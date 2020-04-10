@@ -6,12 +6,12 @@ export interface AnyAction {
   payload?: any;
 }
 
-export interface Action<TPayload = any> {
+export interface Action<TPayload> {
   type: string;
   payload: TPayload;
 }
 
-export interface ActionHelper<TPayload = any, TResult = any> {
+export interface ActionHelper<TPayload, TResult> {
   type: string;
   is(action: any): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
@@ -19,7 +19,7 @@ export interface ActionHelper<TPayload = any, TResult = any> {
 }
 
 export interface ActionHelpers {
-  [key: string]: ActionHelper | ActionHelpers;
+  [key: string]: ActionHelper<any, any> | ActionHelpers;
 }
 
 export type ConvertActionHelpersFromPayloadResultPairs<T> = {
