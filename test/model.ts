@@ -1,8 +1,12 @@
 import { timer } from "rxjs";
 import { createRequiredArg } from "../src/arg";
-import { ModelBase } from "../src/model";
+import {
+  mergeModelConstructors,
+  mergeSubModelConstructors,
+  ModelBase,
+} from "../src/model";
 
-class FakeModel extends ModelBase<{
+class FakeModel1 extends ModelBase<{
   foo: string;
   bar: number;
 }> {
@@ -62,3 +66,82 @@ class FakeModel extends ModelBase<{
     };
   }
 }
+
+class Fa extends FakeModel1 {
+  public selectors() {
+    return {
+      ...super.selectors(),
+      aa: 123,
+    };
+  }
+}
+
+class FakeModel2 extends ModelBase<{
+  foo: string;
+  bar: number;
+}> {
+  public defaultArgs() {
+    return {
+      arg5: "arg1",
+      arg6: 2,
+      arg7: createRequiredArg("arg3"),
+      arg8: createRequiredArg<number>(),
+    };
+  }
+
+  public initialState() {
+    return {
+      state5: this.args.arg5,
+      state6: this.args.arg6,
+      state7: this.args.arg7,
+      state8: this.args.arg8,
+      foo2: "foo",
+      bar2: 0,
+    };
+  }
+
+  public selectors() {
+    return {
+      fooAndBar2: () => this.state.foo2 + this.state.bar2,
+    };
+  }
+
+  public reducers() {
+    return {
+      setState5: (value: string) => {
+        this.state.state5 = value;
+      },
+      increaseState6: () => {
+        this.state.state6 += 1;
+      },
+      foobar2: (value: string) => {
+        this.state.foo2 = value;
+      },
+    };
+  }
+
+  public effects() {
+    return {
+      setState5WithTimeout: async (payload: {
+        value: string;
+        timeout?: number;
+      }) => {
+        await timer(payload.timeout ?? 10).toPromise();
+        await this.actions.setState5.dispatch(payload.value);
+        return this.state.state5;
+      },
+      foobar2: async () => {
+        return this.getters.fooAndBar2;
+      },
+    };
+  }
+}
+
+mergeModelConstructors(
+  mergeSubModelConstructors({
+    fake1: FakeModel1,
+    fake2: FakeModel2,
+  }),
+  FakeModel1,
+  FakeModel2
+);
