@@ -7,7 +7,7 @@ import {
 import { Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { ContainerImpl, GetContainer } from "./container";
-import { Model, ModelConstructor } from "./model";
+import { ModelConstructor } from "./model";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -49,6 +49,5 @@ export interface ModelContext {
   isDynamic: boolean;
   autoRegister: boolean;
 
-  modelByContainerKey: Map<string | undefined, Model>;
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
 }

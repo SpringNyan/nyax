@@ -22,10 +22,6 @@ export interface ActionHelper<TPayload = any, TResult = any> {
   dispatch(payload: TPayload): Promise<TResult>;
 }
 
-export interface ActionHelpers {
-  [key: string]: ActionHelper | ActionHelpers;
-}
-
 export type ConvertActionHelpersFromPayloadResultPairs<T> = {
   [K in keyof T]: T[K] extends [any, any]
     ? ActionHelper<T[K][0], T[K][1]>
@@ -98,11 +94,11 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
   nyaxContext: NyaxContext,
   container: ContainerImpl<TModelConstructor>
 ): InstanceType<TModelConstructor>["actions"] {
-  const actionHelpers: ActionHelpers = {};
+  const actionHelpers: Record<string, any> = {};
 
-  const obj: any = {};
-  mergeObjects(obj, container.currentModel.reducers());
-  mergeObjects(obj, container.currentModel.effects());
+  const obj: Record<string, any> = {};
+  mergeObjects(obj, container.reducers);
+  mergeObjects(obj, container.effects);
 
   const paths: string[] = [];
   mergeObjects(

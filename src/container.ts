@@ -1,11 +1,15 @@
 import {
   batchRegisterActionHelper,
   batchUnregisterActionHelper,
+  createActionHelpers,
 } from "./action";
-import { ConvertArgsParam } from "./arg";
+import { ConvertArgs, ConvertArgsParam, createArgs } from "./arg";
+import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelConstructor } from "./model";
-import { joinLastString } from "./util";
+import { createGetters } from "./selector";
+import { getSubState } from "./state";
+import { is, joinLastString } from "./util";
 
 export interface ContainerBase<
   TState = any,
@@ -45,7 +49,33 @@ export class ContainerImpl<
   public readonly modelNamespace: string;
 
   public readonly modelContext: ModelContext;
+  public readonly model: InstanceType<TModelConstructor>;
   public readonly namespace: string;
+
+  public readonly selectors: ReturnType<
+    InstanceType<TModelConstructor>["selectors"]
+  > = this.model.selectors();
+
+  public readonly reducers: ReturnType<
+    InstanceType<TModelConstructor>["reducers"]
+  > = this.model.reducers();
+
+  public readonly effects: ReturnType<
+    InstanceType<TModelConstructor>["effects"]
+  > = this.model.effects();
+
+  public readonly epics: ReturnType<
+    InstanceType<TModelConstructor>["epics"]
+  > = this.model.epics();
+
+  private _initialStateCache: any;
+
+  private _lastRootState: any;
+  private _lastState: any;
+
+  private _gettersCache: any;
+
+  private _actionsCache: any;
 
   constructor(
     private readonly _nyaxContext: NyaxContext,
@@ -60,30 +90,98 @@ export class ContainerImpl<
     }
     this.modelContext = modelContext;
 
+    this.model = new this.modelConstructor() as InstanceType<TModelConstructor>;
+    // TODO
+
     this.modelNamespace = this.modelContext.modelNamespace;
     this.namespace = joinLastString(this.modelNamespace, this.containerKey);
   }
 
-  public get currentModel(): InstanceType<TModelConstructor> {
-    let model = this.modelContext.modelByContainerKey.get(this.containerKey);
-    if (!model) {
-      model = new this.modelConstructor();
-      // TODO
-      this.modelContext.modelByContainerKey.set(this.containerKey, model);
-    }
-    return model as InstanceType<TModelConstructor>;
+  public args:
+    | ConvertArgs<ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>>
+    | undefined;
+
+  public get rootState(): any {
+    return this._nyaxContext.cachedRootState !== NYAX_NOTHING
+      ? this._nyaxContext.cachedRootState
+      : this._nyaxContext.store.getState();
   }
 
   public get state(): InstanceType<TModelConstructor>["state"] {
-    return this.currentModel.state;
+    const container = this._currentContainer;
+    if (container !== this) {
+      return container.state;
+    }
+
+    if (this.isRegistered) {
+      const rootState = this.rootState;
+      if (is(this._lastRootState, rootState)) {
+        return this._lastState;
+      }
+
+      const state = getSubState(
+        rootState,
+        this.modelContext.modelPath,
+        this.containerKey
+      );
+
+      this._lastRootState = rootState;
+      this._lastState = state;
+
+      return state;
+    }
+
+    if (this.canRegister) {
+      if (this._initialStateCache === undefined) {
+        this.args = createArgs(
+          this.model.defaultArgs(),
+          undefined,
+          true
+        ) as ConvertArgs<
+          ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>
+        >;
+        this._initialStateCache = this.model.initialState();
+        this.args = undefined;
+      }
+
+      return this._initialStateCache;
+    }
+
+    throw new Error("Namespace is already used by other container");
   }
 
   public get getters(): InstanceType<TModelConstructor>["getters"] {
-    return this.currentModel.getters;
+    const container = this._currentContainer;
+    if (container !== this) {
+      return container.getters;
+    }
+
+    if (this.isRegistered || this.canRegister) {
+      if (this._gettersCache === undefined) {
+        this._gettersCache = createGetters(this);
+      }
+
+      return this._gettersCache;
+    }
+
+    throw new Error("Namespace is already used by other container");
   }
 
   public get actions(): InstanceType<TModelConstructor>["actions"] {
-    return this.currentModel.actions;
+    const container = this._currentContainer;
+    if (container !== this) {
+      return container.actions;
+    }
+
+    if (this.isRegistered || this.canRegister) {
+      if (this._actionsCache === undefined) {
+        this._actionsCache = createActionHelpers(this._nyaxContext, this);
+      }
+
+      return this._actionsCache;
+    }
+
+    throw new Error("Namespace is already used by other container");
   }
 
   public get isRegistered(): boolean {
@@ -129,8 +227,15 @@ export class ContainerImpl<
       );
     }
 
-    this.modelContext.modelByContainerKey.delete(this.containerKey);
     this.modelContext.containerByContainerKey.delete(this.containerKey);
+  }
+
+  private get _currentContainer(): this {
+    return this._nyaxContext.getContainer(
+      this.modelConstructor,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.containerKey!
+    ) as this;
   }
 }
 
