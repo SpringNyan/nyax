@@ -59,36 +59,26 @@ export interface Container<
 export class ContainerImpl<
   TModelConstructor extends ModelConstructor = ModelConstructor
 > implements Container<TModelConstructor> {
-  public readonly modelNamespace: string;
-
   public readonly modelContext: ModelContext;
+
+  public readonly modelNamespace: string;
   public readonly namespace: string;
 
   public readonly model: InstanceType<TModelConstructor>;
 
   public readonly selectors: ExtractSelectorsFromModelConstructor<
     TModelConstructor
-  > = this.model.selectors();
-
+  >;
   public readonly reducers: ExtractReducersFromModelConstructor<
     TModelConstructor
-  > = this.model.reducers();
-
+  >;
   public readonly effects: ExtractEffectsFromModelConstructor<
     TModelConstructor
-  > = this.model.effects();
+  >;
+  public readonly epics: ExtractEpicsFromModelConstructor<TModelConstructor>;
 
-  public readonly epics: ExtractEpicsFromModelConstructor<
-    TModelConstructor
-  > = this.model.epics();
-
-  public readonly reducerByPath: Record<string, ModelReducer> = flattenObject(
-    this.reducers
-  );
-
-  public readonly effectByPath: Record<string, ModelEffect> = flattenObject(
-    this.effects
-  );
+  public readonly reducerByPath: Record<string, ModelReducer>;
+  public readonly effectByPath: Record<string, ModelEffect>;
 
   public modelArgs:
     | ExtractArgsFromModelConstructor<TModelConstructor>
@@ -119,38 +109,18 @@ export class ContainerImpl<
     }
 
     this.modelContext = modelContext;
+
     this.modelNamespace = this.modelContext.modelNamespace;
     this.namespace = joinLastString(this.modelNamespace, this.containerKey);
 
-    const model = new this.modelConstructor() as InstanceType<
-      TModelConstructor
-    >;
+    this.model = this._initializeModel();
 
-    defineGetter(model, "dependencies", () => this._nyaxContext.dependencies);
-    defineGetter(model, "args", () => {
-      if (this.modelArgs !== NYAX_NOTHING) {
-        return this.modelArgs;
-      }
-      throw new Error("Args is only available in `initialState()`");
-    });
-    defineGetter(model, "state", () => {
-      if (this.modelState !== NYAX_NOTHING) {
-        return this.modelState;
-      }
-      return this.state;
-    });
-    defineGetter(model, "getters", () => this.getters);
-    defineGetter(model, "actions", () => this.actions);
-
-    defineGetter(model, "rootAction$", () => this._nyaxContext.rootAction$);
-    defineGetter(model, "rootState$", () => this._nyaxContext.rootState$);
-
-    defineGetter(model, "modelNamespace", () => this.modelNamespace);
-    defineGetter(model, "containerKey", () => this.containerKey);
-
-    defineGetter(model, "getContainer", () => this._nyaxContext.getContainer);
-
-    this.model = model;
+    this.selectors = this.model.selectors();
+    this.reducers = this.model.reducers();
+    this.effects = this.model.effects();
+    this.epics = this.model.epics();
+    this.reducerByPath = flattenObject(this.reducers);
+    this.effectByPath = flattenObject(this.effects);
   }
 
   public get rootState(): any {
@@ -283,6 +253,38 @@ export class ContainerImpl<
       this.modelConstructor,
       this.containerKey
     ) as this;
+  }
+
+  private _initializeModel(): InstanceType<TModelConstructor> {
+    const model = new this.modelConstructor() as InstanceType<
+      TModelConstructor
+    >;
+
+    defineGetter(model, "dependencies", () => this._nyaxContext.dependencies);
+    defineGetter(model, "args", () => {
+      if (this.modelArgs !== NYAX_NOTHING) {
+        return this.modelArgs;
+      }
+      throw new Error("Args is only available in `initialState()`");
+    });
+    defineGetter(model, "state", () => {
+      if (this.modelState !== NYAX_NOTHING) {
+        return this.modelState;
+      }
+      return this.state;
+    });
+    defineGetter(model, "getters", () => this.getters);
+    defineGetter(model, "actions", () => this.actions);
+
+    defineGetter(model, "rootAction$", () => this._nyaxContext.rootAction$);
+    defineGetter(model, "rootState$", () => this._nyaxContext.rootState$);
+
+    defineGetter(model, "modelNamespace", () => this.modelNamespace);
+    defineGetter(model, "containerKey", () => this.containerKey);
+
+    defineGetter(model, "getContainer", () => this._nyaxContext.getContainer);
+
+    return model;
   }
 }
 
