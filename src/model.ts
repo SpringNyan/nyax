@@ -49,7 +49,7 @@ export interface Model<
   rootState$: StateObservable<any>;
 
   modelNamespace: string;
-  containerKey?: string;
+  containerKey: string | undefined;
 
   getContainer: GetContainer;
 }

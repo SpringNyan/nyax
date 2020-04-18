@@ -43,7 +43,7 @@ export interface Container<
     ExtractActionHelpersFromModelConstructor<TModelConstructor>
   > {
   modelNamespace: string;
-  containerKey?: string;
+  containerKey: string | undefined;
 
   isRegistered: boolean;
   canRegister: boolean;
@@ -109,7 +109,7 @@ export class ContainerImpl<
   constructor(
     private readonly _nyaxContext: NyaxContext,
     public readonly modelConstructor: TModelConstructor,
-    public readonly containerKey?: string
+    public readonly containerKey: string | undefined
   ) {
     const modelContext = this._nyaxContext.modelContextByModelConstructor.get(
       this.modelConstructor
