@@ -102,16 +102,13 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
   mergeObjects(obj, container.reducers);
   mergeObjects(obj, container.effects);
 
-  mergeObjects(
-    actionHelpers,
-    obj,
-    (item, key, parent, paths) =>
-      new ActionHelperImpl(
-        nyaxContext,
-        container,
-        joinLastString(container.namespace, paths.join("."))
-      )
-  );
+  mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
+    parent[key] = new ActionHelperImpl(
+      nyaxContext,
+      container,
+      joinLastString(container.namespace, paths.join("."))
+    );
+  });
 
   return actionHelpers as ExtractActionHelpersFromModelConstructor<
     TModelConstructor
