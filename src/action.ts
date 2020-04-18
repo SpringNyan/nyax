@@ -100,17 +100,15 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
   mergeObjects(obj, container.reducers);
   mergeObjects(obj, container.effects);
 
-  const paths: string[] = [];
   mergeObjects(
     actionHelpers,
     obj,
-    () =>
+    (item, key, parent, paths) =>
       new ActionHelperImpl(
         nyaxContext,
         container,
         joinLastString(container.namespace, paths.join("."))
-      ),
-    paths
+      )
   );
 
   return actionHelpers as InstanceType<TModelConstructor>["actions"];

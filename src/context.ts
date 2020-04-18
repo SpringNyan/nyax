@@ -1,34 +1,31 @@
 import { Store } from "redux";
-import {
-  ActionsObservable,
-  Epic as ReduxObservableEpic,
-  StateObservable,
-} from "redux-observable";
+import { Epic } from "redux-observable";
 import { Subject } from "rxjs";
 import { AnyAction } from "./action";
-import { ContainerImpl, GetContainer } from "./container";
+import { NYAX_NOTHING } from "./common";
+import {
+  ContainerImpl,
+  createGetContainer,
+  GetContainerInternal,
+} from "./container";
 import { ModelConstructor } from "./model";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
   store: Store;
   options: NyaxOptions;
+  getContainer: GetContainerInternal;
 
-  getContainer: GetContainer;
-
-  addEpic$: Subject<ReduxObservableEpic>;
+  addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
-
-  rootAction$: ActionsObservable<AnyAction>;
-  rootState$: StateObservable<any>;
 
   cachedRootState: any;
 
   modelContextByModelConstructor: Map<ModelConstructor, ModelContext>;
   modelConstructorByModelNamespace: Map<string, ModelConstructor>;
 
-  containerByNamespace: Map<string, ContainerImpl<any>>;
-  dispatchDeferredByAction: WeakMap<
+  containerByNamespace: Map<string, ContainerImpl>;
+  dispatchDeferredByAction: Map<
     AnyAction,
     {
       resolve: (value: any) => void;
@@ -36,8 +33,7 @@ export interface NyaxContext {
     }
   >;
 
-  getDependencies: () => any;
-  resolveActionName: (paths: string[]) => string;
+  dependencies: any;
   onUnhandledEffectError: (error: any) => void;
   onUnhandledEpicError: (error: any) => void;
 }
@@ -50,4 +46,49 @@ export interface ModelContext {
   autoRegister: boolean;
 
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
+}
+
+export function createNyaxContext(): NyaxContext {
+  const nyaxContext: NyaxContext = {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    store: undefined!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    options: undefined!,
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    getContainer: undefined!,
+
+    addEpic$: new Subject(),
+    switchEpic$: new Subject(),
+
+    cachedRootState: NYAX_NOTHING,
+
+    modelContextByModelConstructor: new Map(),
+    modelConstructorByModelNamespace: new Map(),
+
+    containerByNamespace: new Map(),
+    dispatchDeferredByAction: new Map(),
+
+    get dependencies(): any {
+      return nyaxContext.options.dependencies;
+    },
+    onUnhandledEffectError: (error) => {
+      if (nyaxContext.options.onUnhandledEffectError) {
+        nyaxContext.options.onUnhandledEffectError(error);
+      } else {
+        console.error(error);
+      }
+    },
+    onUnhandledEpicError: (error) => {
+      if (nyaxContext.options.onUnhandledEpicError) {
+        nyaxContext.options.onUnhandledEpicError(error);
+      } else {
+        console.error(error);
+      }
+    },
+  };
+
+  nyaxContext.getContainer = createGetContainer(nyaxContext);
+
+  return nyaxContext;
 }

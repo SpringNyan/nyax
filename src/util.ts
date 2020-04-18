@@ -27,9 +27,13 @@ export function isObject(obj: any): boolean {
 export function mergeObjects<T>(
   target: DeepRecord<string, T>,
   source: DeepRecord<string, T>,
-  fn?: (item: T, key: string, parent: DeepRecord<string, T>) => void,
-  paths?: string[]
-): void {
+  fn?: (
+    item: T,
+    key: string,
+    parent: DeepRecord<string, T>,
+    paths: readonly string[]
+  ) => void
+): DeepRecord<string, T> {
   if (!isObject(target)) {
     throw new Error(`target is not an object`);
   }
@@ -38,16 +42,14 @@ export function mergeObjects<T>(
     throw new Error(`source is not an object`);
   }
 
+  const paths: string[] = [];
   Object.keys(source).forEach((key) => {
     if (key === "__proto__") {
       return;
     }
 
     const sourceItem = source[key];
-
-    if (paths) {
-      paths.push(key);
-    }
+    paths.push(key);
 
     if (isObject(sourceItem)) {
       if (target[key] === undefined) {
@@ -62,29 +64,48 @@ export function mergeObjects<T>(
       mergeObjects(
         targetItem as Record<string, T>,
         sourceItem as Record<string, T>,
-        fn,
-        paths
+        fn
       );
     } else {
       if (fn) {
-        fn(sourceItem as T, key, target);
+        fn(sourceItem as T, key, target, paths);
       } else {
         target[key] = sourceItem;
       }
     }
 
-    if (paths) {
-      paths.pop();
-    }
+    paths.pop();
   });
+
+  return target;
 }
 
 export function traverseObject<T>(
   obj: DeepRecord<string, T>,
-  fn: (item: T, key: string, parent: DeepRecord<string, T>) => void,
-  paths?: string[]
+  fn: (
+    item: T,
+    key: string,
+    parent: DeepRecord<string, T>,
+    paths: readonly string[]
+  ) => void
 ): void {
-  mergeObjects(obj, obj, fn, paths);
+  mergeObjects(obj, obj, fn);
+}
+
+export function flattenObject<T>(
+  obj: DeepRecord<string, T>
+): Record<string, T> {
+  const result: Record<string, T> = {};
+
+  traverseObject(obj, (item, key, parent, paths) => {
+    result[paths.join(".")] = item;
+  });
+
+  return result;
+}
+
+export function convertNamespaceToPath(namespace: string): string {
+  return namespace.replace(/\//g, ".");
 }
 
 export function joinLastString(

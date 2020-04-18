@@ -3,13 +3,13 @@ import {
   batchUnregisterActionHelper,
   createActionHelpers,
 } from "./action";
-import { ConvertArgs, ConvertArgsParam, createArgs } from "./arg";
+import { ConvertArgsParam, createArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelConstructor } from "./model";
 import { createGetters } from "./selector";
-import { getSubState } from "./state";
-import { is, joinLastString } from "./util";
+import { createState, getSubState } from "./state";
+import { flattenObject, is, joinLastString } from "./util";
 
 export interface ContainerBase<
   TState = any,
@@ -68,6 +68,16 @@ export class ContainerImpl<
     InstanceType<TModelConstructor>["epics"]
   > = this.model.epics();
 
+  public readonly reducerByPath: Record<
+    string,
+    (payload: any) => void
+  > = flattenObject(this.reducers);
+
+  public readonly effectByPath: Record<
+    string,
+    (payload: any) => Promise<any>
+  > = flattenObject(this.effects);
+
   private _initialStateCache: any;
 
   private _lastRootState: any;
@@ -97,9 +107,7 @@ export class ContainerImpl<
     this.namespace = joinLastString(this.modelNamespace, this.containerKey);
   }
 
-  public args:
-    | ConvertArgs<ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>>
-    | undefined;
+  public args: InstanceType<TModelConstructor>["args"] | undefined;
 
   public get rootState(): any {
     return this._nyaxContext.cachedRootState !== NYAX_NOTHING
@@ -133,17 +141,11 @@ export class ContainerImpl<
 
     if (this.canRegister) {
       if (this._initialStateCache === undefined) {
-        this.args = createArgs(
-          this.model.defaultArgs(),
-          undefined,
-          true
-        ) as ConvertArgs<
-          ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>
-        >;
-        this._initialStateCache = this.model.initialState();
-        this.args = undefined;
+        this._initialStateCache = createState(
+          this,
+          createArgs(this, undefined, true)
+        );
       }
-
       return this._initialStateCache;
     }
 
@@ -233,39 +235,47 @@ export class ContainerImpl<
   private get _currentContainer(): this {
     return this._nyaxContext.getContainer(
       this.modelConstructor,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.containerKey!
+      this.containerKey
     ) as this;
   }
 }
 
 export interface GetContainer {
   <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrNamespace: TModelConstructor | string
+    modelConstructorOrModelNamespace: TModelConstructor | string
   ): Container<TModelConstructor>;
   <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrNamespace: TModelConstructor | string,
+    modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey: string
   ): Container<TModelConstructor>;
 }
 
-export function createGetContainer(nyaxContext: NyaxContext): GetContainer {
-  return (
-    modelConstructorOrNamespace: ModelConstructor | string,
+export interface GetContainerInternal {
+  <TModelConstructor extends ModelConstructor>(
+    modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey?: string
-  ): Container<ModelConstructor> => {
-    if (typeof modelConstructorOrNamespace === "string") {
+  ): ContainerImpl<TModelConstructor>;
+}
+
+export function createGetContainer(
+  nyaxContext: NyaxContext
+): GetContainerInternal {
+  return ((
+    modelConstructorOrModelNamespace: ModelConstructor | string,
+    containerKey?: string
+  ): ContainerImpl<ModelConstructor> => {
+    if (typeof modelConstructorOrModelNamespace === "string") {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      modelConstructorOrNamespace = nyaxContext.modelConstructorByModelNamespace.get(
-        modelConstructorOrNamespace
+      modelConstructorOrModelNamespace = nyaxContext.modelConstructorByModelNamespace.get(
+        modelConstructorOrModelNamespace
       )!;
-      if (modelConstructorOrNamespace == null) {
+      if (modelConstructorOrModelNamespace == null) {
         throw new Error("Model is not found by namespace");
       }
     }
 
     const modelContext = nyaxContext.modelContextByModelConstructor.get(
-      modelConstructorOrNamespace
+      modelConstructorOrModelNamespace
     );
     if (modelContext == null) {
       throw new Error("Model is not registered");
@@ -283,14 +293,14 @@ export function createGetContainer(nyaxContext: NyaxContext): GetContainer {
     if (container == null) {
       container = new ContainerImpl(
         nyaxContext,
-        modelConstructorOrNamespace,
+        modelConstructorOrModelNamespace,
         containerKey
       );
       modelContext.containerByContainerKey.set(containerKey, container);
     }
 
     return container;
-  };
+  }) as GetContainerInternal;
 }
 
 export function createSubContainer<

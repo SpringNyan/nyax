@@ -1,11 +1,23 @@
-import { ConvertActionHelpers } from "./action";
+import { ActionsObservable, StateObservable } from "redux-observable";
+import {
+  AnyAction,
+  ConvertActionHelpers,
+  RegisterActionPayload,
+} from "./action";
 import { ConvertArgs, DefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import { GetContainer } from "./container";
+import { NyaxContext } from "./context";
 import { Effects } from "./effect";
 import { Epics } from "./epic";
 import { Reducers } from "./reducer";
 import { ConvertGetters, Selectors } from "./selector";
 import { ConvertState, InitialState } from "./state";
-import { defineGetter, UnionToIntersection } from "./util";
+import {
+  convertNamespaceToPath,
+  defineGetter,
+  traverseObject,
+  UnionToIntersection,
+} from "./util";
 
 export interface Model<
   TDependencies = any,
@@ -31,6 +43,14 @@ export interface Model<
     ReturnType<this["reducers"]>,
     ReturnType<this["effects"]>
   >;
+
+  rootAction$: ActionsObservable<AnyAction>;
+  rootState$: StateObservable<any>;
+
+  modelNamespace: string;
+  containerKey?: string;
+
+  getContainer: GetContainer;
 }
 
 export type ModelConstructor<
@@ -50,6 +70,14 @@ export type ModelConstructor<
   TEffects,
   TEpics
 >;
+
+export interface ModelConstructors<TDependencies = any> {
+  [key: string]:
+    | ModelConstructor<TDependencies>
+    | [ModelConstructor<TDependencies>]
+    | [boolean, ModelConstructor<TDependencies>]
+    | ModelConstructors<TDependencies>;
+}
 
 export class ModelBase<TDependencies> implements Model<TDependencies> {
   public defaultArgs(): DefaultArgs {
@@ -79,6 +107,14 @@ export class ModelBase<TDependencies> implements Model<TDependencies> {
     ReturnType<this["reducers"]>,
     ReturnType<this["effects"]>
   >;
+
+  public rootAction$!: ActionsObservable<AnyAction>;
+  public rootState$!: StateObservable<any>;
+
+  public modelNamespace!: string;
+  public containerKey!: string | undefined;
+
+  public getContainer!: GetContainer;
 }
 
 export type MergeModelDependencies<
@@ -198,6 +234,14 @@ export function mergeModelConstructors<
     public state!: any;
     public getters!: any;
     public actions!: any;
+
+    public rootAction$!: any;
+    public rootState$!: any;
+
+    public modelNamespace!: any;
+    public containerKey!: any;
+
+    public getContainer!: any;
   };
 }
 
@@ -274,5 +318,96 @@ export function mergeSubModelConstructors<
     public state!: any;
     public getters!: any;
     public actions!: any;
+
+    public rootAction$!: any;
+    public rootState$!: any;
+
+    public modelNamespace!: any;
+    public containerKey!: any;
+
+    public getContainer!: any;
   };
+}
+
+export function registerModel<TModelConstructor extends ModelConstructor>(
+  nyaxContext: NyaxContext,
+  modelNamespace: string,
+  modelConstructorInput:
+    | TModelConstructor
+    | [TModelConstructor]
+    | [boolean, TModelConstructor]
+): RegisterActionPayload[] {
+  const modelConstructor = (Array.isArray(modelConstructorInput)
+    ? modelConstructorInput[modelConstructorInput.length - 1]
+    : modelConstructorInput) as TModelConstructor;
+
+  if (nyaxContext.modelContextByModelConstructor.has(modelConstructor)) {
+    throw new Error("Model is already registered");
+  }
+
+  if (nyaxContext.modelConstructorByModelNamespace.has(modelNamespace)) {
+    throw new Error("Model namespace is already bound");
+  }
+
+  const isDynamic = Array.isArray(modelConstructorInput);
+  const autoRegister =
+    Array.isArray(modelConstructorInput) && modelConstructorInput[0] === true;
+
+  nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
+    modelNamespace,
+    modelPath: convertNamespaceToPath(modelNamespace),
+
+    isDynamic,
+    autoRegister,
+
+    containerByContainerKey: new Map(),
+  });
+
+  nyaxContext.modelConstructorByModelNamespace.set(
+    modelNamespace,
+    modelConstructor
+  );
+
+  return !isDynamic
+    ? [
+        {
+          modelNamespace,
+        },
+      ]
+    : [];
+}
+
+export function registerModels(
+  nyaxContext: NyaxContext,
+  modelConstructors: ModelConstructors
+): RegisterActionPayload[] {
+  const registerActionPayloads: RegisterActionPayload[] = [];
+
+  traverseObject(modelConstructors, (item, key, parent, paths) => {
+    const modelNamespace = paths.join("/");
+    registerActionPayloads.push(
+      ...registerModel(
+        nyaxContext,
+        modelNamespace,
+        item as Exclude<typeof item, ModelConstructors>
+      )
+    );
+  });
+
+  return registerActionPayloads;
+}
+
+export function flattenModels(
+  modelConstructors: ModelConstructors
+): Record<string, ModelConstructor> {
+  const result: Record<string, ModelConstructor> = {};
+
+  traverseObject(modelConstructors, (item, key, parent, paths) => {
+    const modelNamespace = paths.join("/");
+    result[modelNamespace] = (Array.isArray(item)
+      ? item[item.length - 1]
+      : item) as ModelConstructor;
+  });
+
+  return result;
 }

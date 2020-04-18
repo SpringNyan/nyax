@@ -1,4 +1,6 @@
 import { NYAX_NOTHING } from "./common";
+import { ContainerImpl } from "./container";
+import { ModelConstructor } from "./model";
 import { is, isObject } from "./util";
 
 export interface InitialState {
@@ -67,4 +69,15 @@ export function setSubState(
       [modelPath]: subState,
     };
   }
+}
+
+export function createState<TModelConstructor extends ModelConstructor>(
+  container: ContainerImpl<TModelConstructor>,
+  args: InstanceType<TModelConstructor>["args"]
+): InstanceType<TModelConstructor>["state"] {
+  container.args = args;
+  const state = container.model.initialState();
+  container.args = undefined;
+
+  return state;
 }

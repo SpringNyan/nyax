@@ -206,26 +206,24 @@ export function createGetters<TModelConstructor extends ModelConstructor>(
   const getters: Record<string, any> = {};
   const cacheByPath = new Map<string, SelectorCache>();
 
-  const paths: string[] = [];
   mergeObjects(
     getters,
     container.selectors,
-    (selector: OutputSelector, key, parent) => {
-      const fullPath = paths.join(".");
+    (selector: OutputSelector, key, parent, paths) => {
+      const path = paths.join(".");
       Object.defineProperty(parent, key, {
         get() {
-          let cache = cacheByPath.get(fullPath);
+          let cache = cacheByPath.get(path);
           if (!cache) {
             cache = {};
-            cacheByPath.set(fullPath, cache);
+            cacheByPath.set(path, cache);
           }
           return selector(cache);
         },
         enumerable: true,
         configurable: true,
       });
-    },
-    paths
+    }
   );
 
   return getters as InstanceType<TModelConstructor>["getters"];
