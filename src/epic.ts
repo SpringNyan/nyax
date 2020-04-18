@@ -6,19 +6,19 @@ import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { traverseObject } from "./util";
 
-export interface Epics {
-  [key: string]: (() => Observable<AnyAction>) | Epics;
+export type ModelEpic = () => Observable<AnyAction>;
+
+export interface ModelEpics {
+  [key: string]: ModelEpic | ModelEpics;
 }
 
 export function createEpic(
   nyaxContext: NyaxContext,
   container: ContainerImpl
 ): Epic {
-  return (rootAction$, rootState$): Observable<AnyAction> => {
-    // TODO
-
+  return (): Observable<AnyAction> => {
     const outputObservables: Array<Observable<AnyAction>> = [];
-    traverseObject(container.epics, (epic: () => Observable<AnyAction>) => {
+    traverseObject(container.epics, (epic: ModelEpic) => {
       outputObservables.push(
         epic().pipe(
           catchError((error, caught) => {
@@ -29,7 +29,7 @@ export function createEpic(
       );
     });
 
-    const takeUntil$ = rootAction$.pipe(
+    const takeUntil$ = nyaxContext.rootAction$.pipe(
       filter((action) => {
         if (batchUnregisterActionHelper.is(action)) {
           return action.payload.some(

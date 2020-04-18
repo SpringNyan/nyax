@@ -35,21 +35,25 @@ export interface Nyax<TDependencies = any> {
   gc: (filterFn?: (container: Container) => boolean) => void;
 }
 
-export function createNyax<TDependencies = any>(
+export function createNyax<TDependencies>(
   options: NyaxOptions<TDependencies>
 ): Nyax<TDependencies> {
   const nyaxContext = createNyaxContext();
   nyaxContext.options = options;
 
   const reducer: Reducer = createRootReducer(nyaxContext);
-  const epic: Epic = (action$, state$, ...rest) =>
-    nyaxContext.switchEpic$.pipe(
+  const epic: Epic = (action$, state$, ...rest) => {
+    nyaxContext.rootAction$ = action$;
+    nyaxContext.rootState$ = state$;
+
+    return nyaxContext.switchEpic$.pipe(
       switchMap(() =>
         nyaxContext.addEpic$.pipe(
           mergeMap((epic) => epic(action$, state$, ...rest))
         )
       )
     );
+  };
   const middleware = createMiddleware(nyaxContext);
 
   if (options.createStore) {

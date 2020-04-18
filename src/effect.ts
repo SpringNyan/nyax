@@ -1,11 +1,16 @@
-export interface Effects {
-  [key: string]: ((payload: any) => Promise<any>) | Effects;
+export type ModelEffect<TPayload = any, TResult = any> = (
+  payload: TPayload
+) => Promise<TResult>;
+
+export interface ModelEffects {
+  [key: string]: ModelEffect | ModelEffects;
 }
 
-export type ConvertPayloadResultPairsFromEffects<TEffects> = {
-  [K in keyof TEffects]: TEffects[K] extends (
-    payload: infer TPayload
-  ) => Promise<infer TResult>
+export type ConvertPayloadResultPairsFromModelEffects<TEffects> = {
+  [K in keyof TEffects]: TEffects[K] extends ModelEffect<
+    infer TPayload,
+    infer TResult
+  >
     ? [TPayload, TResult]
-    : ConvertPayloadResultPairsFromEffects<TEffects[K]>;
+    : ConvertPayloadResultPairsFromModelEffects<TEffects[K]>;
 };

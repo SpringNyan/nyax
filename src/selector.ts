@@ -1,14 +1,18 @@
 import { ContainerImpl } from "./container";
-import { ModelConstructor } from "./model";
-import { is, mergeObjects } from "./util";
+import { ExtractGettersFromModelConstructor, ModelConstructor } from "./model";
+import { defineGetter, is, mergeObjects } from "./util";
 
-export interface Selectors {
-  [key: string]: (() => any) | Selectors;
+export type ModelSelector<TResult = any> = () => TResult;
+
+export interface ModelSelectors {
+  [key: string]: ModelSelector | ModelSelectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
   ? {
-      [K in keyof TSelectors]: TSelectors[K] extends () => infer TResult
+      [K in keyof TSelectors]: TSelectors[K] extends ModelSelector<
+        infer TResult
+      >
         ? TResult
         : ConvertGetters<TSelectors[K]>;
     }
@@ -202,7 +206,7 @@ export function createSelector(...args: any[]): OutputSelector {
 
 export function createGetters<TModelConstructor extends ModelConstructor>(
   container: ContainerImpl<TModelConstructor>
-): InstanceType<TModelConstructor>["getters"] {
+): ExtractGettersFromModelConstructor<TModelConstructor> {
   const getters: Record<string, any> = {};
   const cacheByPath = new Map<string, SelectorCache>();
 
@@ -211,20 +215,16 @@ export function createGetters<TModelConstructor extends ModelConstructor>(
     container.selectors,
     (selector: OutputSelector, key, parent, paths) => {
       const path = paths.join(".");
-      Object.defineProperty(parent, key, {
-        get() {
-          let cache = cacheByPath.get(path);
-          if (!cache) {
-            cache = {};
-            cacheByPath.set(path, cache);
-          }
-          return selector(cache);
-        },
-        enumerable: true,
-        configurable: true,
+      defineGetter(parent, key, () => {
+        let cache = cacheByPath.get(path);
+        if (!cache) {
+          cache = {};
+          cacheByPath.set(path, cache);
+        }
+        return selector(cache);
       });
     }
   );
 
-  return getters as InstanceType<TModelConstructor>["getters"];
+  return getters as ExtractGettersFromModelConstructor<TModelConstructor>;
 }

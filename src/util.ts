@@ -35,11 +35,11 @@ export function mergeObjects<T>(
   ) => void
 ): DeepRecord<string, T> {
   if (!isObject(target)) {
-    throw new Error(`target is not an object`);
+    throw new Error("target is not an object");
   }
 
   if (!isObject(source)) {
-    throw new Error(`source is not an object`);
+    throw new Error("source is not an object");
   }
 
   const paths: string[] = [];
@@ -48,19 +48,15 @@ export function mergeObjects<T>(
       return;
     }
 
-    const sourceItem = source[key];
     paths.push(key);
 
+    const sourceItem = source[key];
     if (isObject(sourceItem)) {
       if (target[key] === undefined) {
         target[key] = {};
       }
 
       const targetItem = target[key];
-      if (!isObject(targetItem)) {
-        throw new Error(`target["${key}"] is not an object`);
-      }
-
       mergeObjects(
         targetItem as Record<string, T>,
         sourceItem as Record<string, T>,
@@ -93,12 +89,13 @@ export function traverseObject<T>(
 }
 
 export function flattenObject<T>(
-  obj: DeepRecord<string, T>
+  obj: DeepRecord<string, T>,
+  separator = "."
 ): Record<string, T> {
   const result: Record<string, T> = {};
 
   traverseObject(obj, (item, key, parent, paths) => {
-    result[paths.join(".")] = item;
+    result[paths.join(separator)] = item;
   });
 
   return result;

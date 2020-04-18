@@ -1,6 +1,10 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
-import { ModelConstructor } from "./model";
+import {
+  ExtractArgsFromModelConstructor,
+  ExtractDefaultArgsFromModelConstructor,
+  ModelConstructor,
+} from "./model";
 import { isObject } from "./util";
 
 export const NYAX_REQUIRED_ARG_KEY: unique symbol = "__nyax_required_arg__" as any;
@@ -11,11 +15,11 @@ export interface RequiredArg<T = any> {
   defaultValue: T | typeof NYAX_NOTHING;
 }
 
-export interface DefaultArgs {
+export interface ModelDefaultArgs {
   [key: string]: any;
 }
 
-export interface MarkedDefaultArgs extends DefaultArgs {
+export interface MarkedModelDefaultArgs extends ModelDefaultArgs {
   [NYAX_DEFAULT_ARGS_KEY]: true;
 }
 
@@ -37,7 +41,7 @@ export type ConvertArgsParam<
       Partial<
         Pick<
           {
-            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends MarkedDefaultArgs
+            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends MarkedModelDefaultArgs
               ? ConvertArgsParam<
                   Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>
                 >
@@ -56,7 +60,7 @@ export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
         ? T
-        : TDefaultArgs[K] extends MarkedDefaultArgs
+        : TDefaultArgs[K] extends MarkedModelDefaultArgs
         ? ConvertArgs<Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>>
         : TDefaultArgs[K];
     }
@@ -74,11 +78,11 @@ export function isRequiredArg(obj: any): obj is RequiredArg {
   return obj?.[NYAX_REQUIRED_ARG_KEY] === true;
 }
 
-export function isMarkedDefaultArgs(obj: any): obj is MarkedDefaultArgs {
+export function isMarkedDefaultArgs(obj: any): obj is MarkedModelDefaultArgs {
   return obj?.[NYAX_DEFAULT_ARGS_KEY] === true;
 }
 
-export function buildArgs<TDefaultArgs extends DefaultArgs>(
+export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   defaultArgs: TDefaultArgs,
   argsParam: ConvertArgsParam<TDefaultArgs> | undefined,
   optional: boolean
@@ -98,7 +102,7 @@ export function buildArgs<TDefaultArgs extends DefaultArgs>(
   }
 
   Object.keys(defaultArgs).forEach((key) => {
-    if (((key as unknown) as symbol) === NYAX_DEFAULT_ARGS_KEY || key in args) {
+    if (((key as any) as symbol) === NYAX_DEFAULT_ARGS_KEY || key in args) {
       return;
     }
     const defaultArg = defaultArgs[key];
@@ -123,14 +127,14 @@ export function createArgs<TModelConstructor extends ModelConstructor>(
   container: ContainerImpl<TModelConstructor>,
   argsParam:
     | ConvertArgsParam<
-        ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>
+        ExtractDefaultArgsFromModelConstructor<TModelConstructor>
       >
     | undefined,
   optional: boolean
-): InstanceType<TModelConstructor>["args"] {
+): ExtractArgsFromModelConstructor<TModelConstructor> {
   return buildArgs(
     container.model.defaultArgs(),
     argsParam,
     optional
-  ) as InstanceType<TModelConstructor>["args"];
+  ) as ExtractArgsFromModelConstructor<TModelConstructor>;
 }

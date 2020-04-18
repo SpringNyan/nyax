@@ -4,17 +4,18 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import { ConvertArgs, DefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import { ConvertArgs, ModelDefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
 import { GetContainer } from "./container";
 import { NyaxContext } from "./context";
-import { Effects } from "./effect";
-import { Epics } from "./epic";
-import { Reducers } from "./reducer";
-import { ConvertGetters, Selectors } from "./selector";
-import { ConvertState, InitialState } from "./state";
+import { ModelEffects } from "./effect";
+import { ModelEpics } from "./epic";
+import { ModelReducers } from "./reducer";
+import { ConvertGetters, ModelSelectors } from "./selector";
+import { ConvertState, ModelInitialState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
+  mergeObjects,
   traverseObject,
   UnionToIntersection,
 } from "./util";
@@ -71,6 +72,50 @@ export type ModelConstructor<
   TEpics
 >;
 
+export type ExtractDefaultArgsFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>;
+
+export type ExtractInitialStateFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["initialState"]>;
+
+export type ExtractSelectorsFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["selectors"]>;
+
+export type ExtractReducersFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["reducers"]>;
+
+export type ExtractEffectsFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["effects"]>;
+
+export type ExtractEpicsFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = ReturnType<InstanceType<TModelConstructor>["epics"]>;
+
+export type ExtractDependenciesFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = InstanceType<TModelConstructor>["dependencies"];
+
+export type ExtractArgsFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = InstanceType<TModelConstructor>["args"];
+
+export type ExtractStateFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = InstanceType<TModelConstructor>["state"];
+
+export type ExtractGettersFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = InstanceType<TModelConstructor>["getters"];
+
+export type ExtractActionHelpersFromModelConstructor<
+  TModelConstructor extends ModelConstructor
+> = InstanceType<TModelConstructor>["actions"];
+
 export interface ModelConstructors<TDependencies = any> {
   [key: string]:
     | ModelConstructor<TDependencies>
@@ -79,61 +124,24 @@ export interface ModelConstructors<TDependencies = any> {
     | ModelConstructors<TDependencies>;
 }
 
-export class ModelBase<TDependencies> implements Model<TDependencies> {
-  public defaultArgs(): DefaultArgs {
-    return {};
-  }
-  public initialState(): InitialState {
-    return {};
-  }
-  public selectors(): Selectors {
-    return {};
-  }
-  public reducers(): Reducers {
-    return {};
-  }
-  public effects(): Effects {
-    return {};
-  }
-  public epics(): Epics {
-    return {};
-  }
-
-  public dependencies!: TDependencies;
-  public args!: ConvertArgs<ReturnType<this["defaultArgs"]>>;
-  public state!: ConvertState<ReturnType<this["initialState"]>>;
-  public getters!: ConvertGetters<ReturnType<this["selectors"]>>;
-  public actions!: ConvertActionHelpers<
-    ReturnType<this["reducers"]>,
-    ReturnType<this["effects"]>
-  >;
-
-  public rootAction$!: ActionsObservable<AnyAction>;
-  public rootState$!: StateObservable<any>;
-
-  public modelNamespace!: string;
-  public containerKey!: string | undefined;
-
-  public getContainer!: GetContainer;
-}
-
-export type MergeModelDependencies<
+export type MergeDependenciesFromModelConstructors<
   TModelConstructors extends ModelConstructor[]
 > = UnionToIntersection<
   {
-    [K in Extract<keyof TModelConstructors, number>]: InstanceType<
-      TModelConstructors[K]
-    >["dependencies"];
+    [K in Extract<
+      keyof TModelConstructors,
+      number
+    >]: ExtractDependenciesFromModelConstructor<TModelConstructors[K]>;
   }[number]
 >;
 
-export type MergeSubModelDependencies<
+export type MergeDependenciesFromSubModelConstructors<
   TSubModelConstructors extends Record<string, ModelConstructor>
 > = UnionToIntersection<
   {
-    [K in keyof TSubModelConstructors]: InstanceType<
+    [K in keyof TSubModelConstructors]: ExtractDependenciesFromModelConstructor<
       TSubModelConstructors[K]
-    >["dependencies"];
+    >;
   }[keyof TSubModelConstructors]
 >;
 
@@ -145,7 +153,7 @@ export type ModelPropKey =
   | "effects"
   | "epics";
 
-export type MergeModelProp<
+export type MergeModelPropFromModelConstructors<
   TModelConstructors extends ModelConstructor[],
   TPropKey extends ModelPropKey
 > = UnionToIntersection<
@@ -156,7 +164,7 @@ export type MergeModelProp<
   }[number]
 >;
 
-export type MergeSubModelProp<
+export type MergeSubModelPropFromSubModelConstructors<
   TSubModelConstructors extends Record<string, ModelConstructor>,
   TPropKey extends ModelPropKey
 > = {
@@ -166,18 +174,18 @@ export type MergeSubModelProp<
     (TPropKey extends "defaultArgs" ? { [NYAX_DEFAULT_ARGS_KEY]: true } : {});
 };
 
-export function mergeModelConstructors<
+export function mergeModels<
   TModelConstructors extends ModelConstructor[] | [ModelConstructor]
 >(
   ...modelConstructors: TModelConstructors
 ): ModelConstructor<
-  MergeModelDependencies<TModelConstructors>,
-  MergeModelProp<TModelConstructors, "defaultArgs">,
-  MergeModelProp<TModelConstructors, "initialState">,
-  MergeModelProp<TModelConstructors, "selectors">,
-  MergeModelProp<TModelConstructors, "reducers">,
-  MergeModelProp<TModelConstructors, "effects">,
-  MergeModelProp<TModelConstructors, "epics">
+  MergeDependenciesFromModelConstructors<TModelConstructors>,
+  MergeModelPropFromModelConstructors<TModelConstructors, "defaultArgs">,
+  MergeModelPropFromModelConstructors<TModelConstructors, "initialState">,
+  MergeModelPropFromModelConstructors<TModelConstructors, "selectors">,
+  MergeModelPropFromModelConstructors<TModelConstructors, "reducers">,
+  MergeModelPropFromModelConstructors<TModelConstructors, "effects">,
+  MergeModelPropFromModelConstructors<TModelConstructors, "epics">
 > {
   return class {
     private readonly _models: Model[];
@@ -191,6 +199,14 @@ export function mergeModelConstructors<
         defineGetter(model, "state", () => this.state);
         defineGetter(model, "getters", () => this.getters);
         defineGetter(model, "actions", () => this.actions);
+
+        defineGetter(model, "rootAction$", () => this.rootAction$);
+        defineGetter(model, "rootState$", () => this.rootState$);
+
+        defineGetter(model, "modelNamespace", () => this.modelNamespace);
+        defineGetter(model, "containerKey", () => this.containerKey);
+
+        defineGetter(model, "getContainer", () => this.getContainer);
 
         return model;
       });
@@ -223,10 +239,15 @@ export function mergeModelConstructors<
     private _mergeModelProp<TPropKey extends ModelPropKey>(
       propKey: TPropKey
     ): ReturnType<Model[TPropKey]> {
-      return Object.assign(
-        {},
-        ...this._models.map((model) => model[propKey]())
-      );
+      const result = {} as ReturnType<Model[TPropKey]>;
+
+      this._models
+        .map((model) => model[propKey]())
+        .forEach((prop) => {
+          mergeObjects(result, prop);
+        });
+
+      return result;
     }
 
     public dependencies!: any;
@@ -245,18 +266,24 @@ export function mergeModelConstructors<
   };
 }
 
-export function mergeSubModelConstructors<
+export function mergeSubModels<
   TSubModelConstructors extends Record<string, ModelConstructor>
 >(
   subModelConstructors: TSubModelConstructors
 ): ModelConstructor<
-  MergeSubModelDependencies<TSubModelConstructors>,
-  MergeSubModelProp<TSubModelConstructors, "defaultArgs">,
-  MergeSubModelProp<TSubModelConstructors, "initialState">,
-  MergeSubModelProp<TSubModelConstructors, "selectors">,
-  MergeSubModelProp<TSubModelConstructors, "reducers">,
-  MergeSubModelProp<TSubModelConstructors, "effects">,
-  MergeSubModelProp<TSubModelConstructors, "epics">
+  MergeDependenciesFromSubModelConstructors<TSubModelConstructors>,
+  MergeSubModelPropFromSubModelConstructors<
+    TSubModelConstructors,
+    "defaultArgs"
+  >,
+  MergeSubModelPropFromSubModelConstructors<
+    TSubModelConstructors,
+    "initialState"
+  >,
+  MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "selectors">,
+  MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "reducers">,
+  MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "effects">,
+  MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "epics">
 > {
   return class {
     private readonly _subModels: Record<string, Model>;
@@ -271,6 +298,14 @@ export function mergeSubModelConstructors<
         defineGetter(model, "state", () => this.state[key]);
         defineGetter(model, "getters", () => this.getters[key]);
         defineGetter(model, "actions", () => this.actions[key]);
+
+        defineGetter(model, "rootAction$", () => this.rootAction$);
+        defineGetter(model, "rootState$", () => this.rootState$);
+
+        defineGetter(model, "modelNamespace", () => this.modelNamespace);
+        defineGetter(model, "containerKey", () => this.containerKey);
+
+        defineGetter(model, "getContainer", () => this.getContainer);
 
         this._subModels[key] = model;
       });
@@ -311,6 +346,51 @@ export function mergeSubModelConstructors<
         }
       });
       return result;
+    }
+
+    public dependencies!: any;
+    public args!: any;
+    public state!: any;
+    public getters!: any;
+    public actions!: any;
+
+    public rootAction$!: any;
+    public rootState$!: any;
+
+    public modelNamespace!: any;
+    public containerKey!: any;
+
+    public getContainer!: any;
+  };
+}
+
+export function createDefaultModel<TDependencies>(): ModelConstructor<
+  TDependencies,
+  ModelDefaultArgs,
+  ModelInitialState,
+  ModelSelectors,
+  ModelReducers,
+  ModelEffects,
+  ModelEpics
+> {
+  return class {
+    public defaultArgs(): ModelDefaultArgs {
+      return {};
+    }
+    public initialState(): ModelInitialState {
+      return {};
+    }
+    public selectors(): ModelSelectors {
+      return {};
+    }
+    public reducers(): ModelReducers {
+      return {};
+    }
+    public effects(): ModelEffects {
+      return {};
+    }
+    public epics(): ModelEpics {
+      return {};
     }
 
     public dependencies!: any;

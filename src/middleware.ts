@@ -68,11 +68,11 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
               modelNamespace: context.modelNamespace,
             });
           } else {
-            Object.keys(state).forEach((key) => {
-              if (isObject(state[key])) {
+            Object.keys(state).forEach((containerKey) => {
+              if (isObject(state[containerKey])) {
                 registerPayloads.push({
                   modelNamespace: context.modelNamespace,
-                  containerKey: key,
+                  containerKey,
                 });
               }
             });
@@ -84,7 +84,10 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     batchRegister(registerPayloads);
   }
 
-  return (store) => (next) => (action: AnyAction): AnyAction => {
+  return () => (next) => (action: AnyAction): AnyAction => {
+    const dispatchDeferred = nyaxContext.dispatchDeferredByAction.get(action);
+    nyaxContext.dispatchDeferredByAction.delete(action);
+
     if (batchRegisterActionHelper.is(action)) {
       batchRegister(action.payload);
     } else if (batchUnregisterActionHelper.is(action)) {
@@ -98,25 +101,27 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     const [namespace, actionName] = splitLastString(action.type);
     const container = nyaxContext.containerByNamespace.get(namespace);
     if (container?.isRegistered) {
-      const deferred = nyaxContext.dispatchDeferredByAction.get(action);
-
       const effect = container.effectByPath[actionName];
       if (effect) {
         const promise = effect(action.payload);
         promise.then(
           (value) => {
-            deferred?.resolve(value);
+            if (dispatchDeferred) {
+              dispatchDeferred.resolve(value);
+            }
           },
           (reason) => {
-            if (deferred) {
-              deferred.reject(reason);
+            if (dispatchDeferred) {
+              dispatchDeferred.reject(reason);
             } else {
               nyaxContext.onUnhandledEffectError(reason);
             }
           }
         );
       } else {
-        deferred?.resolve(undefined);
+        if (dispatchDeferred) {
+          dispatchDeferred.resolve(undefined);
+        }
       }
     }
 

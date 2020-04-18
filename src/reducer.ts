@@ -14,14 +14,16 @@ import { NyaxContext } from "./context";
 import { createState, getSubState, setSubState } from "./state";
 import { splitLastString } from "./util";
 
-export interface Reducers {
-  [key: string]: ((payload: any) => void) | Reducers;
+export type ModelReducer<TPayload = any> = (payload: TPayload) => void;
+
+export interface ModelReducers {
+  [key: string]: ModelReducer | ModelReducers;
 }
 
-export type ConvertPayloadResultPairsFromReducers<TReducers> = {
-  [K in keyof TReducers]: TReducers[K] extends (payload: infer TPayload) => void
+export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
+  [K in keyof TReducers]: TReducers[K] extends ModelReducer<infer TPayload>
     ? [TPayload, unknown]
-    : ConvertPayloadResultPairsFromReducers<TReducers[K]>;
+    : ConvertPayloadResultPairsFromModelReducers<TReducers[K]>;
 };
 
 export function createRootReducer(nyaxContext: NyaxContext): Reducer {
@@ -90,14 +92,12 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       rootState = {};
     }
 
-    if (reloadActionHelper.is(action)) {
-      return reload(rootState, action.payload);
-    }
-
     if (batchRegisterActionHelper.is(action)) {
-      rootState = batchRegister(rootState, action.payload);
+      return batchRegister(rootState, action.payload);
     } else if (batchUnregisterActionHelper.is(action)) {
-      rootState = batchUnregister(rootState, action.payload);
+      return batchUnregister(rootState, action.payload);
+    } else if (reloadActionHelper.is(action)) {
+      return reload(rootState, action.payload);
     }
 
     const [namespace, actionName] = splitLastString(action.type);
@@ -118,8 +118,9 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       container.containerKey
     );
     const newState = produce(state, (draft: any) => {
-      // TODO
+      container.modelState = draft;
       reducer(action.payload);
+      container.modelState = NYAX_NOTHING;
     });
 
     return setSubState(

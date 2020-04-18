@@ -1,8 +1,11 @@
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import { ConvertPayloadResultPairsFromEffects } from "./effect";
-import { ModelConstructor } from "./model";
-import { ConvertPayloadResultPairsFromReducers } from "./reducer";
+import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
+import {
+  ExtractActionHelpersFromModelConstructor,
+  ModelConstructor,
+} from "./model";
+import { ConvertPayloadResultPairsFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
@@ -34,8 +37,8 @@ export type ConvertActionHelpers<
 > = TReducers extends infer TReducers
   ? TEffects extends infer TEffects
     ? ConvertActionHelpersFromPayloadResultPairs<
-        ConvertPayloadResultPairsFromReducers<TReducers> &
-          ConvertPayloadResultPairsFromEffects<TEffects>
+        ConvertPayloadResultPairsFromModelReducers<TReducers> &
+          ConvertPayloadResultPairsFromModelEffects<TEffects>
       >
     : never
   : never;
@@ -73,12 +76,11 @@ export class ActionHelperImpl<TPayload, TResult>
       this._container.modelContext.autoRegister
     ) {
       this._container.register();
-    } else {
-      throw new Error("Container is not registered");
     }
 
     const action = this.create(payload);
     const promise = new Promise<TResult>((resolve, reject) => {
+      // TODO: handle unhandled effect error
       this._nyaxContext.dispatchDeferredByAction.set(action, {
         resolve,
         reject,
@@ -93,7 +95,7 @@ export class ActionHelperImpl<TPayload, TResult>
 export function createActionHelpers<TModelConstructor extends ModelConstructor>(
   nyaxContext: NyaxContext,
   container: ContainerImpl<TModelConstructor>
-): InstanceType<TModelConstructor>["actions"] {
+): ExtractActionHelpersFromModelConstructor<TModelConstructor> {
   const actionHelpers: Record<string, any> = {};
 
   const obj: Record<string, any> = {};
@@ -111,7 +113,9 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
       )
   );
 
-  return actionHelpers as InstanceType<TModelConstructor>["actions"];
+  return actionHelpers as ExtractActionHelpersFromModelConstructor<
+    TModelConstructor
+  >;
 }
 
 export interface RegisterActionPayload {

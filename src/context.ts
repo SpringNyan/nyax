@@ -1,5 +1,5 @@
 import { Store } from "redux";
-import { Epic } from "redux-observable";
+import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
@@ -14,12 +14,16 @@ import { NyaxOptions } from "./store";
 export interface NyaxContext {
   store: Store;
   options: NyaxOptions;
+
+  rootAction$: ActionsObservable<AnyAction>;
+  rootState$: StateObservable<any>;
+
   getContainer: GetContainerInternal;
 
   addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
 
-  cachedRootState: any;
+  cachedRootState: any | typeof NYAX_NOTHING;
 
   modelContextByModelConstructor: Map<ModelConstructor, ModelContext>;
   modelConstructorByModelNamespace: Map<string, ModelConstructor>;
@@ -54,6 +58,11 @@ export function createNyaxContext(): NyaxContext {
     store: undefined!,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     options: undefined!,
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    rootAction$: undefined!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    rootState$: undefined!,
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getContainer: undefined!,

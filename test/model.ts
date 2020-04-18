@@ -1,15 +1,11 @@
 import { timer } from "rxjs";
 import { createRequiredArg } from "../src/arg";
-import {
-  mergeModelConstructors,
-  mergeSubModelConstructors,
-  ModelBase,
-} from "../src/model";
+import { createDefaultModel, mergeModels, mergeSubModels } from "../src/model";
+import { Dependencies } from "./dependencies";
 
-class FakeModel1 extends ModelBase<{
-  foo: string;
-  bar: number;
-}> {
+const DefaultModel = createDefaultModel<Dependencies>();
+
+class FakeModel1 extends DefaultModel {
   public defaultArgs() {
     return {
       arg1: "arg1",
@@ -67,19 +63,7 @@ class FakeModel1 extends ModelBase<{
   }
 }
 
-class Fa extends FakeModel1 {
-  public selectors() {
-    return {
-      ...super.selectors(),
-      aa: 123,
-    };
-  }
-}
-
-class FakeModel2 extends ModelBase<{
-  foo: string;
-  bar: number;
-}> {
+class FakeModel2 extends DefaultModel {
   public defaultArgs() {
     return {
       arg5: "arg1",
@@ -137,11 +121,14 @@ class FakeModel2 extends ModelBase<{
   }
 }
 
-mergeModelConstructors(
-  mergeSubModelConstructors({
+const FakeModel = mergeModels(
+  mergeSubModels({
     fake1: FakeModel1,
     fake2: FakeModel2,
   }),
   FakeModel1,
   FakeModel2
 );
+
+const fakeModel = new FakeModel();
+fakeModel;

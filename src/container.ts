@@ -6,10 +6,23 @@ import {
 import { ConvertArgsParam, createArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
-import { ModelConstructor } from "./model";
+import { ModelEffect } from "./effect";
+import {
+  ExtractActionHelpersFromModelConstructor,
+  ExtractArgsFromModelConstructor,
+  ExtractDefaultArgsFromModelConstructor,
+  ExtractEffectsFromModelConstructor,
+  ExtractEpicsFromModelConstructor,
+  ExtractGettersFromModelConstructor,
+  ExtractReducersFromModelConstructor,
+  ExtractSelectorsFromModelConstructor,
+  ExtractStateFromModelConstructor,
+  ModelConstructor,
+} from "./model";
+import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
 import { createState, getSubState } from "./state";
-import { flattenObject, is, joinLastString } from "./util";
+import { defineGetter, flattenObject, joinLastString } from "./util";
 
 export interface ContainerBase<
   TState = any,
@@ -25,9 +38,9 @@ export interface Container<
   TModelConstructor extends ModelConstructor = ModelConstructor
 >
   extends ContainerBase<
-    InstanceType<TModelConstructor>["state"],
-    InstanceType<TModelConstructor>["getters"],
-    InstanceType<TModelConstructor>["actions"]
+    ExtractStateFromModelConstructor<TModelConstructor>,
+    ExtractGettersFromModelConstructor<TModelConstructor>,
+    ExtractActionHelpersFromModelConstructor<TModelConstructor>
   > {
   modelNamespace: string;
   containerKey?: string;
@@ -37,7 +50,7 @@ export interface Container<
 
   register(
     args?: ConvertArgsParam<
-      ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>
+      ExtractDefaultArgsFromModelConstructor<TModelConstructor>
     >
   ): void;
   unregister(): void;
@@ -49,34 +62,40 @@ export class ContainerImpl<
   public readonly modelNamespace: string;
 
   public readonly modelContext: ModelContext;
-  public readonly model: InstanceType<TModelConstructor>;
   public readonly namespace: string;
 
-  public readonly selectors: ReturnType<
-    InstanceType<TModelConstructor>["selectors"]
+  public readonly model: InstanceType<TModelConstructor>;
+
+  public readonly selectors: ExtractSelectorsFromModelConstructor<
+    TModelConstructor
   > = this.model.selectors();
 
-  public readonly reducers: ReturnType<
-    InstanceType<TModelConstructor>["reducers"]
+  public readonly reducers: ExtractReducersFromModelConstructor<
+    TModelConstructor
   > = this.model.reducers();
 
-  public readonly effects: ReturnType<
-    InstanceType<TModelConstructor>["effects"]
+  public readonly effects: ExtractEffectsFromModelConstructor<
+    TModelConstructor
   > = this.model.effects();
 
-  public readonly epics: ReturnType<
-    InstanceType<TModelConstructor>["epics"]
+  public readonly epics: ExtractEpicsFromModelConstructor<
+    TModelConstructor
   > = this.model.epics();
 
-  public readonly reducerByPath: Record<
-    string,
-    (payload: any) => void
-  > = flattenObject(this.reducers);
+  public readonly reducerByPath: Record<string, ModelReducer> = flattenObject(
+    this.reducers
+  );
 
-  public readonly effectByPath: Record<
-    string,
-    (payload: any) => Promise<any>
-  > = flattenObject(this.effects);
+  public readonly effectByPath: Record<string, ModelEffect> = flattenObject(
+    this.effects
+  );
+
+  public modelArgs:
+    | ExtractArgsFromModelConstructor<TModelConstructor>
+    | typeof NYAX_NOTHING = NYAX_NOTHING;
+  public modelState:
+    | ExtractStateFromModelConstructor<TModelConstructor>
+    | typeof NYAX_NOTHING = NYAX_NOTHING;
 
   private _initialStateCache: any;
 
@@ -98,16 +117,41 @@ export class ContainerImpl<
     if (!modelContext) {
       throw new Error("Model is not registered");
     }
+
     this.modelContext = modelContext;
-
-    this.model = new this.modelConstructor() as InstanceType<TModelConstructor>;
-    // TODO
-
     this.modelNamespace = this.modelContext.modelNamespace;
     this.namespace = joinLastString(this.modelNamespace, this.containerKey);
-  }
 
-  public args: InstanceType<TModelConstructor>["args"] | undefined;
+    const model = new this.modelConstructor() as InstanceType<
+      TModelConstructor
+    >;
+
+    defineGetter(model, "dependencies", () => this._nyaxContext.dependencies);
+    defineGetter(model, "args", () => {
+      if (this.modelArgs !== NYAX_NOTHING) {
+        return this.modelArgs;
+      }
+      throw new Error("Args is only available in `initialState()`");
+    });
+    defineGetter(model, "state", () => {
+      if (this.modelState !== NYAX_NOTHING) {
+        return this.modelState;
+      }
+      return this.state;
+    });
+    defineGetter(model, "getters", () => this.getters);
+    defineGetter(model, "actions", () => this.actions);
+
+    defineGetter(model, "rootAction$", () => this._nyaxContext.rootAction$);
+    defineGetter(model, "rootState$", () => this._nyaxContext.rootState$);
+
+    defineGetter(model, "modelNamespace", () => this.modelNamespace);
+    defineGetter(model, "containerKey", () => this.containerKey);
+
+    defineGetter(model, "getContainer", () => this._nyaxContext.getContainer);
+
+    this.model = model;
+  }
 
   public get rootState(): any {
     return this._nyaxContext.cachedRootState !== NYAX_NOTHING
@@ -115,7 +159,7 @@ export class ContainerImpl<
       : this._nyaxContext.store.getState();
   }
 
-  public get state(): InstanceType<TModelConstructor>["state"] {
+  public get state(): ExtractStateFromModelConstructor<TModelConstructor> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.state;
@@ -123,7 +167,7 @@ export class ContainerImpl<
 
     if (this.isRegistered) {
       const rootState = this.rootState;
-      if (is(this._lastRootState, rootState)) {
+      if (this._lastRootState === rootState) {
         return this._lastState;
       }
 
@@ -149,10 +193,10 @@ export class ContainerImpl<
       return this._initialStateCache;
     }
 
-    throw new Error("Namespace is already used by other container");
+    throw new Error("Namespace is already bound by other container");
   }
 
-  public get getters(): InstanceType<TModelConstructor>["getters"] {
+  public get getters(): ExtractGettersFromModelConstructor<TModelConstructor> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.getters;
@@ -166,10 +210,12 @@ export class ContainerImpl<
       return this._gettersCache;
     }
 
-    throw new Error("Namespace is already used by other container");
+    throw new Error("Namespace is already bound by other container");
   }
 
-  public get actions(): InstanceType<TModelConstructor>["actions"] {
+  public get actions(): ExtractActionHelpersFromModelConstructor<
+    TModelConstructor
+  > {
     const container = this._currentContainer;
     if (container !== this) {
       return container.actions;
@@ -183,7 +229,7 @@ export class ContainerImpl<
       return this._actionsCache;
     }
 
-    throw new Error("Namespace is already used by other container");
+    throw new Error("Namespace is already bound by other container");
   }
 
   public get isRegistered(): boolean {
@@ -199,11 +245,11 @@ export class ContainerImpl<
 
   public register(
     args?: ConvertArgsParam<
-      ReturnType<InstanceType<TModelConstructor>["defaultArgs"]>
+      ExtractDefaultArgsFromModelConstructor<TModelConstructor>
     >
   ): void {
     if (!this.canRegister) {
-      throw new Error("Namespace is already used");
+      throw new Error("Namespace is already bound");
     }
 
     this._nyaxContext.store.dispatch(
@@ -260,24 +306,26 @@ export interface GetContainerInternal {
 export function createGetContainer(
   nyaxContext: NyaxContext
 ): GetContainerInternal {
-  return ((
-    modelConstructorOrModelNamespace: ModelConstructor | string,
+  return <TModelConstructor extends ModelConstructor>(
+    modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey?: string
-  ): ContainerImpl<ModelConstructor> => {
+  ): ContainerImpl<TModelConstructor> => {
+    let modelConstructor: TModelConstructor;
     if (typeof modelConstructorOrModelNamespace === "string") {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      modelConstructorOrModelNamespace = nyaxContext.modelConstructorByModelNamespace.get(
+      modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
         modelConstructorOrModelNamespace
-      )!;
-      if (modelConstructorOrModelNamespace == null) {
-        throw new Error("Model is not found by namespace");
+      ) as TModelConstructor;
+      if (!modelConstructor) {
+        throw new Error("Model namespace is not bound");
       }
+    } else {
+      modelConstructor = modelConstructorOrModelNamespace;
     }
 
     const modelContext = nyaxContext.modelContextByModelConstructor.get(
-      modelConstructorOrModelNamespace
+      modelConstructor
     );
-    if (modelContext == null) {
+    if (!modelContext) {
       throw new Error("Model is not registered");
     }
 
@@ -289,18 +337,20 @@ export function createGetContainer(
       throw new Error("Container key is not available for static model");
     }
 
-    let container = modelContext.containerByContainerKey.get(containerKey);
-    if (container == null) {
+    let container = modelContext.containerByContainerKey.get(
+      containerKey
+    ) as ContainerImpl<TModelConstructor>;
+    if (!container) {
       container = new ContainerImpl(
         nyaxContext,
-        modelConstructorOrModelNamespace,
+        modelConstructor,
         containerKey
       );
       modelContext.containerByContainerKey.set(containerKey, container);
     }
 
     return container;
-  }) as GetContainerInternal;
+  };
 }
 
 export function createSubContainer<

@@ -1,10 +1,14 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
-import { ModelConstructor } from "./model";
+import {
+  ExtractArgsFromModelConstructor,
+  ExtractStateFromModelConstructor,
+  ModelConstructor,
+} from "./model";
 import { is, isObject } from "./util";
 
-export interface InitialState {
-  [key: string]: any;
+export interface ModelInitialState {
+  [key: string]: any | ModelInitialState;
 }
 
 export type ConvertState<
@@ -73,11 +77,11 @@ export function setSubState(
 
 export function createState<TModelConstructor extends ModelConstructor>(
   container: ContainerImpl<TModelConstructor>,
-  args: InstanceType<TModelConstructor>["args"]
-): InstanceType<TModelConstructor>["state"] {
-  container.args = args;
+  args: ExtractArgsFromModelConstructor<TModelConstructor>
+): ExtractStateFromModelConstructor<TModelConstructor> {
+  container.modelArgs = args;
   const state = container.model.initialState();
-  container.args = undefined;
+  container.modelArgs = NYAX_NOTHING;
 
   return state;
 }
