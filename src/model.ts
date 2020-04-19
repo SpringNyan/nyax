@@ -54,7 +54,7 @@ export interface Model<
   getContainer: GetContainer;
 }
 
-export type ModelConstructor<
+export interface ModelConstructor<
   TDependencies = any,
   TDefaultArgs = any,
   TInitialState = any,
@@ -62,15 +62,26 @@ export type ModelConstructor<
   TReducers = any,
   TEffects = any,
   TEpics = any
-> = new () => Model<
-  TDependencies,
-  TDefaultArgs,
-  TInitialState,
-  TSelectors,
-  TReducers,
-  TEffects,
-  TEpics
->;
+> {
+  autoRegister?: boolean;
+
+  new (): Model<
+    TDependencies,
+    TDefaultArgs,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TEpics
+  >;
+}
+
+export interface ModelConstructors<TDependencies = any> {
+  [key: string]:
+    | ModelConstructor<TDependencies>
+    | [ModelConstructor<TDependencies>]
+    | ModelConstructors<TDependencies>;
+}
 
 export type ExtractDefaultArgsFromModelConstructor<
   TModelConstructor extends ModelConstructor
@@ -115,14 +126,6 @@ export type ExtractGettersFromModelConstructor<
 export type ExtractActionHelpersFromModelConstructor<
   TModelConstructor extends ModelConstructor
 > = InstanceType<TModelConstructor>["actions"];
-
-export interface ModelConstructors<TDependencies = any> {
-  [key: string]:
-    | ModelConstructor<TDependencies>
-    | [ModelConstructor<TDependencies>]
-    | [boolean, ModelConstructor<TDependencies>]
-    | ModelConstructors<TDependencies>;
-}
 
 export type MergeDependenciesFromModelConstructors<
   TModelConstructors extends ModelConstructor[]
@@ -412,14 +415,11 @@ export function createModelBase<TDependencies>(): ModelConstructor<
 export function registerModel<TModelConstructor extends ModelConstructor>(
   nyaxContext: NyaxContext,
   modelNamespace: string,
-  modelConstructorInput:
-    | TModelConstructor
-    | [TModelConstructor]
-    | [boolean, TModelConstructor]
-): RegisterActionPayload[] {
-  const modelConstructor = (Array.isArray(modelConstructorInput)
-    ? modelConstructorInput[modelConstructorInput.length - 1]
-    : modelConstructorInput) as TModelConstructor;
+  modelConstructorInput: TModelConstructor | [TModelConstructor]
+): void {
+  const modelConstructor = Array.isArray(modelConstructorInput)
+    ? modelConstructorInput[0]
+    : modelConstructorInput;
 
   if (nyaxContext.modelContextByModelConstructor.has(modelConstructor)) {
     throw new Error("Model is already registered");
@@ -430,8 +430,7 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
   }
 
   const isDynamic = Array.isArray(modelConstructorInput);
-  const autoRegister =
-    Array.isArray(modelConstructorInput) && modelConstructorInput[0] === true;
+  const autoRegister = !!modelConstructor.autoRegister;
 
   nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
     modelNamespace,
@@ -447,14 +446,6 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
     modelNamespace,
     modelConstructor
   );
-
-  return !isDynamic
-    ? [
-        {
-          modelNamespace,
-        },
-      ]
-    : [];
 }
 
 export function registerModels(
@@ -465,13 +456,16 @@ export function registerModels(
 
   traverseObject(modelConstructors, (item, key, parent, paths) => {
     const modelNamespace = paths.join("/");
-    registerActionPayloads.push(
-      ...registerModel(
-        nyaxContext,
-        modelNamespace,
-        item as Exclude<typeof item, ModelConstructors>
-      )
+    registerModel(
+      nyaxContext,
+      modelNamespace,
+      item as Exclude<typeof item, ModelConstructors>
     );
+    if (!Array.isArray(item)) {
+      registerActionPayloads.push({
+        modelNamespace,
+      });
+    }
   });
 
   return registerActionPayloads;
