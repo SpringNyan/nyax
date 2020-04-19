@@ -364,7 +364,7 @@ export function mergeSubModels<
   };
 }
 
-export function createDefaultModel<TDependencies>(): ModelConstructor<
+export function createModelBase<TDependencies>(): ModelConstructor<
   TDependencies,
   ModelDefaultArgs,
   ModelInitialState,
