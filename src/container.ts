@@ -123,12 +123,6 @@ export class ContainerImpl<
     this.effectByPath = flattenObject(this.effects);
   }
 
-  public get rootState(): any {
-    return this._nyaxContext.cachedRootState !== NYAX_NOTHING
-      ? this._nyaxContext.cachedRootState
-      : this._nyaxContext.store.getState();
-  }
-
   public get state(): ExtractStateFromModelConstructor<TModelConstructor> {
     const container = this._currentContainer;
     if (container !== this) {
@@ -136,7 +130,7 @@ export class ContainerImpl<
     }
 
     if (this.isRegistered) {
-      const rootState = this.rootState;
+      const rootState = this._nyaxContext.getRootState();
       if (this._lastRootState === rootState) {
         return this._lastState;
       }

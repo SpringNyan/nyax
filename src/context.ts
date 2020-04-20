@@ -9,6 +9,7 @@ import {
   GetContainerInternal,
 } from "./container";
 import { ModelConstructor } from "./model";
+import { createGetState, GetState } from "./state";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -19,6 +20,7 @@ export interface NyaxContext {
   rootState$: StateObservable<any>;
 
   getContainer: GetContainerInternal;
+  getState: GetState;
 
   addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
@@ -40,6 +42,8 @@ export interface NyaxContext {
   dependencies: any;
   onUnhandledEffectError: (error: any) => void;
   onUnhandledEpicError: (error: any) => void;
+
+  getRootState: () => any;
 }
 
 export interface ModelContext {
@@ -66,6 +70,8 @@ export function createNyaxContext(): NyaxContext {
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getContainer: undefined!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    getState: undefined!,
 
     addEpic$: new Subject(),
     switchEpic$: new Subject(),
@@ -95,9 +101,15 @@ export function createNyaxContext(): NyaxContext {
         console.error(error);
       }
     },
+
+    getRootState: () =>
+      nyaxContext.cachedRootState !== NYAX_NOTHING
+        ? nyaxContext.cachedRootState
+        : nyaxContext.store.getState(),
   };
 
   nyaxContext.getContainer = createGetContainer(nyaxContext);
+  nyaxContext.getState = createGetState(nyaxContext);
 
   return nyaxContext;
 }

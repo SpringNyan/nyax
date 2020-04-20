@@ -13,6 +13,7 @@ import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
 import { ModelConstructors, registerModels } from "./model";
 import { createRootReducer } from "./reducer";
+import { GetState } from "./state";
 
 export interface NyaxOptions<TDependencies = any> {
   dependencies: TDependencies;
@@ -31,6 +32,7 @@ export interface Nyax<TDependencies = any> {
   store: Store;
   registerModels: (modelConstructors: ModelConstructors<TDependencies>) => void;
   getContainer: GetContainer;
+  getState: GetState;
   reload: (state?: any) => void;
   gc: (filterFn?: (container: Container) => boolean) => void;
 }
@@ -85,6 +87,7 @@ export function createNyax<TDependencies>(
       );
     },
     getContainer: nyaxContext.getContainer,
+    getState: nyaxContext.getState,
     reload: (state): void => {
       nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
     },

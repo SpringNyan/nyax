@@ -63,7 +63,8 @@ export interface ModelConstructor<
   TEffects = any,
   TEpics = any
 > {
-  autoRegister?: boolean;
+  readonly isDynamic?: boolean;
+  readonly isAutoRegistration?: boolean;
 
   new (): Model<
     TDependencies,
@@ -79,7 +80,6 @@ export interface ModelConstructor<
 export interface ModelConstructors<TDependencies = any> {
   [key: string]:
     | ModelConstructor<TDependencies>
-    | [ModelConstructor<TDependencies>]
     | ModelConstructors<TDependencies>;
 }
 
@@ -415,12 +415,8 @@ export function createModelBase<TDependencies>(): ModelConstructor<
 export function registerModel<TModelConstructor extends ModelConstructor>(
   nyaxContext: NyaxContext,
   modelNamespace: string,
-  modelConstructorInput: TModelConstructor | [TModelConstructor]
+  modelConstructor: TModelConstructor
 ): void {
-  const modelConstructor = Array.isArray(modelConstructorInput)
-    ? modelConstructorInput[0]
-    : modelConstructorInput;
-
   if (nyaxContext.modelContextByModelConstructor.has(modelConstructor)) {
     throw new Error("Model is already registered");
   }
@@ -429,8 +425,8 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
     throw new Error("Model namespace is already bound");
   }
 
-  const isDynamic = Array.isArray(modelConstructorInput);
-  const autoRegister = !!modelConstructor.autoRegister;
+  const isDynamic = !!modelConstructor.isDynamic;
+  const autoRegister = !!modelConstructor.isAutoRegistration;
 
   nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
     modelNamespace,
@@ -456,12 +452,10 @@ export function registerModels(
 
   traverseObject(modelConstructors, (item, key, parent, paths) => {
     const modelNamespace = paths.join("/");
-    registerModel(
-      nyaxContext,
-      modelNamespace,
-      item as Exclude<typeof item, ModelConstructors>
-    );
-    if (!Array.isArray(item)) {
+    const modelConstructor = item as Exclude<typeof item, ModelConstructors>;
+
+    registerModel(nyaxContext, modelNamespace, modelConstructor);
+    if (!modelConstructor.isDynamic) {
       registerActionPayloads.push({
         modelNamespace,
       });
@@ -478,9 +472,8 @@ export function flattenModels(
 
   traverseObject(modelConstructors, (item, key, parent, paths) => {
     const modelNamespace = paths.join("/");
-    result[modelNamespace] = (Array.isArray(item)
-      ? item[item.length - 1]
-      : item) as ModelConstructor;
+    const modelConstructor = item as Exclude<typeof item, ModelConstructors>;
+    result[modelNamespace] = modelConstructor;
   });
 
   return result;
