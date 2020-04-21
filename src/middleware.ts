@@ -45,13 +45,13 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
   }
 
   function reload(payload: ReloadActionPayload): void {
+    nyaxContext.switchEpic$.next();
+
     nyaxContext.containerByNamespace.clear();
 
     nyaxContext.modelContextByModelConstructor.forEach((context) => {
       context.containerByContainerKey.clear();
     });
-
-    nyaxContext.switchEpic$.next();
 
     const rootState =
       payload.state !== undefined
@@ -64,7 +64,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
         (context, modelConstructor) => {
           const state = rootState[context.modelPath];
           if (isObject(state)) {
-            if (!modelConstructor.isDynamic) {
+            if (!modelConstructor.isDynamic && !modelConstructor.isLazy) {
               registerPayloads.push({
                 modelNamespace: context.modelNamespace,
               });

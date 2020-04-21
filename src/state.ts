@@ -1,6 +1,5 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
-import { NyaxContext } from "./context";
 import {
   ExtractArgsFromModelConstructor,
   ExtractStateFromModelConstructor,
@@ -85,41 +84,4 @@ export function createState<TModelConstructor extends ModelConstructor>(
   container.modelArgs = NYAX_NOTHING;
 
   return state;
-}
-
-export interface GetState {
-  <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string
-  ): TModelConstructor["isDynamic"] extends true
-    ? Partial<
-        Record<string, ExtractStateFromModelConstructor<TModelConstructor>>
-      >
-    : ExtractStateFromModelConstructor<TModelConstructor>;
-}
-
-export function createGetState(nyaxContext: NyaxContext): GetState {
-  // TODO: check model registered
-
-  return <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string
-  ): TModelConstructor["isDynamic"] extends true
-    ? Partial<
-        Record<string, ExtractStateFromModelConstructor<TModelConstructor>>
-      >
-    : ExtractStateFromModelConstructor<TModelConstructor> => {
-    let modelNamespace: string;
-    if (typeof modelConstructorOrModelNamespace === "string") {
-      modelNamespace = modelConstructorOrModelNamespace;
-    } else {
-      const modelContext = nyaxContext.modelContextByModelConstructor.get(
-        modelConstructorOrModelNamespace
-      );
-      if (!modelContext) {
-        throw new Error("Model is not registered");
-      }
-      modelNamespace = modelContext.modelNamespace;
-    }
-
-    return nyaxContext.getRootState()[modelNamespace] ?? {};
-  };
 }

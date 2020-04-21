@@ -16,7 +16,7 @@ export interface RequiredArg<T = any> {
 }
 
 export interface ModelDefaultArgs {
-  [key: string]: any;
+  [key: string]: any | ModelDefaultArgs;
 }
 
 export interface MarkedModelDefaultArgs extends ModelDefaultArgs {
