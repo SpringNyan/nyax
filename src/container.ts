@@ -325,11 +325,11 @@ export function createGetContainer(
       throw new Error("Model is not registered");
     }
 
-    if (containerKey === undefined && modelContext.isDynamic) {
+    if (containerKey === undefined && modelConstructor.isDynamic) {
       throw new Error("Container key is required for dynamic model");
     }
 
-    if (containerKey !== undefined && !modelContext.isDynamic) {
+    if (containerKey !== undefined && !modelConstructor.isDynamic) {
       throw new Error("Container key is not available for static model");
     }
 

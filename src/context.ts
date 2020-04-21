@@ -50,9 +50,6 @@ export interface ModelContext {
   modelNamespace: string;
   modelPath: string;
 
-  isDynamic: boolean;
-  isLazy: boolean;
-
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
 }
 

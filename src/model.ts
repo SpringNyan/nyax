@@ -425,15 +425,9 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
     throw new Error("Model namespace is already bound");
   }
 
-  const isDynamic = !!modelConstructor.isDynamic;
-  const isLazy = !!modelConstructor.isLazy;
-
   nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
     modelNamespace,
     modelPath: convertNamespaceToPath(modelNamespace),
-
-    isDynamic,
-    isLazy,
 
     containerByContainerKey: new Map(),
   });
