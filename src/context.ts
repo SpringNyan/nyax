@@ -51,7 +51,7 @@ export interface ModelContext {
   modelPath: string;
 
   isDynamic: boolean;
-  autoRegister: boolean;
+  isLazy: boolean;
 
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
 }

@@ -64,7 +64,7 @@ export interface ModelConstructor<
   TEpics = any
 > {
   readonly isDynamic?: boolean;
-  readonly isAutoRegistration?: boolean;
+  readonly isLazy?: boolean;
 
   new (): Model<
     TDependencies,
@@ -426,14 +426,14 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
   }
 
   const isDynamic = !!modelConstructor.isDynamic;
-  const autoRegister = !!modelConstructor.isAutoRegistration;
+  const isLazy = !!modelConstructor.isLazy;
 
   nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
     modelNamespace,
     modelPath: convertNamespaceToPath(modelNamespace),
 
     isDynamic,
-    autoRegister,
+    isLazy,
 
     containerByContainerKey: new Map(),
   });

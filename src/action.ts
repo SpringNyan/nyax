@@ -71,10 +71,7 @@ export class ActionHelperImpl<TPayload, TResult>
   }
 
   public dispatch(payload: TPayload): Promise<TResult> {
-    if (
-      this._container.canRegister &&
-      this._container.modelContext.autoRegister
-    ) {
+    if (this._container.canRegister && this._container.modelContext.isLazy) {
       this._container.register();
     }
 
