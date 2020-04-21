@@ -62,8 +62,8 @@ export interface ModelConstructor<
   TEffects = any,
   TEpics = any
 > {
-  readonly isDynamic?: boolean;
-  readonly isLazy?: boolean;
+  readonly isDynamic?: true;
+  readonly isLazy?: true;
 
   new (): Model<
     TDependencies,

@@ -1,11 +1,11 @@
 import { timer } from "rxjs";
 import { createRequiredArg } from "../src/arg";
-import { createDefaultModel, mergeModels, mergeSubModels } from "../src/model";
+import { createModelBase, mergeModels, mergeSubModels } from "../src/model";
 import { Dependencies } from "./dependencies";
 
-const DefaultModel = createDefaultModel<Dependencies>();
+const ModelBase = createModelBase<Dependencies>();
 
-class FakeModel1 extends DefaultModel {
+class FakeModel1 extends ModelBase {
   public defaultArgs() {
     return {
       arg1: "arg1",
@@ -63,7 +63,7 @@ class FakeModel1 extends DefaultModel {
   }
 }
 
-class FakeModel2 extends DefaultModel {
+class FakeModel2 extends ModelBase {
   public defaultArgs() {
     return {
       arg5: "arg1",
