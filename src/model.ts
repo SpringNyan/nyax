@@ -178,6 +178,7 @@ export class ModelBase<TDependencies = any>
   implements Model<TDependencies, {}, {}, {}, {}, {}, {}> {
   public _nyaxContext!: NyaxContext;
   public _container!: ContainerImpl;
+  public _subKey!: string | undefined;
 
   public defaultArgs(): {} {
     return {};
@@ -203,21 +204,21 @@ export class ModelBase<TDependencies = any>
   }
   public get args(): any {
     if (this._container.modelArgs !== NYAX_NOTHING) {
-      return this._container.modelArgs;
+      return this._getContainerProp(this._container.modelArgs);
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
     if (this._container.modelState !== NYAX_NOTHING) {
-      return this._container.modelState;
+      return this._getContainerProp(this._container.modelState);
     }
-    return this._container.state;
+    return this._getContainerProp(this._container.state);
   }
   public get getters(): any {
-    return this._container.getters;
+    return this._getContainerProp(this._container.getters);
   }
   public get actions(): any {
-    return this._container.actions;
+    return this._getContainerProp(this._container.actions);
   }
 
   public get rootAction$(): any {
@@ -236,6 +237,10 @@ export class ModelBase<TDependencies = any>
 
   public get getContainer(): any {
     return this._nyaxContext.getContainer;
+  }
+
+  private _getContainerProp(prop: any): any {
+    return this._subKey !== undefined ? prop[this._subKey] : prop;
   }
 }
 
@@ -326,6 +331,7 @@ export function mergeSubModels<
       const model = new subModelConstructors[key]() as ModelBase;
       defineGetter(model, "_nyaxContext", () => this._nyaxContext);
       defineGetter(model, "_container", () => this._container);
+      model._subKey = key;
       obj[key] = model;
       return obj;
     }, {});
