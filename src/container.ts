@@ -17,12 +17,13 @@ import {
   ExtractReducersFromModelConstructor,
   ExtractSelectorsFromModelConstructor,
   ExtractStateFromModelConstructor,
+  ModelBase,
   ModelConstructor,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
 import { createState, getSubState } from "./state";
-import { defineGetter, flattenObject, joinLastString } from "./util";
+import { flattenObject, joinLastString } from "./util";
 
 export interface ContainerBase<
   TState = any,
@@ -123,12 +124,6 @@ export class ContainerImpl<
     this.effectByPath = flattenObject(this.effects);
   }
 
-  public get rootState(): any {
-    return this._nyaxContext.cachedRootState !== NYAX_NOTHING
-      ? this._nyaxContext.cachedRootState
-      : this._nyaxContext.store.getState();
-  }
-
   public get state(): ExtractStateFromModelConstructor<TModelConstructor> {
     const container = this._currentContainer;
     if (container !== this) {
@@ -136,7 +131,7 @@ export class ContainerImpl<
     }
 
     if (this.isRegistered) {
-      const rootState = this.rootState;
+      const rootState = this._nyaxContext.getRootState();
       if (this._lastRootState === rootState) {
         return this._lastState;
       }
@@ -256,46 +251,25 @@ export class ContainerImpl<
   }
 
   private _initializeModel(): InstanceType<TModelConstructor> {
-    const model = new this.modelConstructor() as InstanceType<
-      TModelConstructor
-    >;
-
-    defineGetter(model, "dependencies", () => this._nyaxContext.dependencies);
-    defineGetter(model, "args", () => {
-      if (this.modelArgs !== NYAX_NOTHING) {
-        return this.modelArgs;
-      }
-      throw new Error("Args is only available in `initialState()`");
-    });
-    defineGetter(model, "state", () => {
-      if (this.modelState !== NYAX_NOTHING) {
-        return this.modelState;
-      }
-      return this.state;
-    });
-    defineGetter(model, "getters", () => this.getters);
-    defineGetter(model, "actions", () => this.actions);
-
-    defineGetter(model, "rootAction$", () => this._nyaxContext.rootAction$);
-    defineGetter(model, "rootState$", () => this._nyaxContext.rootState$);
-
-    defineGetter(model, "modelNamespace", () => this.modelNamespace);
-    defineGetter(model, "containerKey", () => this.containerKey);
-
-    defineGetter(model, "getContainer", () => this._nyaxContext.getContainer);
-
-    return model;
+    const model = new this.modelConstructor() as ModelBase;
+    model._nyaxContext = this._nyaxContext;
+    model._container = this;
+    return model as InstanceType<TModelConstructor>;
   }
 }
 
 export interface GetContainer {
   <TModelConstructor extends ModelConstructor>(
     modelConstructorOrModelNamespace: TModelConstructor | string
-  ): Container<TModelConstructor>;
+  ): TModelConstructor["isDynamic"] extends true
+    ? never
+    : Container<TModelConstructor>;
   <TModelConstructor extends ModelConstructor>(
     modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey: string
-  ): Container<TModelConstructor>;
+  ): TModelConstructor["isDynamic"] extends true
+    ? Container<TModelConstructor>
+    : never;
 }
 
 export interface GetContainerInternal {
@@ -331,11 +305,11 @@ export function createGetContainer(
       throw new Error("Model is not registered");
     }
 
-    if (containerKey === undefined && modelContext.isDynamic) {
+    if (containerKey === undefined && modelConstructor.isDynamic) {
       throw new Error("Container key is required for dynamic model");
     }
 
-    if (containerKey !== undefined && !modelContext.isDynamic) {
+    if (containerKey !== undefined && !modelConstructor.isDynamic) {
       throw new Error("Container key is not available for static model");
     }
 
@@ -362,18 +336,18 @@ export function createSubContainer<
   container: TContainer,
   subKey: TSubKey
 ): ContainerBase<
-  TContainer["state"],
-  TContainer["getters"],
-  TContainer["actions"]
+  TContainer["state"][TSubKey],
+  TContainer["getters"][TSubKey],
+  TContainer["actions"][TSubKey]
 > {
   return {
-    get state(): TContainer["state"] {
+    get state(): TContainer["state"][TSubKey] {
       return container.state[subKey];
     },
-    get getters(): TContainer["getters"] {
+    get getters(): TContainer["getters"][TSubKey] {
       return container.getters[subKey];
     },
-    get actions(): TContainer["actions"] {
+    get actions(): TContainer["actions"][TSubKey] {
       return container.actions[subKey];
     },
   };

@@ -3,7 +3,7 @@ export { createRequiredArg } from "./arg";
 export { createSubContainer } from "./container";
 export type { Container, GetContainer } from "./container";
 export {
-  createDefaultModel,
+  createModelBase,
   flattenModels,
   mergeModels,
   mergeSubModels,

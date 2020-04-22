@@ -45,13 +45,13 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
   }
 
   function reload(payload: ReloadActionPayload): void {
+    nyaxContext.switchEpic$.next();
+
     nyaxContext.containerByNamespace.clear();
 
     nyaxContext.modelContextByModelConstructor.forEach((context) => {
       context.containerByContainerKey.clear();
     });
-
-    nyaxContext.switchEpic$.next();
 
     const rootState =
       payload.state !== undefined
@@ -60,25 +60,27 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
     const registerPayloads: RegisterActionPayload[] = [];
     if (isObject(rootState)) {
-      nyaxContext.modelContextByModelConstructor.forEach((context) => {
-        const state = rootState[context.modelPath];
-        if (isObject(state)) {
-          if (!context.isDynamic) {
-            registerPayloads.push({
-              modelNamespace: context.modelNamespace,
-            });
-          } else {
-            Object.keys(state).forEach((containerKey) => {
-              if (isObject(state[containerKey])) {
-                registerPayloads.push({
-                  modelNamespace: context.modelNamespace,
-                  containerKey,
-                });
-              }
-            });
+      nyaxContext.modelContextByModelConstructor.forEach(
+        (context, modelConstructor) => {
+          const state = rootState[context.modelPath];
+          if (isObject(state)) {
+            if (!modelConstructor.isDynamic && !modelConstructor.isLazy) {
+              registerPayloads.push({
+                modelNamespace: context.modelNamespace,
+              });
+            } else {
+              Object.keys(state).forEach((containerKey) => {
+                if (isObject(state[containerKey])) {
+                  registerPayloads.push({
+                    modelNamespace: context.modelNamespace,
+                    containerKey,
+                  });
+                }
+              });
+            }
           }
         }
-      });
+      );
     }
 
     batchRegister(registerPayloads);
@@ -96,10 +98,29 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
       reload(action.payload);
     }
 
+    const [namespace, actionName] = splitLastString(action.type);
+    let container = nyaxContext.containerByNamespace.get(namespace);
+    if (!container) {
+      let modelNamespace = namespace;
+      let containerKey: string | undefined;
+
+      let modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
+        modelNamespace
+      );
+      if (!modelConstructor) {
+        [modelNamespace, containerKey] = splitLastString(modelNamespace);
+        modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
+          modelNamespace
+        );
+      }
+      if (modelConstructor?.isLazy) {
+        container = nyaxContext.getContainer(modelConstructor, containerKey);
+        container.register();
+      }
+    }
+
     const result = next(action);
 
-    const [namespace, actionName] = splitLastString(action.type);
-    const container = nyaxContext.containerByNamespace.get(namespace);
     if (container?.isRegistered) {
       const effect = container.effectByPath[actionName];
       if (effect) {

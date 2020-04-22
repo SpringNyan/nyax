@@ -64,20 +64,12 @@ export class ActionHelperImpl<TPayload, TResult>
   implements ActionHelper<TPayload, TResult> {
   constructor(
     private readonly _nyaxContext: NyaxContext,
-    private readonly _container: ContainerImpl,
     public readonly type: string
   ) {
     super(type);
   }
 
   public dispatch(payload: TPayload): Promise<TResult> {
-    if (
-      this._container.canRegister &&
-      this._container.modelContext.autoRegister
-    ) {
-      this._container.register();
-    }
-
     const action = this.create(payload);
     const promise = new Promise<TResult>((resolve, reject) => {
       // TODO: handle unhandled effect error
@@ -105,7 +97,6 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
   mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      container,
       joinLastString(container.namespace, paths.join("."))
     );
   });

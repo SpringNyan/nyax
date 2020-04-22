@@ -139,7 +139,7 @@ export function defineGetter<TObject, TKey extends keyof TObject>(
 ): void {
   Object.defineProperty(obj, p, {
     get,
-    enumerable: true,
+    enumerable: false,
     configurable: true,
   });
 }

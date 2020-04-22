@@ -40,14 +40,13 @@ export interface NyaxContext {
   dependencies: any;
   onUnhandledEffectError: (error: any) => void;
   onUnhandledEpicError: (error: any) => void;
+
+  getRootState: () => any;
 }
 
 export interface ModelContext {
   modelNamespace: string;
   modelPath: string;
-
-  isDynamic: boolean;
-  autoRegister: boolean;
 
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
 }
@@ -95,6 +94,11 @@ export function createNyaxContext(): NyaxContext {
         console.error(error);
       }
     },
+
+    getRootState: () =>
+      nyaxContext.cachedRootState !== NYAX_NOTHING
+        ? nyaxContext.cachedRootState
+        : nyaxContext.store.getState(),
   };
 
   nyaxContext.getContainer = createGetContainer(nyaxContext);

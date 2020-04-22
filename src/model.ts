@@ -4,17 +4,16 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import { ConvertArgs, ModelDefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
-import { GetContainer } from "./container";
+import { ConvertArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import { NYAX_NOTHING } from "./common";
+import { ContainerImpl, GetContainer } from "./container";
 import { NyaxContext } from "./context";
-import { ModelEffects } from "./effect";
-import { ModelEpics } from "./epic";
-import { ModelReducers } from "./reducer";
-import { ConvertGetters, ModelSelectors } from "./selector";
-import { ConvertState, ModelInitialState } from "./state";
+import { ConvertGetters } from "./selector";
+import { ConvertState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
+  flattenObject,
   mergeObjects,
   traverseObject,
   UnionToIntersection,
@@ -54,7 +53,7 @@ export interface Model<
   getContainer: GetContainer;
 }
 
-export type ModelConstructor<
+export interface ModelConstructor<
   TDependencies = any,
   TDefaultArgs = any,
   TInitialState = any,
@@ -62,15 +61,24 @@ export type ModelConstructor<
   TReducers = any,
   TEffects = any,
   TEpics = any
-> = new () => Model<
-  TDependencies,
-  TDefaultArgs,
-  TInitialState,
-  TSelectors,
-  TReducers,
-  TEffects,
-  TEpics
->;
+> {
+  readonly isDynamic?: true;
+  readonly isLazy?: true;
+
+  new (): Model<
+    TDependencies,
+    TDefaultArgs,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TEpics
+  >;
+}
+
+export interface ModelConstructors {
+  [key: string]: ModelConstructor | ModelConstructors;
+}
 
 export type ExtractDefaultArgsFromModelConstructor<
   TModelConstructor extends ModelConstructor
@@ -115,14 +123,6 @@ export type ExtractGettersFromModelConstructor<
 export type ExtractActionHelpersFromModelConstructor<
   TModelConstructor extends ModelConstructor
 > = InstanceType<TModelConstructor>["actions"];
-
-export interface ModelConstructors<TDependencies = any> {
-  [key: string]:
-    | ModelConstructor<TDependencies>
-    | [ModelConstructor<TDependencies>]
-    | [boolean, ModelConstructor<TDependencies>]
-    | ModelConstructors<TDependencies>;
-}
 
 export type MergeDependenciesFromModelConstructors<
   TModelConstructors extends ModelConstructor[]
@@ -174,6 +174,76 @@ export type MergeSubModelPropFromSubModelConstructors<
     (TPropKey extends "defaultArgs" ? { [NYAX_DEFAULT_ARGS_KEY]: true } : {});
 };
 
+export class ModelBase<TDependencies = any>
+  implements Model<TDependencies, {}, {}, {}, {}, {}, {}> {
+  public _nyaxContext!: NyaxContext;
+  public _container!: ContainerImpl;
+  public _subKey!: string | undefined;
+
+  public defaultArgs(): {} {
+    return {};
+  }
+  public initialState(): {} {
+    return {};
+  }
+  public selectors(): {} {
+    return {};
+  }
+  public reducers(): {} {
+    return {};
+  }
+  public effects(): {} {
+    return {};
+  }
+  public epics(): {} {
+    return {};
+  }
+
+  public get dependencies(): TDependencies {
+    return this._nyaxContext.dependencies;
+  }
+  public get args(): any {
+    if (this._container.modelArgs !== NYAX_NOTHING) {
+      return this._getContainerProp(this._container.modelArgs);
+    }
+    throw new Error("Args is only available in `initialState()`");
+  }
+  public get state(): any {
+    if (this._container.modelState !== NYAX_NOTHING) {
+      return this._getContainerProp(this._container.modelState);
+    }
+    return this._getContainerProp(this._container.state);
+  }
+  public get getters(): any {
+    return this._getContainerProp(this._container.getters);
+  }
+  public get actions(): any {
+    return this._getContainerProp(this._container.actions);
+  }
+
+  public get rootAction$(): any {
+    return this._nyaxContext.rootAction$;
+  }
+  public get rootState$(): any {
+    return this._nyaxContext.rootState$;
+  }
+
+  public get modelNamespace(): any {
+    return this._container.modelNamespace;
+  }
+  public get containerKey(): any {
+    return this._container.containerKey;
+  }
+
+  public get getContainer(): any {
+    return this._nyaxContext.getContainer;
+  }
+
+  private _getContainerProp(prop: any): any {
+    return this._subKey !== undefined ? prop[this._subKey] : prop;
+  }
+}
+
 export function mergeModels<
   TModelConstructors extends ModelConstructor[] | [ModelConstructor]
 >(
@@ -187,30 +257,13 @@ export function mergeModels<
   MergeModelPropFromModelConstructors<TModelConstructors, "effects">,
   MergeModelPropFromModelConstructors<TModelConstructors, "epics">
 > {
-  return class {
-    private readonly _models: Model[];
-
-    constructor() {
-      this._models = modelConstructors.map((ctor) => {
-        const model = new ctor();
-
-        defineGetter(model, "dependencies", () => this.dependencies);
-        defineGetter(model, "args", () => this.args);
-        defineGetter(model, "state", () => this.state);
-        defineGetter(model, "getters", () => this.getters);
-        defineGetter(model, "actions", () => this.actions);
-
-        defineGetter(model, "rootAction$", () => this.rootAction$);
-        defineGetter(model, "rootState$", () => this.rootState$);
-
-        defineGetter(model, "modelNamespace", () => this.modelNamespace);
-        defineGetter(model, "containerKey", () => this.containerKey);
-
-        defineGetter(model, "getContainer", () => this.getContainer);
-
-        return model;
-      });
-    }
+  return class extends ModelBase {
+    private readonly _models: Model[] = modelConstructors.map((ctor) => {
+      const model = new ctor() as ModelBase;
+      defineGetter(model, "_nyaxContext", () => this._nyaxContext);
+      defineGetter(model, "_container", () => this._container);
+      return model;
+    });
 
     public defaultArgs(): any {
       return this._mergeModelProp("defaultArgs");
@@ -249,20 +302,6 @@ export function mergeModels<
 
       return result;
     }
-
-    public dependencies!: any;
-    public args!: any;
-    public state!: any;
-    public getters!: any;
-    public actions!: any;
-
-    public rootAction$!: any;
-    public rootState$!: any;
-
-    public modelNamespace!: any;
-    public containerKey!: any;
-
-    public getContainer!: any;
   };
 }
 
@@ -285,31 +324,17 @@ export function mergeSubModels<
   MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "effects">,
   MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "epics">
 > {
-  return class {
-    private readonly _subModels: Record<string, Model>;
-
-    constructor() {
-      this._subModels = {};
-      Object.keys(subModelConstructors).forEach((key) => {
-        const model = new subModelConstructors[key]();
-
-        defineGetter(model, "dependencies", () => this.dependencies);
-        defineGetter(model, "args", () => this.args[key]);
-        defineGetter(model, "state", () => this.state[key]);
-        defineGetter(model, "getters", () => this.getters[key]);
-        defineGetter(model, "actions", () => this.actions[key]);
-
-        defineGetter(model, "rootAction$", () => this.rootAction$);
-        defineGetter(model, "rootState$", () => this.rootState$);
-
-        defineGetter(model, "modelNamespace", () => this.modelNamespace);
-        defineGetter(model, "containerKey", () => this.containerKey);
-
-        defineGetter(model, "getContainer", () => this.getContainer);
-
-        this._subModels[key] = model;
-      });
-    }
+  return class extends ModelBase {
+    private readonly _subModels: Record<string, Model> = Object.keys(
+      subModelConstructors
+    ).reduce<Record<string, Model>>((obj, key) => {
+      const model = new subModelConstructors[key]() as ModelBase;
+      defineGetter(model, "_nyaxContext", () => this._nyaxContext);
+      defineGetter(model, "_container", () => this._container);
+      model._subKey = key;
+      obj[key] = model;
+      return obj;
+    }, {});
 
     public defaultArgs(): any {
       return this._mergeSubModelProp("defaultArgs");
@@ -347,80 +372,26 @@ export function mergeSubModels<
       });
       return result;
     }
-
-    public dependencies!: any;
-    public args!: any;
-    public state!: any;
-    public getters!: any;
-    public actions!: any;
-
-    public rootAction$!: any;
-    public rootState$!: any;
-
-    public modelNamespace!: any;
-    public containerKey!: any;
-
-    public getContainer!: any;
   };
 }
 
-export function createDefaultModel<TDependencies>(): ModelConstructor<
+export function createModelBase<TDependencies>(): ModelConstructor<
   TDependencies,
-  ModelDefaultArgs,
-  ModelInitialState,
-  ModelSelectors,
-  ModelReducers,
-  ModelEffects,
-  ModelEpics
+  {},
+  {},
+  {},
+  {},
+  {},
+  {}
 > {
-  return class {
-    public defaultArgs(): ModelDefaultArgs {
-      return {};
-    }
-    public initialState(): ModelInitialState {
-      return {};
-    }
-    public selectors(): ModelSelectors {
-      return {};
-    }
-    public reducers(): ModelReducers {
-      return {};
-    }
-    public effects(): ModelEffects {
-      return {};
-    }
-    public epics(): ModelEpics {
-      return {};
-    }
-
-    public dependencies!: any;
-    public args!: any;
-    public state!: any;
-    public getters!: any;
-    public actions!: any;
-
-    public rootAction$!: any;
-    public rootState$!: any;
-
-    public modelNamespace!: any;
-    public containerKey!: any;
-
-    public getContainer!: any;
-  };
+  return class extends ModelBase<TDependencies> {};
 }
 
 export function registerModel<TModelConstructor extends ModelConstructor>(
   nyaxContext: NyaxContext,
   modelNamespace: string,
-  modelConstructorInput:
-    | TModelConstructor
-    | [TModelConstructor]
-    | [boolean, TModelConstructor]
-): RegisterActionPayload[] {
-  const modelConstructor = (Array.isArray(modelConstructorInput)
-    ? modelConstructorInput[modelConstructorInput.length - 1]
-    : modelConstructorInput) as TModelConstructor;
-
+  modelConstructor: TModelConstructor
+): void {
   if (nyaxContext.modelContextByModelConstructor.has(modelConstructor)) {
     throw new Error("Model is already registered");
   }
@@ -429,16 +400,9 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
     throw new Error("Model namespace is already bound");
   }
 
-  const isDynamic = Array.isArray(modelConstructorInput);
-  const autoRegister =
-    Array.isArray(modelConstructorInput) && modelConstructorInput[0] === true;
-
   nyaxContext.modelContextByModelConstructor.set(modelConstructor, {
     modelNamespace,
     modelPath: convertNamespaceToPath(modelNamespace),
-
-    isDynamic,
-    autoRegister,
 
     containerByContainerKey: new Map(),
   });
@@ -447,14 +411,6 @@ export function registerModel<TModelConstructor extends ModelConstructor>(
     modelNamespace,
     modelConstructor
   );
-
-  return !isDynamic
-    ? [
-        {
-          modelNamespace,
-        },
-      ]
-    : [];
 }
 
 export function registerModels(
@@ -465,13 +421,14 @@ export function registerModels(
 
   traverseObject(modelConstructors, (item, key, parent, paths) => {
     const modelNamespace = paths.join("/");
-    registerActionPayloads.push(
-      ...registerModel(
-        nyaxContext,
+    const modelConstructor = item as Exclude<typeof item, ModelConstructors>;
+
+    registerModel(nyaxContext, modelNamespace, modelConstructor);
+    if (!modelConstructor.isDynamic && !modelConstructor.isLazy) {
+      registerActionPayloads.push({
         modelNamespace,
-        item as Exclude<typeof item, ModelConstructors>
-      )
-    );
+      });
+    }
   });
 
   return registerActionPayloads;
@@ -480,14 +437,8 @@ export function registerModels(
 export function flattenModels(
   modelConstructors: ModelConstructors
 ): Record<string, ModelConstructor> {
-  const result: Record<string, ModelConstructor> = {};
-
-  traverseObject(modelConstructors, (item, key, parent, paths) => {
-    const modelNamespace = paths.join("/");
-    result[modelNamespace] = (Array.isArray(item)
-      ? item[item.length - 1]
-      : item) as ModelConstructor;
-  });
-
-  return result;
+  return flattenObject(modelConstructors, "/") as Record<
+    string,
+    ModelConstructor
+  >;
 }
