@@ -14,8 +14,8 @@ import { createMiddleware } from "./middleware";
 import { ModelConstructors, registerModels } from "./model";
 import { createRootReducer } from "./reducer";
 
-export interface NyaxOptions<TDependencies = any> {
-  dependencies: TDependencies;
+export interface NyaxOptions {
+  dependencies: any;
 
   createStore?: (params: {
     reducer: Reducer;
@@ -27,17 +27,15 @@ export interface NyaxOptions<TDependencies = any> {
   onUnhandledEpicError?: (error: any) => void;
 }
 
-export interface Nyax<TDependencies = any> {
+export interface Nyax {
   store: Store;
-  registerModels: (modelConstructors: ModelConstructors<TDependencies>) => void;
-  getContainer: GetContainer<TDependencies>;
+  registerModels: (modelConstructors: ModelConstructors) => void;
+  getContainer: GetContainer;
   reload: (state?: any) => void;
   gc: (filterFn?: (container: Container) => boolean) => void;
 }
 
-export function createNyax<TDependencies>(
-  options: NyaxOptions<TDependencies>
-): Nyax<TDependencies> {
+export function createNyax(options: NyaxOptions): Nyax {
   const nyaxContext = createNyaxContext();
   nyaxContext.options = options;
 

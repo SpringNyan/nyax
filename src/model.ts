@@ -76,10 +76,8 @@ export interface ModelConstructor<
   >;
 }
 
-export interface ModelConstructors<TDependencies = any> {
-  [key: string]:
-    | ModelConstructor<TDependencies>
-    | ModelConstructors<TDependencies>;
+export interface ModelConstructors {
+  [key: string]: ModelConstructor | ModelConstructors;
 }
 
 export type ExtractDefaultArgsFromModelConstructor<

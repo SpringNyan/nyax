@@ -258,13 +258,13 @@ export class ContainerImpl<
   }
 }
 
-export interface GetContainer<TDependencies = any> {
-  <TModelConstructor extends ModelConstructor<TDependencies>>(
+export interface GetContainer {
+  <TModelConstructor extends ModelConstructor>(
     modelConstructorOrModelNamespace: TModelConstructor | string
   ): TModelConstructor["isDynamic"] extends true
     ? never
     : Container<TModelConstructor>;
-  <TModelConstructor extends ModelConstructor<TDependencies>>(
+  <TModelConstructor extends ModelConstructor>(
     modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey: string
   ): TModelConstructor["isDynamic"] extends true
@@ -272,8 +272,8 @@ export interface GetContainer<TDependencies = any> {
     : never;
 }
 
-export interface GetContainerInternal<TDependencies = any> {
-  <TModelConstructor extends ModelConstructor<TDependencies>>(
+export interface GetContainerInternal {
+  <TModelConstructor extends ModelConstructor>(
     modelConstructorOrModelNamespace: TModelConstructor | string,
     containerKey?: string
   ): ContainerImpl<TModelConstructor>;
