@@ -400,20 +400,20 @@ export function createModel<
     ModelEffects,
     ModelEpics
   >,
-  TOptions extends {
+  TModelOptions extends {
     isDynamic?: boolean;
     isLazy?: boolean;
   }
 >(
   modelConstructor: TModelConstructor,
-  options?: TOptions
-): TModelConstructor & TOptions {
-  if (options) {
-    modelConstructor.isDynamic = options.isDynamic;
-    modelConstructor.isLazy = options.isLazy;
+  modelOptions?: TModelOptions
+): TModelConstructor & TModelOptions {
+  if (modelOptions) {
+    modelConstructor.isDynamic = modelOptions.isDynamic;
+    modelConstructor.isLazy = modelOptions.isLazy;
   }
 
-  return modelConstructor as TModelConstructor & TOptions;
+  return modelConstructor as TModelConstructor & TModelOptions;
 }
 
 export function registerModel<TModelConstructor extends ModelConstructor>(
