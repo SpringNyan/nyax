@@ -133,7 +133,7 @@ export function createArgs<TModelConstructor extends ModelConstructor>(
   optional: boolean
 ): ExtractArgsFromModelConstructor<TModelConstructor> {
   return buildArgs(
-    container.model.defaultArgs(),
+    container.modelInstance.defaultArgs(),
     argsParam,
     optional
   ) as ExtractArgsFromModelConstructor<TModelConstructor>;

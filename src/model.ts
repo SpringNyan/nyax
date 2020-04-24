@@ -22,7 +22,7 @@ import {
   UnionToIntersection,
 } from "./util";
 
-export interface Model<
+export interface ModelInstance<
   TDependencies = any,
   TDefaultArgs = any,
   TInitialState = any,
@@ -68,7 +68,7 @@ export interface ModelConstructor<
   isDynamic?: boolean;
   isLazy?: boolean;
 
-  new (): Model<
+  new (): ModelInstance<
     TDependencies,
     TDefaultArgs,
     TInitialState,
@@ -148,7 +148,7 @@ export type MergeDependenciesFromSubModelConstructors<
   }[keyof TSubModelConstructors]
 >;
 
-export type ModelPropKey =
+export type ModelInstancePropKey =
   | "defaultArgs"
   | "initialState"
   | "selectors"
@@ -158,7 +158,7 @@ export type ModelPropKey =
 
 export type MergeModelPropFromModelConstructors<
   TModelConstructors extends ModelConstructor[],
-  TPropKey extends ModelPropKey
+  TPropKey extends ModelInstancePropKey
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModelConstructors, number>]: ReturnType<
@@ -169,7 +169,7 @@ export type MergeModelPropFromModelConstructors<
 
 export type MergeSubModelPropFromSubModelConstructors<
   TSubModelConstructors extends Record<string, ModelConstructor>,
-  TPropKey extends ModelPropKey
+  TPropKey extends ModelInstancePropKey
 > = {
   [K in keyof TSubModelConstructors]: ReturnType<
     InstanceType<TSubModelConstructors[K]>[TPropKey]
@@ -178,7 +178,7 @@ export type MergeSubModelPropFromSubModelConstructors<
 };
 
 export class ModelBase<TDependencies = any>
-  implements Model<TDependencies, {}, {}, {}, {}, {}, {}> {
+  implements ModelInstance<TDependencies, {}, {}, {}, {}, {}, {}> {
   public _nyaxContext!: NyaxContext;
   public _container!: ContainerImpl;
   public _subKey!: string | undefined;
@@ -261,44 +261,46 @@ export function mergeModels<
   MergeModelPropFromModelConstructors<TModelConstructors, "epics">
 > {
   return class extends ModelBase {
-    private readonly _models: Model[] = modelConstructors.map((ctor) => {
-      const model = new ctor() as ModelBase;
-      defineGetter(model, "_nyaxContext", () => this._nyaxContext);
-      defineGetter(model, "_container", () => this._container);
-      return model;
-    });
+    private readonly _modelInstances: ModelInstance[] = modelConstructors.map(
+      (ctor) => {
+        const modelInstance = new ctor() as ModelBase;
+        defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
+        defineGetter(modelInstance, "_container", () => this._container);
+        return modelInstance;
+      }
+    );
 
     public defaultArgs(): any {
-      return this._mergeModelProp("defaultArgs");
+      return this._mergeModelInstanceProp("defaultArgs");
     }
 
     public initialState(): any {
-      return this._mergeModelProp("initialState");
+      return this._mergeModelInstanceProp("initialState");
     }
 
     public selectors(): any {
-      return this._mergeModelProp("selectors");
+      return this._mergeModelInstanceProp("selectors");
     }
 
     public reducers(): any {
-      return this._mergeModelProp("reducers");
+      return this._mergeModelInstanceProp("reducers");
     }
 
     public effects(): any {
-      return this._mergeModelProp("effects");
+      return this._mergeModelInstanceProp("effects");
     }
 
     public epics(): any {
-      return this._mergeModelProp("epics");
+      return this._mergeModelInstanceProp("epics");
     }
 
-    private _mergeModelProp<TPropKey extends ModelPropKey>(
+    private _mergeModelInstanceProp<TPropKey extends ModelInstancePropKey>(
       propKey: TPropKey
-    ): ReturnType<Model[TPropKey]> {
-      const result = {} as ReturnType<Model[TPropKey]>;
+    ): ReturnType<ModelInstance[TPropKey]> {
+      const result = {} as ReturnType<ModelInstance[TPropKey]>;
 
-      this._models
-        .map((model) => model[propKey]())
+      this._modelInstances
+        .map((modelInstance) => modelInstance[propKey]())
         .forEach((prop) => {
           mergeObjects(result, prop);
         });
@@ -328,47 +330,51 @@ export function mergeSubModels<
   MergeSubModelPropFromSubModelConstructors<TSubModelConstructors, "epics">
 > {
   return class extends ModelBase {
-    private readonly _subModels: Record<string, Model> = Object.keys(
-      subModelConstructors
-    ).reduce<Record<string, Model>>((obj, key) => {
-      const model = new subModelConstructors[key]() as ModelBase;
-      defineGetter(model, "_nyaxContext", () => this._nyaxContext);
-      defineGetter(model, "_container", () => this._container);
-      model._subKey = key;
-      obj[key] = model;
-      return obj;
-    }, {});
+    private readonly _subModelInstances: Record<
+      string,
+      ModelInstance
+    > = Object.keys(subModelConstructors).reduce<Record<string, ModelInstance>>(
+      (obj, key) => {
+        const modelInstance = new subModelConstructors[key]() as ModelBase;
+        defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
+        defineGetter(modelInstance, "_container", () => this._container);
+        modelInstance._subKey = key;
+        obj[key] = modelInstance;
+        return obj;
+      },
+      {}
+    );
 
     public defaultArgs(): any {
-      return this._mergeSubModelProp("defaultArgs");
+      return this._mergeSubModelInstanceProp("defaultArgs");
     }
 
     public initialState(): any {
-      return this._mergeSubModelProp("initialState");
+      return this._mergeSubModelInstanceProp("initialState");
     }
 
     public selectors(): any {
-      return this._mergeSubModelProp("selectors");
+      return this._mergeSubModelInstanceProp("selectors");
     }
 
     public reducers(): any {
-      return this._mergeSubModelProp("reducers");
+      return this._mergeSubModelInstanceProp("reducers");
     }
 
     public effects(): any {
-      return this._mergeSubModelProp("effects");
+      return this._mergeSubModelInstanceProp("effects");
     }
 
     public epics(): any {
-      return this._mergeSubModelProp("epics");
+      return this._mergeSubModelInstanceProp("epics");
     }
 
-    private _mergeSubModelProp<TPropKey extends ModelPropKey>(
+    private _mergeSubModelInstanceProp<TPropKey extends ModelInstancePropKey>(
       propKey: TPropKey
-    ): Record<string, ReturnType<Model[TPropKey]>> {
-      const result: Record<string, ReturnType<Model[TPropKey]>> = {};
-      Object.keys(this._subModels).forEach((key) => {
-        result[key] = this._subModels[key][propKey]();
+    ): Record<string, ReturnType<ModelInstance[TPropKey]>> {
+      const result: Record<string, ReturnType<ModelInstance[TPropKey]>> = {};
+      Object.keys(this._subModelInstances).forEach((key) => {
+        result[key] = this._subModelInstances[key][propKey]();
         if (propKey === "defaultArgs") {
           result[key][NYAX_DEFAULT_ARGS_KEY] = true;
         }

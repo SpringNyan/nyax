@@ -65,7 +65,7 @@ export class ContainerImpl<
   public readonly modelNamespace: string;
   public readonly namespace: string;
 
-  public readonly model: InstanceType<TModelConstructor>;
+  public readonly modelInstance: InstanceType<TModelConstructor>;
 
   public readonly selectors: ExtractSelectorsFromModelConstructor<
     TModelConstructor
@@ -114,12 +114,12 @@ export class ContainerImpl<
     this.modelNamespace = this.modelContext.modelNamespace;
     this.namespace = joinLastString(this.modelNamespace, this.containerKey);
 
-    this.model = this._initializeModel();
+    this.modelInstance = this._createModelInstance();
 
-    this.selectors = this.model.selectors();
-    this.reducers = this.model.reducers();
-    this.effects = this.model.effects();
-    this.epics = this.model.epics();
+    this.selectors = this.modelInstance.selectors();
+    this.reducers = this.modelInstance.reducers();
+    this.effects = this.modelInstance.effects();
+    this.epics = this.modelInstance.epics();
     this.reducerByPath = flattenObject(this.reducers);
     this.effectByPath = flattenObject(this.effects);
   }
@@ -250,11 +250,11 @@ export class ContainerImpl<
     ) as this;
   }
 
-  private _initializeModel(): InstanceType<TModelConstructor> {
-    const model = new this.modelConstructor() as ModelBase;
-    model._nyaxContext = this._nyaxContext;
-    model._container = this;
-    return model as InstanceType<TModelConstructor>;
+  private _createModelInstance(): InstanceType<TModelConstructor> {
+    const modelInstance = new this.modelConstructor() as ModelBase;
+    modelInstance._nyaxContext = this._nyaxContext;
+    modelInstance._container = this;
+    return modelInstance as InstanceType<TModelConstructor>;
   }
 }
 

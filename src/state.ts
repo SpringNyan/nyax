@@ -80,7 +80,7 @@ export function createState<TModelConstructor extends ModelConstructor>(
   args: ExtractArgsFromModelConstructor<TModelConstructor>
 ): ExtractStateFromModelConstructor<TModelConstructor> {
   container.modelArgs = args;
-  const state = container.model.initialState();
+  const state = container.modelInstance.initialState();
   container.modelArgs = NYAX_NOTHING;
 
   return state;
