@@ -11,7 +11,7 @@ import { batchRegisterActionHelper, reloadActionHelper } from "./action";
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
-import { ModelConstructors, registerModels } from "./model";
+import { Models, registerModels } from "./model";
 import { createRootReducer } from "./reducer";
 
 export interface NyaxOptions {
@@ -29,7 +29,7 @@ export interface NyaxOptions {
 
 export interface Nyax {
   store: Store;
-  registerModels: (modelConstructors: ModelConstructors) => void;
+  registerModels: (models: Models) => void;
   getContainer: GetContainer;
   reload: (state?: any) => void;
   gc: (filterFn?: (container: Container) => boolean) => void;
@@ -73,11 +73,8 @@ export function createNyax(options: NyaxOptions): Nyax {
 
   return {
     store: nyaxContext.store,
-    registerModels: (modelConstructors): void => {
-      const registerActionPayloads = registerModels(
-        nyaxContext,
-        modelConstructors
-      );
+    registerModels: (models): void => {
+      const registerActionPayloads = registerModels(nyaxContext, models);
       nyaxContext.store.dispatch(
         batchRegisterActionHelper.create(registerActionPayloads)
       );
@@ -92,7 +89,7 @@ export function createNyax(options: NyaxOptions): Nyax {
       }
 
       const containers: Container[] = [];
-      nyaxContext.modelContextByModelConstructor.forEach((context) => {
+      nyaxContext.modelContextByModel.forEach((context) => {
         context.containerByContainerKey.forEach((container) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           if (filterFn!(container)) {

@@ -8,17 +8,17 @@ import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
-  ExtractActionHelpersFromModelConstructor,
-  ExtractArgsFromModelConstructor,
-  ExtractDefaultArgsFromModelConstructor,
-  ExtractEffectsFromModelConstructor,
-  ExtractEpicsFromModelConstructor,
-  ExtractGettersFromModelConstructor,
-  ExtractReducersFromModelConstructor,
-  ExtractSelectorsFromModelConstructor,
-  ExtractStateFromModelConstructor,
+  ExtractActionHelpersFromModel,
+  ExtractArgsFromModel,
+  ExtractDefaultArgsFromModel,
+  ExtractEffectsFromModel,
+  ExtractEpicsFromModel,
+  ExtractGettersFromModel,
+  ExtractReducersFromModel,
+  ExtractSelectorsFromModel,
+  ExtractStateFromModel,
+  Model,
   ModelBase,
-  ModelConstructor,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -35,13 +35,11 @@ export interface ContainerBase<
   actions: TActionHelpers;
 }
 
-export interface Container<
-  TModelConstructor extends ModelConstructor = ModelConstructor
->
+export interface Container<TModel extends Model = Model>
   extends ContainerBase<
-    ExtractStateFromModelConstructor<TModelConstructor>,
-    ExtractGettersFromModelConstructor<TModelConstructor>,
-    ExtractActionHelpersFromModelConstructor<TModelConstructor>
+    ExtractStateFromModel<TModel>,
+    ExtractGettersFromModel<TModel>,
+    ExtractActionHelpersFromModel<TModel>
   > {
   modelNamespace: string;
   containerKey: string | undefined;
@@ -49,43 +47,32 @@ export interface Container<
   isRegistered: boolean;
   canRegister: boolean;
 
-  register(
-    args?: ConvertArgsParam<
-      ExtractDefaultArgsFromModelConstructor<TModelConstructor>
-    >
-  ): void;
+  register(args?: ConvertArgsParam<ExtractDefaultArgsFromModel<TModel>>): void;
   unregister(): void;
 }
 
-export class ContainerImpl<
-  TModelConstructor extends ModelConstructor = ModelConstructor
-> implements Container<TModelConstructor> {
+export class ContainerImpl<TModel extends Model = Model>
+  implements Container<TModel> {
   public readonly modelContext: ModelContext;
 
   public readonly modelNamespace: string;
   public readonly namespace: string;
 
-  public readonly modelInstance: InstanceType<TModelConstructor>;
+  public readonly modelInstance: InstanceType<TModel>;
 
-  public readonly selectors: ExtractSelectorsFromModelConstructor<
-    TModelConstructor
-  >;
-  public readonly reducers: ExtractReducersFromModelConstructor<
-    TModelConstructor
-  >;
-  public readonly effects: ExtractEffectsFromModelConstructor<
-    TModelConstructor
-  >;
-  public readonly epics: ExtractEpicsFromModelConstructor<TModelConstructor>;
+  public readonly selectors: ExtractSelectorsFromModel<TModel>;
+  public readonly reducers: ExtractReducersFromModel<TModel>;
+  public readonly effects: ExtractEffectsFromModel<TModel>;
+  public readonly epics: ExtractEpicsFromModel<TModel>;
 
   public readonly reducerByPath: Record<string, ModelReducer>;
   public readonly effectByPath: Record<string, ModelEffect>;
 
   public modelArgs:
-    | ExtractArgsFromModelConstructor<TModelConstructor>
+    | ExtractArgsFromModel<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
   public modelState:
-    | ExtractStateFromModelConstructor<TModelConstructor>
+    | ExtractStateFromModel<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
 
   private _initialStateCache: any;
@@ -99,12 +86,10 @@ export class ContainerImpl<
 
   constructor(
     private readonly _nyaxContext: NyaxContext,
-    public readonly modelConstructor: TModelConstructor,
+    public readonly model: TModel,
     public readonly containerKey: string | undefined
   ) {
-    const modelContext = this._nyaxContext.modelContextByModelConstructor.get(
-      this.modelConstructor
-    );
+    const modelContext = this._nyaxContext.modelContextByModel.get(this.model);
     if (!modelContext) {
       throw new Error("Model is not registered");
     }
@@ -124,7 +109,7 @@ export class ContainerImpl<
     this.effectByPath = flattenObject(this.effects);
   }
 
-  public get state(): ExtractStateFromModelConstructor<TModelConstructor> {
+  public get state(): ExtractStateFromModel<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.state;
@@ -161,7 +146,7 @@ export class ContainerImpl<
     throw new Error("Namespace is already bound by other container");
   }
 
-  public get getters(): ExtractGettersFromModelConstructor<TModelConstructor> {
+  public get getters(): ExtractGettersFromModel<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.getters;
@@ -178,9 +163,7 @@ export class ContainerImpl<
     throw new Error("Namespace is already bound by other container");
   }
 
-  public get actions(): ExtractActionHelpersFromModelConstructor<
-    TModelConstructor
-  > {
+  public get actions(): ExtractActionHelpersFromModel<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.actions;
@@ -201,7 +184,7 @@ export class ContainerImpl<
     const container = this._nyaxContext.containerByNamespace.get(
       this.namespace
     );
-    return container?.modelConstructor === this.modelConstructor;
+    return container?.model === this.model;
   }
 
   public get canRegister(): boolean {
@@ -209,9 +192,7 @@ export class ContainerImpl<
   }
 
   public register(
-    args?: ConvertArgsParam<
-      ExtractDefaultArgsFromModelConstructor<TModelConstructor>
-    >
+    args?: ConvertArgsParam<ExtractDefaultArgsFromModel<TModel>>
   ): void {
     if (!this.canRegister) {
       throw new Error("Namespace is already bound");
@@ -245,83 +226,73 @@ export class ContainerImpl<
 
   private get _currentContainer(): this {
     return this._nyaxContext.getContainer(
-      this.modelConstructor,
+      this.model,
       this.containerKey
     ) as this;
   }
 
-  private _createModelInstance(): InstanceType<TModelConstructor> {
-    const modelInstance = new this.modelConstructor() as ModelBase;
+  private _createModelInstance(): InstanceType<TModel> {
+    const modelInstance = new this.model() as ModelBase;
     modelInstance._nyaxContext = this._nyaxContext;
     modelInstance._container = this;
-    return modelInstance as InstanceType<TModelConstructor>;
+    return modelInstance as InstanceType<TModel>;
   }
 }
 
 export interface GetContainer {
-  <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string
-  ): TModelConstructor["isDynamic"] extends true
-    ? never
-    : Container<TModelConstructor>;
-  <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string,
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | string
+  ): TModel["isDynamic"] extends true ? never : Container<TModel>;
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | string,
     containerKey: string
-  ): TModelConstructor["isDynamic"] extends true
-    ? Container<TModelConstructor>
-    : never;
+  ): TModel["isDynamic"] extends true ? Container<TModel> : never;
 }
 
 export interface GetContainerInternal {
-  <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string,
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | string,
     containerKey?: string
-  ): ContainerImpl<TModelConstructor>;
+  ): ContainerImpl<TModel>;
 }
 
 export function createGetContainer(
   nyaxContext: NyaxContext
 ): GetContainerInternal {
-  return <TModelConstructor extends ModelConstructor>(
-    modelConstructorOrModelNamespace: TModelConstructor | string,
+  return <TModel extends Model>(
+    modelOrModelNamespace: TModel | string,
     containerKey?: string
-  ): ContainerImpl<TModelConstructor> => {
-    let modelConstructor: TModelConstructor;
-    if (typeof modelConstructorOrModelNamespace === "string") {
-      modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
-        modelConstructorOrModelNamespace
-      ) as TModelConstructor;
-      if (!modelConstructor) {
+  ): ContainerImpl<TModel> => {
+    let model: TModel;
+    if (typeof modelOrModelNamespace === "string") {
+      model = nyaxContext.modelByModelNamespace.get(
+        modelOrModelNamespace
+      ) as TModel;
+      if (!model) {
         throw new Error("Model namespace is not bound");
       }
     } else {
-      modelConstructor = modelConstructorOrModelNamespace;
+      model = modelOrModelNamespace;
     }
 
-    const modelContext = nyaxContext.modelContextByModelConstructor.get(
-      modelConstructor
-    );
+    const modelContext = nyaxContext.modelContextByModel.get(model);
     if (!modelContext) {
       throw new Error("Model is not registered");
     }
 
-    if (containerKey === undefined && modelConstructor.isDynamic) {
+    if (containerKey === undefined && model.isDynamic) {
       throw new Error("Container key is required for dynamic model");
     }
 
-    if (containerKey !== undefined && !modelConstructor.isDynamic) {
+    if (containerKey !== undefined && !model.isDynamic) {
       throw new Error("Container key is not available for static model");
     }
 
     let container = modelContext.containerByContainerKey.get(
       containerKey
-    ) as ContainerImpl<TModelConstructor>;
+    ) as ContainerImpl<TModel>;
     if (!container) {
-      container = new ContainerImpl(
-        nyaxContext,
-        modelConstructor,
-        containerKey
-      );
+      container = new ContainerImpl(nyaxContext, model, containerKey);
       modelContext.containerByContainerKey.set(containerKey, container);
     }
 

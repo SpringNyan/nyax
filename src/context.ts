@@ -8,7 +8,7 @@ import {
   createGetContainer,
   GetContainerInternal,
 } from "./container";
-import { ModelConstructor } from "./model";
+import { Model } from "./model";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -25,8 +25,8 @@ export interface NyaxContext {
 
   cachedRootState: any | typeof NYAX_NOTHING;
 
-  modelContextByModelConstructor: Map<ModelConstructor, ModelContext>;
-  modelConstructorByModelNamespace: Map<string, ModelConstructor>;
+  modelContextByModel: Map<Model, ModelContext>;
+  modelByModelNamespace: Map<string, Model>;
 
   containerByNamespace: Map<string, ContainerImpl>;
   dispatchDeferredByAction: Map<
@@ -71,8 +71,8 @@ export function createNyaxContext(): NyaxContext {
 
     cachedRootState: NYAX_NOTHING,
 
-    modelContextByModelConstructor: new Map(),
-    modelConstructorByModelNamespace: new Map(),
+    modelContextByModel: new Map(),
+    modelByModelNamespace: new Map(),
 
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),

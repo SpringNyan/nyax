@@ -1,9 +1,9 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
 import {
-  ExtractArgsFromModelConstructor,
-  ExtractDefaultArgsFromModelConstructor,
-  ModelConstructor,
+  ExtractArgsFromModel,
+  ExtractDefaultArgsFromModel,
+  Model,
 } from "./model";
 import { isObject } from "./util";
 
@@ -123,18 +123,14 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   return args as ConvertArgs<TDefaultArgs>;
 }
 
-export function createArgs<TModelConstructor extends ModelConstructor>(
-  container: ContainerImpl<TModelConstructor>,
-  argsParam:
-    | ConvertArgsParam<
-        ExtractDefaultArgsFromModelConstructor<TModelConstructor>
-      >
-    | undefined,
+export function createArgs<TModel extends Model>(
+  container: ContainerImpl<TModel>,
+  argsParam: ConvertArgsParam<ExtractDefaultArgsFromModel<TModel>> | undefined,
   optional: boolean
-): ExtractArgsFromModelConstructor<TModelConstructor> {
+): ExtractArgsFromModel<TModel> {
   return buildArgs(
     container.modelInstance.defaultArgs(),
     argsParam,
     optional
-  ) as ExtractArgsFromModelConstructor<TModelConstructor>;
+  ) as ExtractArgsFromModel<TModel>;
 }
