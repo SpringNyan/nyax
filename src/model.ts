@@ -4,12 +4,15 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import { ConvertArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import { ConvertArgs, ModelDefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
 import { NyaxContext } from "./context";
-import { ConvertGetters } from "./selector";
-import { ConvertState } from "./state";
+import { ModelEffects } from "./effect";
+import { ModelEpics } from "./epic";
+import { ModelReducers } from "./reducer";
+import { ConvertGetters, ModelSelectors } from "./selector";
+import { ConvertState, ModelInitialState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
@@ -62,8 +65,8 @@ export interface ModelConstructor<
   TEffects = any,
   TEpics = any
 > {
-  readonly isDynamic?: true;
-  readonly isLazy?: true;
+  isDynamic?: boolean;
+  isLazy?: boolean;
 
   new (): Model<
     TDependencies,
@@ -385,6 +388,32 @@ export function createModelBase<TDependencies>(): ModelConstructor<
   {}
 > {
   return class extends ModelBase<TDependencies> {};
+}
+
+export function createModel<
+  TModelConstructor extends ModelConstructor<
+    any,
+    ModelDefaultArgs,
+    ModelInitialState,
+    ModelSelectors,
+    ModelReducers,
+    ModelEffects,
+    ModelEpics
+  >,
+  TOptions extends {
+    isDynamic?: boolean;
+    isLazy?: boolean;
+  }
+>(
+  modelConstructor: TModelConstructor,
+  options?: TOptions
+): TModelConstructor & TOptions {
+  if (options) {
+    modelConstructor.isDynamic = options.isDynamic;
+    modelConstructor.isLazy = options.isLazy;
+  }
+
+  return modelConstructor as TModelConstructor & TOptions;
 }
 
 export function registerModel<TModelConstructor extends ModelConstructor>(
