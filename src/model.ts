@@ -405,26 +405,50 @@ export function createModelBase<TDependencies>(): Model<
 }
 
 export function createModel<
-  TModel extends Model<
-    any,
-    ModelDefaultArgs,
-    ModelInitialState,
-    ModelSelectors,
-    ModelReducers,
-    ModelEffects,
-    ModelEpics
+  TDependencies,
+  TDefaultArgs extends ModelDefaultArgs,
+  TInitialState extends ModelInitialState,
+  TSelectors extends ModelSelectors,
+  TReducers extends ModelReducers,
+  TEffects extends ModelEffects,
+  TEpics extends ModelEpics,
+  TOptions extends ModelOptions
+>(
+  model: Model<
+    TDependencies,
+    TDefaultArgs,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TEpics
   >,
-  TModelOptions extends {
-    isDynamic?: boolean;
-    isLazy?: boolean;
+  options?: TOptions
+): ModelInstanceConstructor<
+  TDependencies,
+  TDefaultArgs,
+  TInitialState,
+  TSelectors,
+  TReducers,
+  TEffects,
+  TEpics
+> &
+  TOptions {
+  const Model = class extends model {};
+  if (options) {
+    Model.isDynamic = options.isDynamic;
+    Model.isLazy = options.isLazy;
   }
->(model: TModel, modelOptions?: TModelOptions): TModel & TModelOptions {
-  if (modelOptions) {
-    model.isDynamic = modelOptions.isDynamic;
-    model.isLazy = modelOptions.isLazy;
-  }
-
-  return model as TModel & TModelOptions;
+  return Model as ModelInstanceConstructor<
+    TDependencies,
+    TDefaultArgs,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TEpics
+  > &
+    TOptions;
 }
 
 export function registerModel<TModel extends Model>(

@@ -352,6 +352,7 @@ describe("nyax", () => {
         }
       },
       {
+        isDynamic: true,
         isLazy: true,
       }
     );
