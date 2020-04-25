@@ -56,6 +56,29 @@ export interface ModelInstance<
   getContainer: GetContainer;
 }
 
+export type ModelInstanceConstructor<
+  TDependencies = any,
+  TDefaultArgs = any,
+  TInitialState = any,
+  TSelectors = any,
+  TReducers = any,
+  TEffects = any,
+  TEpics = any
+> = new () => ModelInstance<
+  TDependencies,
+  TDefaultArgs,
+  TInitialState,
+  TSelectors,
+  TReducers,
+  TEffects,
+  TEpics
+>;
+
+export interface ModelOptions {
+  isDynamic?: boolean;
+  isLazy?: boolean;
+}
+
 export interface Model<
   TDependencies = any,
   TDefaultArgs = any,
@@ -64,20 +87,17 @@ export interface Model<
   TReducers = any,
   TEffects = any,
   TEpics = any
-> {
-  isDynamic?: boolean;
-  isLazy?: boolean;
-
-  new (): ModelInstance<
-    TDependencies,
-    TDefaultArgs,
-    TInitialState,
-    TSelectors,
-    TReducers,
-    TEffects,
-    TEpics
-  >;
-}
+>
+  extends ModelInstanceConstructor<
+      TDependencies,
+      TDefaultArgs,
+      TInitialState,
+      TSelectors,
+      TReducers,
+      TEffects,
+      TEpics
+    >,
+    ModelOptions {}
 
 export interface Models {
   [key: string]: Model | Models;
