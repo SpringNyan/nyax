@@ -1,6 +1,6 @@
 import { Store } from "redux";
 import { ActionsObservable, Epic, StateObservable } from "redux-observable";
-import { Subject } from "rxjs";
+import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
 import {
@@ -8,7 +8,7 @@ import {
   createGetContainer,
   GetContainerInternal,
 } from "./container";
-import { ModelConstructor } from "./model";
+import { Model } from "./model";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -25,8 +25,8 @@ export interface NyaxContext {
 
   cachedRootState: any | typeof NYAX_NOTHING;
 
-  modelContextByModelConstructor: Map<ModelConstructor, ModelContext>;
-  modelConstructorByModelNamespace: Map<string, ModelConstructor>;
+  modelContextByModel: Map<Model, ModelContext>;
+  modelByModelNamespace: Map<string, Model>;
 
   containerByNamespace: Map<string, ContainerImpl>;
   dispatchDeferredByAction: Map<
@@ -38,8 +38,14 @@ export interface NyaxContext {
   >;
 
   dependencies: any;
-  onUnhandledEffectError: (error: any) => void;
-  onUnhandledEpicError: (error: any) => void;
+  onUnhandledEffectError: (
+    error: any,
+    promise: Promise<any> | undefined
+  ) => void;
+  onUnhandledEpicError: (
+    error: any,
+    caught: Observable<AnyAction>
+  ) => Observable<AnyAction>;
 
   getRootState: () => any;
 }
@@ -71,8 +77,8 @@ export function createNyaxContext(): NyaxContext {
 
     cachedRootState: NYAX_NOTHING,
 
-    modelContextByModelConstructor: new Map(),
-    modelConstructorByModelNamespace: new Map(),
+    modelContextByModel: new Map(),
+    modelByModelNamespace: new Map(),
 
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
@@ -80,18 +86,24 @@ export function createNyaxContext(): NyaxContext {
     get dependencies(): any {
       return nyaxContext.options.dependencies;
     },
-    onUnhandledEffectError: (error) => {
+    onUnhandledEffectError: (error, promise) => {
       if (nyaxContext.options.onUnhandledEffectError) {
-        nyaxContext.options.onUnhandledEffectError(error);
+        return nyaxContext.options.onUnhandledEffectError(error, promise);
       } else {
+        if (promise) {
+          promise.then(undefined, () => {
+            // noop
+          });
+        }
         console.error(error);
       }
     },
-    onUnhandledEpicError: (error) => {
+    onUnhandledEpicError: (error, caught) => {
       if (nyaxContext.options.onUnhandledEpicError) {
-        nyaxContext.options.onUnhandledEpicError(error);
+        return nyaxContext.options.onUnhandledEpicError(error, caught);
       } else {
         console.error(error);
+        return caught;
       }
     },
 

@@ -37,8 +37,8 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
       nyaxContext.containerByNamespace.delete(namespace);
 
       if (container) {
-        nyaxContext.modelContextByModelConstructor
-          .get(container.modelConstructor)
+        nyaxContext.modelContextByModel
+          .get(container.model)
           ?.containerByContainerKey.delete(container.containerKey);
       }
     });
@@ -49,7 +49,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
     nyaxContext.containerByNamespace.clear();
 
-    nyaxContext.modelContextByModelConstructor.forEach((context) => {
+    nyaxContext.modelContextByModel.forEach((context) => {
       context.containerByContainerKey.clear();
     });
 
@@ -60,27 +60,25 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
     const registerPayloads: RegisterActionPayload[] = [];
     if (isObject(rootState)) {
-      nyaxContext.modelContextByModelConstructor.forEach(
-        (context, modelConstructor) => {
-          const state = rootState[context.modelPath];
-          if (isObject(state)) {
-            if (!modelConstructor.isDynamic && !modelConstructor.isLazy) {
-              registerPayloads.push({
-                modelNamespace: context.modelNamespace,
-              });
-            } else {
-              Object.keys(state).forEach((containerKey) => {
-                if (isObject(state[containerKey])) {
-                  registerPayloads.push({
-                    modelNamespace: context.modelNamespace,
-                    containerKey,
-                  });
-                }
-              });
-            }
+      nyaxContext.modelContextByModel.forEach((context, model) => {
+        const state = rootState[context.modelPath];
+        if (isObject(state)) {
+          if (!model.isDynamic && !model.isLazy) {
+            registerPayloads.push({
+              modelNamespace: context.modelNamespace,
+            });
+          } else {
+            Object.keys(state).forEach((containerKey) => {
+              if (isObject(state[containerKey])) {
+                registerPayloads.push({
+                  modelNamespace: context.modelNamespace,
+                  containerKey,
+                });
+              }
+            });
           }
         }
-      );
+      });
     }
 
     batchRegister(registerPayloads);
@@ -104,17 +102,13 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
       let modelNamespace = namespace;
       let containerKey: string | undefined;
 
-      let modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
-        modelNamespace
-      );
-      if (!modelConstructor) {
+      let model = nyaxContext.modelByModelNamespace.get(modelNamespace);
+      if (!model) {
         [modelNamespace, containerKey] = splitLastString(modelNamespace);
-        modelConstructor = nyaxContext.modelConstructorByModelNamespace.get(
-          modelNamespace
-        );
+        model = nyaxContext.modelByModelNamespace.get(modelNamespace);
       }
-      if (modelConstructor?.isLazy) {
-        container = nyaxContext.getContainer(modelConstructor, containerKey);
+      if (model?.isLazy) {
+        container = nyaxContext.getContainer(model, containerKey);
         container.register();
       }
     }
@@ -135,7 +129,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
             if (dispatchDeferred) {
               dispatchDeferred.reject(reason);
             } else {
-              nyaxContext.onUnhandledEffectError(reason);
+              nyaxContext.onUnhandledEffectError(reason, undefined);
             }
           }
         );

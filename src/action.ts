@@ -1,10 +1,8 @@
+import { NyaxPromise } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
-import {
-  ExtractActionHelpersFromModelConstructor,
-  ModelConstructor,
-} from "./model";
+import { ExtractModelActionHelpers, Model } from "./model";
 import { ConvertPayloadResultPairsFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
@@ -71,23 +69,31 @@ export class ActionHelperImpl<TPayload, TResult>
 
   public dispatch(payload: TPayload): Promise<TResult> {
     const action = this.create(payload);
-    const promise = new Promise<TResult>((resolve, reject) => {
-      // TODO: handle unhandled effect error
+
+    const promise = new NyaxPromise<TResult>((resolve, reject) => {
       this._nyaxContext.dispatchDeferredByAction.set(action, {
         resolve,
-        reject,
+        reject: (reason) => {
+          reject(reason);
+          Promise.resolve().then(() => {
+            if (!promise.hasRejectionHandler) {
+              this._nyaxContext.onUnhandledEffectError(reason, promise);
+            }
+          });
+        },
       });
     });
+
     this._nyaxContext.store.dispatch(action);
 
     return promise;
   }
 }
 
-export function createActionHelpers<TModelConstructor extends ModelConstructor>(
+export function createActionHelpers<TModel extends Model>(
   nyaxContext: NyaxContext,
-  container: ContainerImpl<TModelConstructor>
-): ExtractActionHelpersFromModelConstructor<TModelConstructor> {
+  container: ContainerImpl<TModel>
+): ExtractModelActionHelpers<TModel> {
   const actionHelpers: Record<string, any> = {};
 
   const obj: Record<string, any> = {};
@@ -101,9 +107,7 @@ export function createActionHelpers<TModelConstructor extends ModelConstructor>(
     );
   });
 
-  return actionHelpers as ExtractActionHelpersFromModelConstructor<
-    TModelConstructor
-  >;
+  return actionHelpers as ExtractModelActionHelpers<TModel>;
 }
 
 export interface RegisterActionPayload {
