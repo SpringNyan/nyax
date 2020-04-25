@@ -1,5 +1,5 @@
 import { ContainerImpl } from "./container";
-import { ExtractGettersFromModel, Model } from "./model";
+import { ExtractModelGetters, Model } from "./model";
 import { defineGetter, is, mergeObjects } from "./util";
 
 export type ModelSelector<TResult = any> = () => TResult;
@@ -206,7 +206,7 @@ export function createSelector(...args: any[]): OutputSelector {
 
 export function createGetters<TModel extends Model>(
   container: ContainerImpl<TModel>
-): ExtractGettersFromModel<TModel> {
+): ExtractModelGetters<TModel> {
   const getters: Record<string, any> = {};
   const cacheByPath = new Map<string, SelectorCache>();
 
@@ -226,5 +226,5 @@ export function createGetters<TModel extends Model>(
     }
   );
 
-  return getters as ExtractGettersFromModel<TModel>;
+  return getters as ExtractModelGetters<TModel>;
 }

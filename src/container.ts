@@ -8,15 +8,15 @@ import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
-  ExtractActionHelpersFromModel,
-  ExtractArgsFromModel,
-  ExtractDefaultArgsFromModel,
-  ExtractEffectsFromModel,
-  ExtractEpicsFromModel,
-  ExtractGettersFromModel,
-  ExtractReducersFromModel,
-  ExtractSelectorsFromModel,
-  ExtractStateFromModel,
+  ExtractModelActionHelpers,
+  ExtractModelArgs,
+  ExtractModelDefaultArgs,
+  ExtractModelEffects,
+  ExtractModelEpics,
+  ExtractModelGetters,
+  ExtractModelReducers,
+  ExtractModelSelectors,
+  ExtractModelState,
   Model,
   ModelBase,
 } from "./model";
@@ -37,9 +37,9 @@ export interface ContainerBase<
 
 export interface Container<TModel extends Model = Model>
   extends ContainerBase<
-    ExtractStateFromModel<TModel>,
-    ExtractGettersFromModel<TModel>,
-    ExtractActionHelpersFromModel<TModel>
+    ExtractModelState<TModel>,
+    ExtractModelGetters<TModel>,
+    ExtractModelActionHelpers<TModel>
   > {
   modelNamespace: string;
   containerKey: string | undefined;
@@ -47,7 +47,7 @@ export interface Container<TModel extends Model = Model>
   isRegistered: boolean;
   canRegister: boolean;
 
-  register(args?: ConvertArgsParam<ExtractDefaultArgsFromModel<TModel>>): void;
+  register(args?: ConvertArgsParam<ExtractModelDefaultArgs<TModel>>): void;
   unregister(): void;
 }
 
@@ -60,19 +60,19 @@ export class ContainerImpl<TModel extends Model = Model>
 
   public readonly modelInstance: InstanceType<TModel>;
 
-  public readonly selectors: ExtractSelectorsFromModel<TModel>;
-  public readonly reducers: ExtractReducersFromModel<TModel>;
-  public readonly effects: ExtractEffectsFromModel<TModel>;
-  public readonly epics: ExtractEpicsFromModel<TModel>;
+  public readonly selectors: ExtractModelSelectors<TModel>;
+  public readonly reducers: ExtractModelReducers<TModel>;
+  public readonly effects: ExtractModelEffects<TModel>;
+  public readonly epics: ExtractModelEpics<TModel>;
 
   public readonly reducerByPath: Record<string, ModelReducer>;
   public readonly effectByPath: Record<string, ModelEffect>;
 
   public modelArgs:
-    | ExtractArgsFromModel<TModel>
+    | ExtractModelArgs<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
   public modelState:
-    | ExtractStateFromModel<TModel>
+    | ExtractModelState<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
 
   private _initialStateCache: any;
@@ -109,7 +109,7 @@ export class ContainerImpl<TModel extends Model = Model>
     this.effectByPath = flattenObject(this.effects);
   }
 
-  public get state(): ExtractStateFromModel<TModel> {
+  public get state(): ExtractModelState<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.state;
@@ -146,7 +146,7 @@ export class ContainerImpl<TModel extends Model = Model>
     throw new Error("Namespace is already bound by other container");
   }
 
-  public get getters(): ExtractGettersFromModel<TModel> {
+  public get getters(): ExtractModelGetters<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.getters;
@@ -163,7 +163,7 @@ export class ContainerImpl<TModel extends Model = Model>
     throw new Error("Namespace is already bound by other container");
   }
 
-  public get actions(): ExtractActionHelpersFromModel<TModel> {
+  public get actions(): ExtractModelActionHelpers<TModel> {
     const container = this._currentContainer;
     if (container !== this) {
       return container.actions;
@@ -192,7 +192,7 @@ export class ContainerImpl<TModel extends Model = Model>
   }
 
   public register(
-    args?: ConvertArgsParam<ExtractDefaultArgsFromModel<TModel>>
+    args?: ConvertArgsParam<ExtractModelDefaultArgs<TModel>>
   ): void {
     if (!this.canRegister) {
       throw new Error("Namespace is already bound");

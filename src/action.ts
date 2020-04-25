@@ -1,7 +1,7 @@
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
-import { ExtractActionHelpersFromModel, Model } from "./model";
+import { ExtractModelActionHelpers, Model } from "./model";
 import { ConvertPayloadResultPairsFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
@@ -84,7 +84,7 @@ export class ActionHelperImpl<TPayload, TResult>
 export function createActionHelpers<TModel extends Model>(
   nyaxContext: NyaxContext,
   container: ContainerImpl<TModel>
-): ExtractActionHelpersFromModel<TModel> {
+): ExtractModelActionHelpers<TModel> {
   const actionHelpers: Record<string, any> = {};
 
   const obj: Record<string, any> = {};
@@ -98,7 +98,7 @@ export function createActionHelpers<TModel extends Model>(
     );
   });
 
-  return actionHelpers as ExtractActionHelpersFromModel<TModel>;
+  return actionHelpers as ExtractModelActionHelpers<TModel>;
 }
 
 export interface RegisterActionPayload {

@@ -103,47 +103,47 @@ export interface Models {
   [key: string]: Model | Models;
 }
 
-export type ExtractDefaultArgsFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
   InstanceType<TModel>["defaultArgs"]
 >;
 
-export type ExtractInitialStateFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelInitialState<TModel extends Model> = ReturnType<
   InstanceType<TModel>["initialState"]
 >;
 
-export type ExtractSelectorsFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelSelectors<TModel extends Model> = ReturnType<
   InstanceType<TModel>["selectors"]
 >;
 
-export type ExtractReducersFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelReducers<TModel extends Model> = ReturnType<
   InstanceType<TModel>["reducers"]
 >;
 
-export type ExtractEffectsFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelEffects<TModel extends Model> = ReturnType<
   InstanceType<TModel>["effects"]
 >;
 
-export type ExtractEpicsFromModel<TModel extends Model> = ReturnType<
+export type ExtractModelEpics<TModel extends Model> = ReturnType<
   InstanceType<TModel>["epics"]
 >;
 
-export type ExtractDependenciesFromModel<TModel extends Model> = InstanceType<
+export type ExtractModelDependencies<TModel extends Model> = InstanceType<
   TModel
 >["dependencies"];
 
-export type ExtractArgsFromModel<TModel extends Model> = InstanceType<
+export type ExtractModelArgs<TModel extends Model> = InstanceType<
   TModel
 >["args"];
 
-export type ExtractStateFromModel<TModel extends Model> = InstanceType<
+export type ExtractModelState<TModel extends Model> = InstanceType<
   TModel
 >["state"];
 
-export type ExtractGettersFromModel<TModel extends Model> = InstanceType<
+export type ExtractModelGetters<TModel extends Model> = InstanceType<
   TModel
 >["getters"];
 
-export type ExtractActionHelpersFromModel<TModel extends Model> = InstanceType<
+export type ExtractModelActionHelpers<TModel extends Model> = InstanceType<
   TModel
 >["actions"];
 
@@ -151,9 +151,7 @@ export type MergeDependenciesFromModels<
   TModels extends Model[]
 > = UnionToIntersection<
   {
-    [K in Extract<keyof TModels, number>]: ExtractDependenciesFromModel<
-      TModels[K]
-    >;
+    [K in Extract<keyof TModels, number>]: ExtractModelDependencies<TModels[K]>;
   }[number]
 >;
 
@@ -161,11 +159,11 @@ export type MergeDependenciesFromSubModels<
   TSubModels extends Record<string, Model>
 > = UnionToIntersection<
   {
-    [K in keyof TSubModels]: ExtractDependenciesFromModel<TSubModels[K]>;
+    [K in keyof TSubModels]: ExtractModelDependencies<TSubModels[K]>;
   }[keyof TSubModels]
 >;
 
-export type ModelInstancePropKey =
+export type ModelInstancePropertyKey =
   | "defaultArgs"
   | "initialState"
   | "selectors"
@@ -173,23 +171,27 @@ export type ModelInstancePropKey =
   | "effects"
   | "epics";
 
-export type MergeModelPropFromModels<
+export type MergeModelPropertyFromModels<
   TModels extends Model[],
-  TPropKey extends ModelInstancePropKey
+  TPropertyKey extends ModelInstancePropertyKey
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ReturnType<
-      InstanceType<TModels[K]>[TPropKey]
+      InstanceType<TModels[K]>[TPropertyKey]
     >;
   }[number]
 >;
 
-export type MergeSubModelPropFromSubModels<
+export type MergeSubModelPropertyFromSubModels<
   TSubModels extends Record<string, Model>,
-  TPropKey extends ModelInstancePropKey
+  TPropertyKey extends ModelInstancePropertyKey
 > = {
-  [K in keyof TSubModels]: ReturnType<InstanceType<TSubModels[K]>[TPropKey]> &
-    (TPropKey extends "defaultArgs" ? { [NYAX_DEFAULT_ARGS_KEY]: true } : {});
+  [K in keyof TSubModels]: ReturnType<
+    InstanceType<TSubModels[K]>[TPropertyKey]
+  > &
+    (TPropertyKey extends "defaultArgs"
+      ? { [NYAX_DEFAULT_ARGS_KEY]: true }
+      : {});
 };
 
 export class ModelBase<TDependencies = any>
@@ -222,21 +224,21 @@ export class ModelBase<TDependencies = any>
   }
   public get args(): any {
     if (this._container.modelArgs !== NYAX_NOTHING) {
-      return this._getContainerProp(this._container.modelArgs);
+      return this._getContainerProperty(this._container.modelArgs);
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
     if (this._container.modelState !== NYAX_NOTHING) {
-      return this._getContainerProp(this._container.modelState);
+      return this._getContainerProperty(this._container.modelState);
     }
-    return this._getContainerProp(this._container.state);
+    return this._getContainerProperty(this._container.state);
   }
   public get getters(): any {
-    return this._getContainerProp(this._container.getters);
+    return this._getContainerProperty(this._container.getters);
   }
   public get actions(): any {
-    return this._getContainerProp(this._container.actions);
+    return this._getContainerProperty(this._container.actions);
   }
 
   public get rootAction$(): any {
@@ -257,8 +259,8 @@ export class ModelBase<TDependencies = any>
     return this._nyaxContext.getContainer;
   }
 
-  private _getContainerProp(prop: any): any {
-    return this._subKey !== undefined ? prop[this._subKey] : prop;
+  private _getContainerProperty(property: any): any {
+    return this._subKey !== undefined ? property[this._subKey] : property;
   }
 }
 
@@ -266,12 +268,12 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
 ): Model<
   MergeDependenciesFromModels<TModels>,
-  MergeModelPropFromModels<TModels, "defaultArgs">,
-  MergeModelPropFromModels<TModels, "initialState">,
-  MergeModelPropFromModels<TModels, "selectors">,
-  MergeModelPropFromModels<TModels, "reducers">,
-  MergeModelPropFromModels<TModels, "effects">,
-  MergeModelPropFromModels<TModels, "epics">
+  MergeModelPropertyFromModels<TModels, "defaultArgs">,
+  MergeModelPropertyFromModels<TModels, "initialState">,
+  MergeModelPropertyFromModels<TModels, "selectors">,
+  MergeModelPropertyFromModels<TModels, "reducers">,
+  MergeModelPropertyFromModels<TModels, "effects">,
+  MergeModelPropertyFromModels<TModels, "epics">
 > {
   return class extends ModelBase {
     private readonly _modelInstances: ModelInstance[] = models.map((model) => {
@@ -282,38 +284,38 @@ export function mergeModels<TModels extends Model[] | [Model]>(
     });
 
     public defaultArgs(): any {
-      return this._mergeModelInstanceProp("defaultArgs");
+      return this._mergeModelInstanceProperty("defaultArgs");
     }
 
     public initialState(): any {
-      return this._mergeModelInstanceProp("initialState");
+      return this._mergeModelInstanceProperty("initialState");
     }
 
     public selectors(): any {
-      return this._mergeModelInstanceProp("selectors");
+      return this._mergeModelInstanceProperty("selectors");
     }
 
     public reducers(): any {
-      return this._mergeModelInstanceProp("reducers");
+      return this._mergeModelInstanceProperty("reducers");
     }
 
     public effects(): any {
-      return this._mergeModelInstanceProp("effects");
+      return this._mergeModelInstanceProperty("effects");
     }
 
     public epics(): any {
-      return this._mergeModelInstanceProp("epics");
+      return this._mergeModelInstanceProperty("epics");
     }
 
-    private _mergeModelInstanceProp<TPropKey extends ModelInstancePropKey>(
-      propKey: TPropKey
-    ): ReturnType<ModelInstance[TPropKey]> {
-      const result = {} as ReturnType<ModelInstance[TPropKey]>;
+    private _mergeModelInstanceProperty<
+      TPropertyKey extends ModelInstancePropertyKey
+    >(propertyKey: TPropertyKey): ReturnType<ModelInstance[TPropertyKey]> {
+      const result = {} as ReturnType<ModelInstance[TPropertyKey]>;
 
       this._modelInstances
-        .map((modelInstance) => modelInstance[propKey]())
-        .forEach((prop) => {
-          mergeObjects(result, prop);
+        .map((modelInstance) => modelInstance[propertyKey]())
+        .forEach((property) => {
+          mergeObjects(result, property);
         });
 
       return result;
@@ -325,12 +327,12 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
 ): Model<
   MergeDependenciesFromSubModels<TSubModels>,
-  MergeSubModelPropFromSubModels<TSubModels, "defaultArgs">,
-  MergeSubModelPropFromSubModels<TSubModels, "initialState">,
-  MergeSubModelPropFromSubModels<TSubModels, "selectors">,
-  MergeSubModelPropFromSubModels<TSubModels, "reducers">,
-  MergeSubModelPropFromSubModels<TSubModels, "effects">,
-  MergeSubModelPropFromSubModels<TSubModels, "epics">
+  MergeSubModelPropertyFromSubModels<TSubModels, "defaultArgs">,
+  MergeSubModelPropertyFromSubModels<TSubModels, "initialState">,
+  MergeSubModelPropertyFromSubModels<TSubModels, "selectors">,
+  MergeSubModelPropertyFromSubModels<TSubModels, "reducers">,
+  MergeSubModelPropertyFromSubModels<TSubModels, "effects">,
+  MergeSubModelPropertyFromSubModels<TSubModels, "epics">
 > {
   return class extends ModelBase {
     private readonly _subModelInstances: Record<
@@ -349,36 +351,41 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
     );
 
     public defaultArgs(): any {
-      return this._mergeSubModelInstanceProp("defaultArgs");
+      return this._mergeSubModelInstanceProperty("defaultArgs");
     }
 
     public initialState(): any {
-      return this._mergeSubModelInstanceProp("initialState");
+      return this._mergeSubModelInstanceProperty("initialState");
     }
 
     public selectors(): any {
-      return this._mergeSubModelInstanceProp("selectors");
+      return this._mergeSubModelInstanceProperty("selectors");
     }
 
     public reducers(): any {
-      return this._mergeSubModelInstanceProp("reducers");
+      return this._mergeSubModelInstanceProperty("reducers");
     }
 
     public effects(): any {
-      return this._mergeSubModelInstanceProp("effects");
+      return this._mergeSubModelInstanceProperty("effects");
     }
 
     public epics(): any {
-      return this._mergeSubModelInstanceProp("epics");
+      return this._mergeSubModelInstanceProperty("epics");
     }
 
-    private _mergeSubModelInstanceProp<TPropKey extends ModelInstancePropKey>(
-      propKey: TPropKey
-    ): Record<string, ReturnType<ModelInstance[TPropKey]>> {
-      const result: Record<string, ReturnType<ModelInstance[TPropKey]>> = {};
+    private _mergeSubModelInstanceProperty<
+      TPropertyKey extends ModelInstancePropertyKey
+    >(
+      propertyKey: TPropertyKey
+    ): Record<string, ReturnType<ModelInstance[TPropertyKey]>> {
+      const result: Record<
+        string,
+        ReturnType<ModelInstance[TPropertyKey]>
+      > = {};
       Object.keys(this._subModelInstances).forEach((key) => {
-        result[key] = this._subModelInstances[key][propKey]();
-        if (propKey === "defaultArgs") {
+        result[key] = this._subModelInstances[key][propertyKey]();
+        if (propertyKey === "defaultArgs") {
           result[key][NYAX_DEFAULT_ARGS_KEY] = true;
         }
       });
