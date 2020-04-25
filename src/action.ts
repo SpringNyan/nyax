@@ -1,3 +1,4 @@
+import { NyaxPromise } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
@@ -68,13 +69,21 @@ export class ActionHelperImpl<TPayload, TResult>
 
   public dispatch(payload: TPayload): Promise<TResult> {
     const action = this.create(payload);
-    const promise = new Promise<TResult>((resolve, reject) => {
-      // TODO: handle unhandled effect error
+
+    const promise = new NyaxPromise<TResult>((resolve, reject) => {
       this._nyaxContext.dispatchDeferredByAction.set(action, {
         resolve,
-        reject,
+        reject: (reason) => {
+          reject(reason);
+          Promise.resolve().then(() => {
+            if (!promise.hasRejectionHandler) {
+              promise.then(undefined, this._nyaxContext.onUnhandledEffectError);
+            }
+          });
+        },
       });
     });
+
     this._nyaxContext.store.dispatch(action);
 
     return promise;

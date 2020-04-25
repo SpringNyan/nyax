@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { interval, timer } from "rxjs";
-import { filter, map } from "rxjs/operators";
+import { empty, interval, timer } from "rxjs";
+import { filter, map, mergeMap } from "rxjs/operators";
 import { createRequiredArg } from "../src/arg";
 import { createSubContainer } from "../src/container";
 import {
@@ -632,5 +632,173 @@ describe("nyax", () => {
       type: "spring/nyan/meow/subA.setAStr",
       payload: "aaa",
     });
+  });
+
+  it("test unhandled error", async () => {
+    let okCounter = 0;
+    let effectErrorCounter = 0;
+    let effectCatchedCounter = 0;
+    let epicErrorCounter = 0;
+
+    const ErrorModel = createModel(
+      class extends ModelBase {
+        public reducers() {
+          return {
+            ok: () => {
+              return;
+            },
+            epic: () => {
+              return;
+            },
+          };
+        }
+
+        public effects() {
+          return {
+            effect: async () => {
+              await timer(2).toPromise();
+              throw new Error("effect error");
+            },
+            effect2: async () => {
+              await timer(2).toPromise();
+              await this.actions.effect.dispatch({});
+            },
+            effect3: async () => {
+              await timer(2).toPromise();
+              await this.actions.effect2.dispatch({});
+            },
+            effectCatchInner: async () => {
+              await timer(2).toPromise();
+              try {
+                await this.actions.effect.dispatch({});
+              } catch {
+                // noop
+              }
+            },
+          };
+        }
+
+        public epics() {
+          return {
+            0: () =>
+              this.rootAction$.pipe(
+                filter((action) => this.actions.epic.is(action)),
+                map(() => {
+                  throw new Error("epic error");
+                })
+              ),
+            1: () =>
+              this.rootAction$.pipe(
+                filter((action) => this.actions.ok.is(action)),
+                mergeMap(() => {
+                  okCounter += 1;
+                  return empty();
+                })
+              ),
+          };
+        }
+      }
+    );
+
+    const { getContainer, registerModels } = createNyax({
+      dependencies,
+      onUnhandledEffectError: (error) => {
+        expect(error.message).eq("effect error");
+        effectErrorCounter += 1;
+      },
+      onUnhandledEpicError: (error) => {
+        expect(error.message).eq("epic error");
+        epicErrorCounter += 1;
+      },
+    });
+
+    registerModels({
+      err: ErrorModel,
+    });
+
+    const err = getContainer(ErrorModel);
+    err.actions.ok.dispatch({});
+    expect(okCounter).eq(1);
+    err.actions.epic.dispatch({});
+    expect(epicErrorCounter).eq(1);
+    err.actions.ok.dispatch({});
+    expect(okCounter).eq(2);
+    err.actions.epic.dispatch({});
+    expect(epicErrorCounter).eq(2);
+
+    err.actions.effect.dispatch({}).then(
+      () => {
+        // noop
+      },
+      () => {
+        // noop
+      }
+    );
+    expect(effectErrorCounter).eq(0);
+
+    err.actions.effect.dispatch({}).catch(() => {
+      // noop
+    });
+    expect(effectErrorCounter).eq(0);
+
+    err.actions.effect
+      .dispatch({})
+      .then(() => {
+        // noop
+      })
+      .catch(() => {
+        // noop
+      });
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(1);
+    expect(effectCatchedCounter).eq(0);
+
+    try {
+      await err.actions.effect.dispatch({});
+    } catch {
+      effectCatchedCounter += 1;
+    }
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(1);
+    expect(effectCatchedCounter).eq(1);
+
+    err.actions.effect2.dispatch({});
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(2);
+    expect(effectCatchedCounter).eq(1);
+
+    try {
+      await err.actions.effect2.dispatch({});
+    } catch {
+      effectCatchedCounter += 1;
+    }
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(2);
+    expect(effectCatchedCounter).eq(2);
+
+    err.actions.effect3
+      .dispatch({})
+      .then(() => {
+        // noop
+      })
+      .catch(() => {
+        // noop
+      });
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(3);
+    expect(effectCatchedCounter).eq(2);
+
+    try {
+      await err.actions.effect3.dispatch({});
+    } catch {
+      effectCatchedCounter += 1;
+    }
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(3);
+    expect(effectCatchedCounter).eq(3);
+
+    err.actions.effectCatchInner.dispatch({});
+    await timer(10).toPromise();
+    expect(effectErrorCounter).eq(3);
   });
 });
