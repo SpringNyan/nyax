@@ -2,7 +2,13 @@ import { expect } from "chai";
 import { interval, timer } from "rxjs";
 import { filter, map } from "rxjs/operators";
 import { createRequiredArg } from "../src/arg";
-import { createModel, createModelBase } from "../src/model";
+import { createSubContainer } from "../src/container";
+import {
+  createModel,
+  createModelBase,
+  mergeModels,
+  mergeSubModels,
+} from "../src/model";
 import { createSelector } from "../src/selector";
 import { createNyax } from "../src/store";
 
@@ -18,145 +24,87 @@ export const dependencies: Dependencies = {
 
 const ModelBase = createModelBase<Dependencies>();
 
-const FooModel = createModel(
-  class extends ModelBase {
-    public initialState() {
-      return {
-        foo: "foo",
-        bar: 998,
-
-        fooChangeCounter: 0,
-      };
-    }
-
-    public selectors() {
-      return {
-        fooBar: () => this.state.foo + this.state.bar,
-        cachedFooBar: createSelector(
-          () => this.state.foo,
-          () => this.state.bar,
-          (foo, bar) => {
-            new Array(2333333).forEach(() => {
-              // wait
-            });
-            return foo + bar;
-          }
-        ),
-      };
-    }
-
-    public reducers() {
-      return {
-        setFoo: (value: string) => {
-          this.state.foo = value;
-        },
-        setBar: (value: number) => {
-          this.state.bar = value;
-        },
-        increaseFooChangeCounter: () => {
-          this.state.fooChangeCounter += 1;
-        },
-      };
-    }
-
-    public effects() {
-      return {
-        setFooAfter10ms: async (value: string) => {
-          await timer(10).toPromise();
-          await this.actions.setFoo.dispatch(value);
-        },
-        setFooAfter20ms: async (value: string) => {
-          await timer(10).toPromise();
-          await this.actions.setFooAfter10ms.dispatch(value);
-        },
-      };
-    }
-
-    public epics() {
-      return {
-        fooChangeCounter: () =>
-          this.rootAction$.pipe(
-            filter((action) => this.actions.setFoo.is(action)),
-            map(() => this.actions.increaseFooChangeCounter.create({}))
-          ),
-      };
-    }
-  }
-);
-
-const BarModel = createModel(
-  class extends ModelBase {
-    public defaultArgs() {
-      return {
-        strArg: "str",
-        numArg: 233,
-        objArg: {
-          foo: "foo",
-          bar: 998,
-        },
-        requiredStrArg: createRequiredArg("requiredStr"),
-      };
-    }
-
-    public initialState() {
-      return {
-        str: this.args.strArg,
-        num: this.args.numArg,
-        obj: this.args.objArg,
-        requiredStr: this.args.requiredStrArg,
-      };
-    }
-
-    public selectors() {
-      return {
-        strNum: () => this.state.str + this.state.num,
-        cachedStrNum: createSelector(
-          () => this.state.str,
-          () => this.state.num,
-          (str, num) => str + num
-        ),
-      };
-    }
-
-    public reducers() {
-      return {
-        setStr: (value: string) => {
-          this.state.str = value;
-        },
-        setNum: (value: number) => {
-          this.state.num = value;
-        },
-      };
-    }
-
-    public effects() {
-      return {
-        setStrAfter10ms: async (value: string) => {
-          await timer(10).toPromise();
-          await this.actions.setStr.dispatch(value);
-        },
-      };
-    }
-  },
-  {
-    isDynamic: true,
-  }
-);
-
 describe("nyax", () => {
   it("test static model", async () => {
     let now = 0;
 
+    const FooModel = createModel(
+      class extends ModelBase {
+        public initialState() {
+          return {
+            foo: "foo",
+            bar: 998,
+
+            fooChangeCounter: 0,
+          };
+        }
+
+        public selectors() {
+          return {
+            fooBar: () => this.state.foo + this.state.bar,
+            cachedFooBar: createSelector(
+              () => this.state.foo,
+              () => this.state.bar,
+              (foo, bar) => {
+                new Array(2333333).forEach(() => {
+                  // wait
+                });
+                return foo + bar;
+              }
+            ),
+          };
+        }
+
+        public reducers() {
+          return {
+            setFoo: (value: string) => {
+              this.state.foo = value;
+            },
+            setBar: (value: number) => {
+              this.state.bar = value;
+            },
+            increaseFooChangeCounter: () => {
+              this.state.fooChangeCounter += 1;
+            },
+          };
+        }
+
+        public effects() {
+          return {
+            setFooAfter10ms: async (value: string) => {
+              await timer(10).toPromise();
+              await this.actions.setFoo.dispatch(value);
+            },
+            setFooAfter20ms: async (value: string) => {
+              await timer(10).toPromise();
+              await this.actions.setFooAfter10ms.dispatch(value);
+            },
+          };
+        }
+
+        public epics() {
+          return {
+            fooChangeCounter: () =>
+              this.rootAction$.pipe(
+                filter((action) => this.actions.setFoo.is(action)),
+                map(() => this.actions.increaseFooChangeCounter.create({}))
+              ),
+          };
+        }
+      }
+    );
+
     const { store, getContainer, registerModels } = createNyax({
       dependencies,
     });
+
+    expect(() => {
+      getContainer(FooModel);
+    }).throw();
+
     registerModels({
       foo: FooModel,
     });
-
-    expect(() => {
-      getContainer(BarModel, "bar");
-    }).throw();
 
     const foo = getContainer(FooModel);
     expect(foo.modelNamespace).eq("foo");
@@ -255,6 +203,65 @@ describe("nyax", () => {
   });
 
   it("test dynamic model", async () => {
+    const BarModel = createModel(
+      class extends ModelBase {
+        public defaultArgs() {
+          return {
+            strArg: "str",
+            numArg: 233,
+            objArg: {
+              foo: "foo",
+              bar: 998,
+            },
+            requiredStrArg: createRequiredArg("requiredStr"),
+          };
+        }
+
+        public initialState() {
+          return {
+            str: this.args.strArg,
+            num: this.args.numArg,
+            obj: this.args.objArg,
+            requiredStr: this.args.requiredStrArg,
+          };
+        }
+
+        public selectors() {
+          return {
+            strNum: () => this.state.str + this.state.num,
+            cachedStrNum: createSelector(
+              () => this.state.str,
+              () => this.state.num,
+              (str, num) => str + num
+            ),
+          };
+        }
+
+        public reducers() {
+          return {
+            setStr: (value: string) => {
+              this.state.str = value;
+            },
+            setNum: (value: number) => {
+              this.state.num = value;
+            },
+          };
+        }
+
+        public effects() {
+          return {
+            setStrAfter10ms: async (value: string) => {
+              await timer(10).toPromise();
+              await this.actions.setStr.dispatch(value);
+            },
+          };
+        }
+      },
+      {
+        isDynamic: true,
+      }
+    );
+
     const { getContainer, registerModels } = createNyax({
       dependencies,
     });
@@ -338,6 +345,13 @@ describe("nyax", () => {
     );
     const LazyBarModel = createModel(
       class extends BarModel {
+        public initialState() {
+          return {
+            ...super.initialState(),
+            lazy: true,
+          };
+        }
+
         public epics() {
           return {
             0: () =>
@@ -365,6 +379,8 @@ describe("nyax", () => {
 
     let time = 0;
     const lazyBarZzz = getContainer(LazyBarModel, "zzz");
+    expect(lazyBarZzz.state.str).eq("str");
+    expect(lazyBarZzz.state.lazy).eq(true);
     const timerContainer = getContainer(TimerModel);
     await timer(10).toPromise();
     expect(timerContainer.state.time).eq(0);
@@ -380,5 +396,241 @@ describe("nyax", () => {
     lazyBarZzz.unregister();
     await timer(10).toPromise();
     expect(timerContainer.state.time).eq(time);
+
+    const RequiredArgWithoutDefaultValueModel = createModel(
+      class extends ModelBase {
+        public defaultArgs() {
+          return {
+            foo: createRequiredArg<string>(),
+          };
+        }
+
+        public initialState() {
+          return {
+            foo: this.args.foo,
+          };
+        }
+      },
+      {
+        isDynamic: true,
+      }
+    );
+    registerModels({
+      requiredArgWithoutDefaultValue: RequiredArgWithoutDefaultValueModel,
+    });
+    const requiredArgWithoutDefaultValueFoo = getContainer(
+      RequiredArgWithoutDefaultValueModel,
+      "foo"
+    );
+    expect(() => {
+      requiredArgWithoutDefaultValueFoo.state.foo;
+    }).throw();
+    requiredArgWithoutDefaultValueFoo.unregister();
+    requiredArgWithoutDefaultValueFoo.register({
+      foo: "foo",
+    });
+    expect(requiredArgWithoutDefaultValueFoo.state.foo).eq("foo");
+  });
+
+  it("test merged model", async () => {
+    const AModel = createModel(
+      class extends ModelBase {
+        public defaultArgs() {
+          return {
+            aArg: "a",
+            foo: "foo",
+          };
+        }
+
+        public initialState() {
+          return {
+            a: this.args.aArg,
+            foo: this.args.foo,
+            aStr: "aStr",
+            aNum: 1,
+            aStrChangeCounter: 0,
+          };
+        }
+
+        public selectors() {
+          return {
+            aStrNum: () => this.state.aStr + this.state.aNum,
+          };
+        }
+
+        public reducers() {
+          return {
+            setAStr: (value: string) => {
+              this.state.aStr = value;
+            },
+            increaseAStrChangeCounter: () => {
+              this.state.aStrChangeCounter += 1;
+            },
+          };
+        }
+
+        public effects() {
+          return {
+            setAStrAfter10ms: async (value: string) => {
+              await timer(10).toPromise();
+              await this.actions.setAStr.dispatch(value);
+            },
+          };
+        }
+
+        public epics() {
+          return {
+            a: () =>
+              this.rootAction$.pipe(
+                filter((action) => this.actions.setAStr.is(action)),
+                map(() => this.actions.increaseAStrChangeCounter.create({}))
+              ),
+          };
+        }
+      }
+    );
+
+    const BModel = createModel(
+      class extends ModelBase {
+        public defaultArgs() {
+          return {
+            bArg: "b",
+            bar: "bar",
+          };
+        }
+
+        public initialState() {
+          return {
+            b: this.args.bArg,
+            bar: this.args.bar,
+            bStr: "bStr",
+            bNum: 2,
+            bStrChangeCounter: 0,
+          };
+        }
+
+        public selectors() {
+          return {
+            bStrNum: () => this.state.bStr + this.state.bNum,
+          };
+        }
+
+        public reducers() {
+          return {
+            setBStr: (value: string) => {
+              this.state.bStr = value;
+            },
+            increaseBStrChangeCounter: () => {
+              this.state.bStrChangeCounter += 1;
+            },
+          };
+        }
+
+        public effects() {
+          return {
+            setBStrAfter10ms: async (value: string) => {
+              await timer(10).toPromise();
+              await this.actions.setBStr.dispatch(value);
+            },
+          };
+        }
+
+        public epics() {
+          return {
+            b: () =>
+              this.rootAction$.pipe(
+                filter((action) => this.actions.setBStr.is(action)),
+                map(() => this.actions.increaseBStrChangeCounter.create({}))
+              ),
+          };
+        }
+      }
+    );
+
+    const { getContainer, registerModels } = createNyax({
+      dependencies,
+    });
+
+    const ABModel = mergeModels(AModel, BModel);
+
+    registerModels({
+      ab: ABModel,
+    });
+    const ab = getContainer(ABModel);
+    expect(ab.state.a).eq("a");
+    expect(ab.state.b).eq("b");
+
+    ab.actions.setAStr.dispatch("aa");
+    expect(ab.state.aStr).eq("aa");
+    expect(ab.getters.aStrNum).eq("aa1");
+    expect(ab.state.bStr).eq("bStr");
+    expect(ab.getters.bStrNum).eq("bStr2");
+
+    await ab.actions.setBStrAfter10ms.dispatch("bb");
+    expect(ab.getters.bStrNum).eq("bb2");
+
+    expect(ab.state.aStrChangeCounter).eq(1);
+    expect(ab.state.bStrChangeCounter).eq(1);
+
+    const ABSubABModel = createModel(
+      mergeModels(
+        AModel,
+        BModel,
+        mergeSubModels({
+          subA: AModel,
+          subB: BModel,
+        })
+      ),
+      {
+        isDynamic: true,
+        isLazy: true,
+      }
+    );
+    registerModels({
+      spring: {
+        nyan: ABSubABModel,
+      },
+    });
+    const abSubABMeow = getContainer(ABSubABModel, "meow");
+    expect(abSubABMeow.modelNamespace).eq("spring/nyan");
+    expect(abSubABMeow.containerKey).eq("meow");
+    expect(abSubABMeow.canRegister).eq(true);
+    expect(abSubABMeow.isRegistered).eq(false);
+
+    expect(abSubABMeow.state.aNum).eq(1);
+    expect(abSubABMeow.state.foo).eq("foo");
+    expect(abSubABMeow.state.bNum).eq(2);
+    expect(abSubABMeow.state.bar).eq("bar");
+    expect(abSubABMeow.state.subA.aStr).eq("aStr");
+    expect(abSubABMeow.state.subB.bStr).eq("bStr");
+
+    abSubABMeow.register({
+      aArg: "aa",
+      bar: "boom",
+      subA: {
+        foo: "for",
+      },
+    });
+    expect(abSubABMeow.state.foo).eq("foo");
+    expect(abSubABMeow.state.bar).eq("boom");
+    expect(abSubABMeow.state.subA.foo).eq("for");
+    expect(abSubABMeow.state.subA.a).eq("a");
+    expect(abSubABMeow.state.subB.bar).eq("bar");
+    expect(abSubABMeow.state.subB.b).eq("b");
+
+    const subA = createSubContainer(abSubABMeow, "subA");
+    const subB = createSubContainer(abSubABMeow, "subB");
+
+    expect(subA.state.foo).eq("for");
+    expect(subA.getters.aStrNum).eq("aStr1");
+
+    await subB.actions.setBStrAfter10ms.dispatch("bbb");
+    expect(subB.getters.bStrNum).eq("bbb2");
+    expect(abSubABMeow.state.subB.bStrChangeCounter).eq(1);
+
+    expect(subA.actions.setAStr.create("aaa")).deep.eq({
+      type: "spring/nyan/meow/subA.setAStr",
+      payload: "aaa",
+    });
   });
 });
