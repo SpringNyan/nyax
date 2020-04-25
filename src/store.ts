@@ -6,8 +6,13 @@ import {
   Store,
 } from "redux";
 import { createEpicMiddleware, Epic } from "redux-observable";
+import { Observable } from "rxjs";
 import { mergeMap, switchMap } from "rxjs/operators";
-import { batchRegisterActionHelper, reloadActionHelper } from "./action";
+import {
+  AnyAction,
+  batchRegisterActionHelper,
+  reloadActionHelper,
+} from "./action";
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
@@ -23,8 +28,14 @@ export interface NyaxOptions {
     middleware: Middleware;
   }) => Store;
 
-  onUnhandledEffectError?: (error: any) => void;
-  onUnhandledEpicError?: (error: any) => void;
+  onUnhandledEffectError?: (
+    error: any,
+    promise: Promise<any> | undefined
+  ) => void;
+  onUnhandledEpicError?: (
+    error: any,
+    caught: Observable<AnyAction>
+  ) => Observable<AnyAction>;
 }
 
 export interface Nyax {

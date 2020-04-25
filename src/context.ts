@@ -1,6 +1,6 @@
 import { Store } from "redux";
 import { ActionsObservable, Epic, StateObservable } from "redux-observable";
-import { Subject } from "rxjs";
+import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
 import {
@@ -38,8 +38,14 @@ export interface NyaxContext {
   >;
 
   dependencies: any;
-  onUnhandledEffectError: (error: any) => void;
-  onUnhandledEpicError: (error: any) => void;
+  onUnhandledEffectError: (
+    error: any,
+    promise: Promise<any> | undefined
+  ) => void;
+  onUnhandledEpicError: (
+    error: any,
+    caught: Observable<AnyAction>
+  ) => Observable<AnyAction>;
 
   getRootState: () => any;
 }
@@ -80,18 +86,24 @@ export function createNyaxContext(): NyaxContext {
     get dependencies(): any {
       return nyaxContext.options.dependencies;
     },
-    onUnhandledEffectError: (error) => {
+    onUnhandledEffectError: (error, promise) => {
       if (nyaxContext.options.onUnhandledEffectError) {
-        nyaxContext.options.onUnhandledEffectError(error);
+        return nyaxContext.options.onUnhandledEffectError(error, promise);
       } else {
+        if (promise) {
+          promise.then(undefined, () => {
+            // noop
+          });
+        }
         console.error(error);
       }
     },
-    onUnhandledEpicError: (error) => {
+    onUnhandledEpicError: (error, caught) => {
       if (nyaxContext.options.onUnhandledEpicError) {
-        nyaxContext.options.onUnhandledEpicError(error);
+        return nyaxContext.options.onUnhandledEpicError(error, caught);
       } else {
         console.error(error);
+        return caught;
       }
     },
 

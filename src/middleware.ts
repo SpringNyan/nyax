@@ -129,7 +129,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
             if (dispatchDeferred) {
               dispatchDeferred.reject(reason);
             } else {
-              nyaxContext.onUnhandledEffectError(reason);
+              nyaxContext.onUnhandledEffectError(reason, undefined);
             }
           }
         );

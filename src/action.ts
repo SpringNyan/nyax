@@ -77,7 +77,7 @@ export class ActionHelperImpl<TPayload, TResult>
           reject(reason);
           Promise.resolve().then(() => {
             if (!promise.hasRejectionHandler) {
-              promise.then(undefined, this._nyaxContext.onUnhandledEffectError);
+              this._nyaxContext.onUnhandledEffectError(reason, promise);
             }
           });
         },
