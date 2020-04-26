@@ -434,7 +434,39 @@ export function createModel<
   TEpics
 > &
   TOptions {
-  const Model = class extends model {};
+  const Model = class extends ModelBase {
+    private readonly _modelInstance: ModelInstance = ((): ModelInstance => {
+      const modelInstance = new (model as Model)() as ModelBase;
+      defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
+      defineGetter(modelInstance, "_container", () => this._container);
+      return modelInstance;
+    })();
+
+    public defaultArgs(): any {
+      return this._modelInstance.defaultArgs();
+    }
+
+    public initialState(): any {
+      return this._modelInstance.initialState();
+    }
+
+    public selectors(): any {
+      return this._modelInstance.selectors();
+    }
+
+    public reducers(): any {
+      return this._modelInstance.reducers();
+    }
+
+    public effects(): any {
+      return this._modelInstance.effects();
+    }
+
+    public epics(): any {
+      return this._modelInstance.epics();
+    }
+  } as Model;
+
   if (options) {
     Model.isDynamic = options.isDynamic;
     Model.isLazy = options.isLazy;
