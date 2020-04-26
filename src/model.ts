@@ -353,13 +353,13 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
 
           const container = {
             get args(): any {
-              return self._container.args !== NYAX_NOTHING
-                ? self._container.args[key]
-                : NYAX_NOTHING;
+              const args = self._container.args;
+              return args !== NYAX_NOTHING ? args[key] : NYAX_NOTHING;
             },
             get draftState(): any {
-              return self._container.draftState !== NYAX_NOTHING
-                ? self._container.draftState[key]
+              const draftState = self._container.draftState;
+              return draftState !== NYAX_NOTHING
+                ? draftState[key]
                 : NYAX_NOTHING;
             },
             get state(): any {
