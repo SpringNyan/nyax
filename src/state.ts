@@ -75,9 +75,9 @@ export function createState<TModel extends Model>(
   container: ContainerImpl<TModel>,
   args: ExtractModelArgs<TModel>
 ): ExtractModelState<TModel> {
-  container.modelArgs = args;
+  container.args = args;
   const state = container.modelInstance.initialState();
-  container.modelArgs = NYAX_NOTHING;
+  container.args = NYAX_NOTHING;
 
   return state;
 }

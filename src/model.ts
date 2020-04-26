@@ -199,8 +199,8 @@ export class ModelBase<TDependencies = any>
   public _nyaxContext!: NyaxContext;
   public _container!: Pick<
     ContainerImpl,
-    | "modelArgs"
-    | "modelState"
+    | "args"
+    | "draftState"
     | "state"
     | "getters"
     | "actions"
@@ -231,14 +231,14 @@ export class ModelBase<TDependencies = any>
     return this._nyaxContext.dependencies;
   }
   public get args(): any {
-    if (this._container.modelArgs !== NYAX_NOTHING) {
-      return this._container.modelArgs;
+    if (this._container.args !== NYAX_NOTHING) {
+      return this._container.args;
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
-    if (this._container.modelState !== NYAX_NOTHING) {
-      return this._container.modelState;
+    if (this._container.draftState !== NYAX_NOTHING) {
+      return this._container.draftState;
     }
     return this._container.state;
   }
@@ -351,14 +351,14 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
           const modelInstance = new subModels[key]() as ModelBase;
           defineGetter(modelInstance, "_nyaxContext", () => self._nyaxContext);
           defineGetter(modelInstance, "_container", () => ({
-            get modelArgs(): any {
-              return self._container.modelArgs !== NYAX_NOTHING
-                ? self._container.modelArgs[key]
+            get args(): any {
+              return self._container.args !== NYAX_NOTHING
+                ? self._container.args[key]
                 : NYAX_NOTHING;
             },
-            get modelState(): any {
-              return self._container.modelState !== NYAX_NOTHING
-                ? self._container.modelState[key]
+            get draftState(): any {
+              return self._container.draftState !== NYAX_NOTHING
+                ? self._container.draftState[key]
                 : NYAX_NOTHING;
             },
             get state(): any {
