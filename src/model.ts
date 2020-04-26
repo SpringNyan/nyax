@@ -197,8 +197,16 @@ export type MergeSubModelsProperty<
 export class ModelBase<TDependencies = any>
   implements ModelInstance<TDependencies, {}, {}, {}, {}, {}, {}> {
   public _nyaxContext!: NyaxContext;
-  public _container!: ContainerImpl;
-  public _subKey!: string | undefined;
+  public _container!: Pick<
+    ContainerImpl,
+    | "args"
+    | "draftState"
+    | "state"
+    | "getters"
+    | "actions"
+    | "modelNamespace"
+    | "containerKey"
+  >;
 
   public defaultArgs(): {} {
     return {};
@@ -223,22 +231,21 @@ export class ModelBase<TDependencies = any>
     return this._nyaxContext.dependencies;
   }
   public get args(): any {
-    if (this._container.modelArgs !== NYAX_NOTHING) {
-      return this._pickContainerProperty(this._container.modelArgs);
+    const args = this._container.args;
+    if (args !== NYAX_NOTHING) {
+      return args;
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
-    if (this._container.modelState !== NYAX_NOTHING) {
-      return this._pickContainerProperty(this._container.modelState);
-    }
-    return this._pickContainerProperty(this._container.state);
+    const draftState = this._container.draftState;
+    return draftState !== NYAX_NOTHING ? draftState : this._container.state;
   }
   public get getters(): any {
-    return this._pickContainerProperty(this._container.getters);
+    return this._container.getters;
   }
   public get actions(): any {
-    return this._pickContainerProperty(this._container.actions);
+    return this._container.actions;
   }
 
   public get rootAction$(): any {
@@ -257,10 +264,6 @@ export class ModelBase<TDependencies = any>
 
   public get getContainer(): any {
     return this._nyaxContext.getContainer;
-  }
-
-  private _pickContainerProperty(property: any): any {
-    return this._subKey !== undefined ? property[this._subKey] : property;
   }
 }
 
@@ -335,20 +338,54 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   MergeSubModelsProperty<TSubModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly _subModelInstances: Record<
+    private readonly _subModelInstances = ((): Record<
       string,
       ModelInstance
-    > = Object.keys(subModels).reduce<Record<string, ModelInstance>>(
-      (obj, key) => {
-        const modelInstance = new subModels[key]() as ModelBase;
-        defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
-        defineGetter(modelInstance, "_container", () => this._container);
-        modelInstance._subKey = key;
-        obj[key] = modelInstance;
-        return obj;
-      },
-      {}
-    );
+    > => {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
+
+      return Object.keys(subModels).reduce<Record<string, ModelInstance>>(
+        (obj, key) => {
+          const modelInstance = new subModels[key]() as ModelBase;
+
+          defineGetter(modelInstance, "_nyaxContext", () => self._nyaxContext);
+
+          const container = {
+            get args(): any {
+              const args = self._container.args;
+              return args !== NYAX_NOTHING ? args[key] : NYAX_NOTHING;
+            },
+            get draftState(): any {
+              const draftState = self._container.draftState;
+              return draftState !== NYAX_NOTHING
+                ? draftState[key]
+                : NYAX_NOTHING;
+            },
+            get state(): any {
+              return self._container.state[key];
+            },
+            get getters(): any {
+              return self._container.getters[key];
+            },
+            get actions(): any {
+              return self._container.actions[key];
+            },
+            get modelNamespace(): any {
+              return self._container.modelNamespace;
+            },
+            get containerKey(): any {
+              return self._container.containerKey;
+            },
+          };
+          defineGetter(modelInstance, "_container", () => container);
+
+          obj[key] = modelInstance;
+          return obj;
+        },
+        {}
+      );
+    })();
 
     public defaultArgs(): any {
       return this._mergeSubProperty("defaultArgs");
@@ -434,7 +471,39 @@ export function createModel<
   TEpics
 > &
   TOptions {
-  const Model = class extends model {};
+  const Model = class extends ModelBase {
+    private readonly _modelInstance = ((): ModelInstance => {
+      const modelInstance = new (model as Model)() as ModelBase;
+      defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
+      defineGetter(modelInstance, "_container", () => this._container);
+      return modelInstance;
+    })();
+
+    public defaultArgs(): any {
+      return this._modelInstance.defaultArgs();
+    }
+
+    public initialState(): any {
+      return this._modelInstance.initialState();
+    }
+
+    public selectors(): any {
+      return this._modelInstance.selectors();
+    }
+
+    public reducers(): any {
+      return this._modelInstance.reducers();
+    }
+
+    public effects(): any {
+      return this._modelInstance.effects();
+    }
+
+    public epics(): any {
+      return this._modelInstance.epics();
+    }
+  } as Model;
+
   if (options) {
     Model.isDynamic = options.isDynamic;
     Model.isLazy = options.isLazy;

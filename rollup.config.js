@@ -1,15 +1,16 @@
 import typescript from "@rollup/plugin-typescript";
 import cleanup from "rollup-plugin-cleanup";
+import pkg from "./package.json";
 
 export default {
   input: "src/index.ts",
   output: [
     {
-      file: "dist/nyax.js",
+      file: pkg.main,
       format: "cjs",
     },
     {
-      file: "dist/nyax.esm.js",
+      file: pkg.module,
       format: "esm",
     },
   ],

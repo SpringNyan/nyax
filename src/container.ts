@@ -68,10 +68,8 @@ export class ContainerImpl<TModel extends Model = Model>
   public readonly reducerByPath: Record<string, ModelReducer>;
   public readonly effectByPath: Record<string, ModelEffect>;
 
-  public modelArgs:
-    | ExtractModelArgs<TModel>
-    | typeof NYAX_NOTHING = NYAX_NOTHING;
-  public modelState:
+  public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
+  public draftState:
     | ExtractModelState<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
 

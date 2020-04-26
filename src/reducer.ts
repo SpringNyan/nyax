@@ -118,9 +118,9 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       container.containerKey
     );
     const newState = produce(state, (draft: any) => {
-      container.modelState = draft;
+      container.draftState = draft;
       reducer(action.payload);
-      container.modelState = NYAX_NOTHING;
+      container.draftState = NYAX_NOTHING;
     });
 
     return setSubState(
