@@ -231,16 +231,15 @@ export class ModelBase<TDependencies = any>
     return this._nyaxContext.dependencies;
   }
   public get args(): any {
-    if (this._container.args !== NYAX_NOTHING) {
-      return this._container.args;
+    const args = this._container.args;
+    if (args !== NYAX_NOTHING) {
+      return args;
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
-    if (this._container.draftState !== NYAX_NOTHING) {
-      return this._container.draftState;
-    }
-    return this._container.state;
+    const draftState = this._container.draftState;
+    return draftState !== NYAX_NOTHING ? draftState : this._container.state;
   }
   public get getters(): any {
     return this._container.getters;
@@ -349,8 +348,10 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       return Object.keys(subModels).reduce<Record<string, ModelInstance>>(
         (obj, key) => {
           const modelInstance = new subModels[key]() as ModelBase;
+
           defineGetter(modelInstance, "_nyaxContext", () => self._nyaxContext);
-          defineGetter(modelInstance, "_container", () => ({
+
+          const container = {
             get args(): any {
               return self._container.args !== NYAX_NOTHING
                 ? self._container.args[key]
@@ -376,7 +377,9 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
             get containerKey(): any {
               return self._container.containerKey;
             },
-          }));
+          };
+          defineGetter(modelInstance, "_container", () => container);
+
           obj[key] = modelInstance;
           return obj;
         },
