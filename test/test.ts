@@ -656,19 +656,19 @@ describe("nyax", () => {
         public effects() {
           return {
             effect: async () => {
-              await timer(2).toPromise();
+              await timer(5).toPromise();
               throw new Error("effect error");
             },
             effect2: async () => {
-              await timer(2).toPromise();
+              await timer(5).toPromise();
               await this.actions.effect.dispatch({});
             },
             effect3: async () => {
-              await timer(2).toPromise();
+              await timer(5).toPromise();
               await this.actions.effect2.dispatch({});
             },
             effectCatchInner: async () => {
-              await timer(2).toPromise();
+              await timer(5).toPromise();
               try {
                 await this.actions.effect.dispatch({});
               } catch {
@@ -753,7 +753,7 @@ describe("nyax", () => {
       .catch(() => {
         // noop
       });
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(1);
     expect(effectCatchedCounter).eq(0);
 
@@ -762,12 +762,12 @@ describe("nyax", () => {
     } catch {
       effectCatchedCounter += 1;
     }
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(1);
     expect(effectCatchedCounter).eq(1);
 
     err.actions.effect2.dispatch({});
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(2);
     expect(effectCatchedCounter).eq(1);
 
@@ -776,7 +776,7 @@ describe("nyax", () => {
     } catch {
       effectCatchedCounter += 1;
     }
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(2);
     expect(effectCatchedCounter).eq(2);
 
@@ -788,7 +788,7 @@ describe("nyax", () => {
       .catch(() => {
         // noop
       });
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(3);
     expect(effectCatchedCounter).eq(2);
 
@@ -797,12 +797,12 @@ describe("nyax", () => {
     } catch {
       effectCatchedCounter += 1;
     }
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(3);
     expect(effectCatchedCounter).eq(3);
 
     err.actions.effectCatchInner.dispatch({});
-    await timer(10).toPromise();
+    await timer(50).toPromise();
     expect(effectErrorCounter).eq(3);
   });
 });
