@@ -1,5 +1,6 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
+import { NyaxContext } from "./context";
 import { ExtractModelArgs, ExtractModelState, Model } from "./model";
 import { is, isObject } from "./util";
 
@@ -80,4 +81,69 @@ export function createState<TModel extends Model>(
   container.args = NYAX_NOTHING;
 
   return state;
+}
+
+export interface GetState {
+  (): unknown;
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | string
+  ): TModel["isDynamic"] extends true
+    ? Record<string, ExtractModelState<TModel> | undefined> | undefined
+    : ExtractModelState<TModel> | undefined;
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | string,
+    containerKey: string
+  ): TModel["isDynamic"] extends true
+    ? ExtractModelState<TModel> | undefined
+    : never;
+}
+
+export function createGetState(nyaxContext: NyaxContext): GetState {
+  return <TModel extends Model>(
+    modelOrModelNamespace?: TModel | string,
+    containerKey?: string
+  ):
+    | unknown
+    | ExtractModelState<TModel>
+    | Record<string, ExtractModelState<TModel> | undefined>
+    | undefined => {
+    const rootState = nyaxContext.getRootState();
+
+    if (modelOrModelNamespace === undefined) {
+      return rootState;
+    }
+
+    let model: TModel;
+    if (typeof modelOrModelNamespace === "string") {
+      model = nyaxContext.modelByModelNamespace.get(
+        modelOrModelNamespace
+      ) as TModel;
+      if (!model) {
+        throw new Error("Model namespace is not bound");
+      }
+    } else {
+      model = modelOrModelNamespace;
+    }
+
+    const modelContext = nyaxContext.modelContextByModel.get(model);
+    if (!modelContext) {
+      throw new Error("Model is not registered");
+    }
+
+    const state = rootState?.[modelContext.modelPath];
+
+    if (model.isDynamic) {
+      if (containerKey !== undefined) {
+        return state?.[containerKey];
+      } else {
+        return state;
+      }
+    } else {
+      if (containerKey !== undefined) {
+        throw new Error("Container key is not available for static model");
+      } else {
+        return state;
+      }
+    }
+  };
 }

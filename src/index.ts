@@ -11,5 +11,6 @@ export {
 } from "./model";
 export type { Model, Models } from "./model";
 export { createSelector } from "./selector";
+export type { GetState } from "./state";
 export { createNyax } from "./store";
 export type { Nyax, NyaxOptions } from "./store";
