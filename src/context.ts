@@ -9,6 +9,7 @@ import {
   GetContainerInternal,
 } from "./container";
 import { Model } from "./model";
+import { createGetState, GetState } from "./state";
 import { NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -19,6 +20,7 @@ export interface NyaxContext {
   rootState$: StateObservable<any>;
 
   getContainer: GetContainerInternal;
+  getState: GetState;
 
   addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
@@ -71,6 +73,8 @@ export function createNyaxContext(): NyaxContext {
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getContainer: undefined!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    getState: undefined!,
 
     addEpic$: new Subject(),
     switchEpic$: new Subject(),
@@ -114,6 +118,7 @@ export function createNyaxContext(): NyaxContext {
   };
 
   nyaxContext.getContainer = createGetContainer(nyaxContext);
+  nyaxContext.getState = createGetState(nyaxContext);
 
   return nyaxContext;
 }
