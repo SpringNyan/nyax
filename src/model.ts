@@ -12,7 +12,7 @@ import { ModelEffects } from "./effect";
 import { ModelEpics } from "./epic";
 import { ModelReducers } from "./reducer";
 import { ConvertGetters, ModelSelectors } from "./selector";
-import { ConvertState, ModelInitialState } from "./state";
+import { ConvertState, GetState, ModelInitialState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
@@ -54,6 +54,7 @@ export interface ModelInstance<
   containerKey: string | undefined;
 
   getContainer: GetContainer;
+  getState: GetState<this["state"]>;
 }
 
 export type ModelInstanceConstructor<
@@ -262,8 +263,20 @@ export class ModelBase<TDependencies = any>
     return this._container.containerKey;
   }
 
-  public get getContainer(): any {
-    return this._nyaxContext.getContainer;
+  public getContainer(...args: any[]): any {
+    return (this._nyaxContext.getContainer as any)(...args);
+  }
+  public getState(...args: any[]): any {
+    if (args[0] === undefined) {
+      return this._nyaxContext.getContainer(
+        this.modelNamespace,
+        this.containerKey
+      ).isRegistered
+        ? this.state
+        : undefined;
+    }
+
+    return (this._nyaxContext.getState as any)(...args);
   }
 }
 
