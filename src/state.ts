@@ -83,8 +83,8 @@ export function createState<TModel extends Model>(
   return state;
 }
 
-export interface GetState {
-  (): unknown;
+export interface GetState<TState = unknown> {
+  (): TState | undefined;
   <TModel extends Model>(
     modelOrModelNamespace: TModel | string
   ): TModel["isDynamic"] extends true
