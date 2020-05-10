@@ -94,7 +94,7 @@ describe("nyax", () => {
       }
     );
 
-    const { store, getContainer, registerModels } = createNyax({
+    const { store, getContainer, getState, registerModels } = createNyax({
       dependencies,
     });
 
@@ -122,6 +122,9 @@ describe("nyax", () => {
     expect(foo.state.foo).eq("fooo");
     await timer(10).toPromise();
     expect(foo.state.foo).eq("foo10");
+
+    expect(getState(FooModel)).eq(foo.state);
+    expect(getState(FooModel)?.foo).eq(foo.state.foo);
 
     await (async () => {
       const promise = foo.actions.setFooAfter20ms.dispatch("foo20");
@@ -192,6 +195,8 @@ describe("nyax", () => {
     expect(barLazyFoo.canRegister).eq(true);
     expect(barLazyFoo.isRegistered).eq(false);
 
+    expect(getState(BarLazyFooModel)).eq(undefined);
+
     expect(barLazyFoo.state.foo).eq("foo");
     expect(barLazyFoo.getters.cachedFooBar).eq("foo998");
     expect(barLazyFoo.isRegistered).eq(false);
@@ -200,6 +205,9 @@ describe("nyax", () => {
     expect(barLazyFoo.state.foo).eq("for");
     expect(barLazyFoo.getters.cachedFooBar).eq("for998");
     expect(barLazyFoo.isRegistered).eq(true);
+
+    expect(getState(BarLazyFooModel)).eq(barLazyFoo.state);
+    expect(getState(BarLazyFooModel)?.foo).eq(barLazyFoo.state.foo);
   });
 
   it("test dynamic model", async () => {
@@ -262,7 +270,7 @@ describe("nyax", () => {
       }
     );
 
-    const { getContainer, registerModels } = createNyax({
+    const { getContainer, getState, registerModels } = createNyax({
       dependencies,
     });
     registerModels({
@@ -274,6 +282,8 @@ describe("nyax", () => {
     expect(barNyan.containerKey).eq("nyan");
     expect(barNyan.canRegister).eq(true);
     expect(barNyan.isRegistered).eq(false);
+
+    expect(getState(BarModel)).eq(undefined);
 
     expect(barNyan.state.str).eq("str");
     expect(barNyan.state.obj.bar).eq(998);
@@ -312,6 +322,14 @@ describe("nyax", () => {
     });
     expect(barNyan.canRegister).eq(false);
     expect(barNyan.isRegistered).eq(true);
+
+    expect(getState(BarModel)?.nyan).eq(barNyan.state);
+    expect(getState(BarModel)?.nyan?.str).eq(barNyan.state.str);
+    expect(getState(BarModel, "nyan")).eq(barNyan.state);
+    expect(getState(BarModel, "nyan")?.str).eq(barNyan.state.str);
+
+    expect(getState(BarModel)?.meow).eq(undefined);
+    expect(getState(BarModel, "meow")).eq(undefined);
 
     expect(barNyan.getters.cachedStrNum).eq("str123");
     barNyan.actions.setStr.dispatch("zzz");
@@ -387,6 +405,9 @@ describe("nyax", () => {
     lazyBarZzz.register({
       requiredStrArg: "zzz",
     });
+
+    expect(getState(LazyBarModel)?.zzz).eq(lazyBarZzz.state);
+
     await timer(10).toPromise();
     time = timerContainer.state.time;
     expect(time).not.eq(0);
@@ -396,6 +417,8 @@ describe("nyax", () => {
     lazyBarZzz.unregister();
     await timer(10).toPromise();
     expect(timerContainer.state.time).eq(time);
+
+    expect(getState(LazyBarModel)?.zzz).eq(undefined);
 
     const RequiredArgWithoutDefaultValueModel = createModel(
       class extends ModelBase {
@@ -547,7 +570,7 @@ describe("nyax", () => {
       }
     );
 
-    const { getContainer, registerModels } = createNyax({
+    const { getContainer, getState, registerModels } = createNyax({
       dependencies,
     });
 
@@ -565,6 +588,8 @@ describe("nyax", () => {
     expect(ab.getters.aStrNum).eq("aa1");
     expect(ab.state.bStr).eq("bStr");
     expect(ab.getters.bStrNum).eq("bStr2");
+
+    expect(getState(ABModel)?.aStr).eq(ab.state.aStr);
 
     await ab.actions.setBStrAfter10ms.dispatch("bb");
     expect(ab.getters.bStrNum).eq("bb2");
@@ -617,6 +642,8 @@ describe("nyax", () => {
     expect(abSubABMeow.state.subA.a).eq("a");
     expect(abSubABMeow.state.subB.bar).eq("bar");
     expect(abSubABMeow.state.subB.b).eq("b");
+
+    expect(getState(ABSubABModel)?.meow?.subA).eq(abSubABMeow.state.subA);
 
     const subA = createSubContainer(abSubABMeow, "subA");
     const subB = createSubContainer(abSubABMeow, "subB");
