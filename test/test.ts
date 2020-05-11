@@ -170,7 +170,17 @@ describe("nyax", () => {
       public selectors() {
         return {
           ...super.selectors(),
+          fooGetterFooBar: () => this.getContainer(FooModel).getters.fooBar,
+          testGetContainerWithoutBind: () => {
+            const { getContainer } = this;
+            return getContainer(FooModel).getters.fooBar;
+          },
+
           fooState: () => this.getState(FooModel),
+          testGetStateWithoutBind: () => {
+            const { getState } = this;
+            return getState(FooModel);
+          },
         };
       }
     }
@@ -188,8 +198,12 @@ describe("nyax", () => {
 
     expect(barFoo.getters.fooBar).eq("foo998");
 
+    expect(barFoo.getters.fooGetterFooBar).eq("foo20666");
+    expect(barFoo.getters.testGetContainerWithoutBind).eq("foo20666");
+
     expect(barFoo.getters.state).eq(barFoo.state);
     expect(barFoo.getters.fooState).eq(foo.state);
+    expect(barFoo.getters.testGetStateWithoutBind).eq(foo.state);
 
     const BarLazyFooModel = createModel(class extends FooModel {}, {
       isLazy: true,

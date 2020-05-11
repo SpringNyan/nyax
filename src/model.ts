@@ -197,8 +197,8 @@ export type MergeSubModelsProperty<
 
 export class ModelBase<TDependencies = any>
   implements ModelInstance<TDependencies, {}, {}, {}, {}, {}, {}> {
-  public _nyaxContext!: NyaxContext;
-  public _container!: Pick<
+  public __nyaxContext!: NyaxContext;
+  public __container!: Pick<
     ContainerImpl,
     | "args"
     | "draftState"
@@ -208,6 +208,8 @@ export class ModelBase<TDependencies = any>
     | "modelNamespace"
     | "containerKey"
   >;
+
+  private __getStateCache: any;
 
   public defaultArgs(): {} {
     return {};
@@ -229,54 +231,60 @@ export class ModelBase<TDependencies = any>
   }
 
   public get dependencies(): TDependencies {
-    return this._nyaxContext.dependencies;
+    return this.__nyaxContext.dependencies;
   }
   public get args(): any {
-    const args = this._container.args;
+    const args = this.__container.args;
     if (args !== NYAX_NOTHING) {
       return args;
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
-    const draftState = this._container.draftState;
-    return draftState !== NYAX_NOTHING ? draftState : this._container.state;
+    const draftState = this.__container.draftState;
+    return draftState !== NYAX_NOTHING ? draftState : this.__container.state;
   }
   public get getters(): any {
-    return this._container.getters;
+    return this.__container.getters;
   }
   public get actions(): any {
-    return this._container.actions;
+    return this.__container.actions;
   }
 
   public get rootAction$(): any {
-    return this._nyaxContext.rootAction$;
+    return this.__nyaxContext.rootAction$;
   }
   public get rootState$(): any {
-    return this._nyaxContext.rootState$;
+    return this.__nyaxContext.rootState$;
   }
 
   public get modelNamespace(): any {
-    return this._container.modelNamespace;
+    return this.__container.modelNamespace;
   }
   public get containerKey(): any {
-    return this._container.containerKey;
+    return this.__container.containerKey;
   }
 
-  public getContainer(...args: any[]): any {
-    return (this._nyaxContext.getContainer as any)(...args);
+  public get getContainer(): any {
+    return this.__nyaxContext.getContainer;
   }
-  public getState(...args: any[]): any {
-    if (args[0] === undefined) {
-      return this._nyaxContext.getContainer(
-        this.modelNamespace,
-        this.containerKey
-      ).isRegistered
-        ? this.state
-        : undefined;
+  public get getState(): any {
+    if (!this.__getStateCache) {
+      this.__getStateCache = (...args: any[]): any => {
+        if (args[0] === undefined) {
+          return this.__nyaxContext.getContainer(
+            this.modelNamespace,
+            this.containerKey
+          ).isRegistered
+            ? this.state
+            : undefined;
+        }
+
+        return (this.__nyaxContext.getState as any)(...args);
+      };
     }
 
-    return (this._nyaxContext.getState as any)(...args);
+    return this.__getStateCache;
   }
 }
 
@@ -292,10 +300,10 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   MergeModelsProperty<TModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly _modelInstances: ModelInstance[] = models.map((model) => {
+    private readonly __modelInstances: ModelInstance[] = models.map((model) => {
       const modelInstance = new model() as ModelBase;
-      defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
-      defineGetter(modelInstance, "_container", () => this._container);
+      defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
+      defineGetter(modelInstance, "__container", () => this.__container);
       return modelInstance;
     });
 
@@ -328,7 +336,7 @@ export function mergeModels<TModels extends Model[] | [Model]>(
     ): ReturnType<ModelInstance[TPropertyKey]> {
       const result = {} as ReturnType<ModelInstance[TPropertyKey]>;
 
-      this._modelInstances
+      this.__modelInstances
         .map((modelInstance) => modelInstance[propertyKey]())
         .forEach((property) => {
           mergeObjects(result, property);
@@ -351,7 +359,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   MergeSubModelsProperty<TSubModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly _subModelInstances = ((): Record<
+    private readonly __subModelInstances = ((): Record<
       string,
       ModelInstance
     > => {
@@ -362,36 +370,40 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
         (obj, key) => {
           const modelInstance = new subModels[key]() as ModelBase;
 
-          defineGetter(modelInstance, "_nyaxContext", () => self._nyaxContext);
+          defineGetter(
+            modelInstance,
+            "__nyaxContext",
+            () => self.__nyaxContext
+          );
 
           const container = {
             get args(): any {
-              const args = self._container.args;
+              const args = self.__container.args;
               return args !== NYAX_NOTHING ? args[key] : NYAX_NOTHING;
             },
             get draftState(): any {
-              const draftState = self._container.draftState;
+              const draftState = self.__container.draftState;
               return draftState !== NYAX_NOTHING
                 ? draftState[key]
                 : NYAX_NOTHING;
             },
             get state(): any {
-              return self._container.state[key];
+              return self.__container.state[key];
             },
             get getters(): any {
-              return self._container.getters[key];
+              return self.__container.getters[key];
             },
             get actions(): any {
-              return self._container.actions[key];
+              return self.__container.actions[key];
             },
             get modelNamespace(): any {
-              return self._container.modelNamespace;
+              return self.__container.modelNamespace;
             },
             get containerKey(): any {
-              return self._container.containerKey;
+              return self.__container.containerKey;
             },
           };
-          defineGetter(modelInstance, "_container", () => container);
+          defineGetter(modelInstance, "__container", () => container);
 
           obj[key] = modelInstance;
           return obj;
@@ -431,8 +443,8 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
         string,
         ReturnType<ModelInstance[TPropertyKey]>
       > = {};
-      Object.keys(this._subModelInstances).forEach((key) => {
-        result[key] = this._subModelInstances[key][propertyKey]();
+      Object.keys(this.__subModelInstances).forEach((key) => {
+        result[key] = this.__subModelInstances[key][propertyKey]();
         if (propertyKey === "defaultArgs") {
           result[key][NYAX_DEFAULT_ARGS_KEY] = true;
         }
@@ -485,35 +497,35 @@ export function createModel<
 > &
   TOptions {
   const Model = class extends ModelBase {
-    private readonly _modelInstance = ((): ModelInstance => {
+    private readonly __modelInstance = ((): ModelInstance => {
       const modelInstance = new (model as Model)() as ModelBase;
-      defineGetter(modelInstance, "_nyaxContext", () => this._nyaxContext);
-      defineGetter(modelInstance, "_container", () => this._container);
+      defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
+      defineGetter(modelInstance, "__container", () => this.__container);
       return modelInstance;
     })();
 
     public defaultArgs(): any {
-      return this._modelInstance.defaultArgs();
+      return this.__modelInstance.defaultArgs();
     }
 
     public initialState(): any {
-      return this._modelInstance.initialState();
+      return this.__modelInstance.initialState();
     }
 
     public selectors(): any {
-      return this._modelInstance.selectors();
+      return this.__modelInstance.selectors();
     }
 
     public reducers(): any {
-      return this._modelInstance.reducers();
+      return this.__modelInstance.reducers();
     }
 
     public effects(): any {
-      return this._modelInstance.effects();
+      return this.__modelInstance.effects();
     }
 
     public epics(): any {
-      return this._modelInstance.epics();
+      return this.__modelInstance.epics();
     }
   } as Model;
 
