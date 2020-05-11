@@ -231,8 +231,8 @@ export class ContainerImpl<TModel extends Model = Model>
 
   private _createModelInstance(): InstanceType<TModel> {
     const modelInstance = new this.model() as ModelBase;
-    modelInstance._nyaxContext = this._nyaxContext;
-    modelInstance._container = this;
+    modelInstance.__nyaxContext = this._nyaxContext;
+    modelInstance.__container = this;
     return modelInstance as InstanceType<TModel>;
   }
 }
