@@ -209,6 +209,8 @@ export class ModelBase<TDependencies = any>
     | "containerKey"
   >;
 
+  private _getState: any;
+
   public defaultArgs(): {} {
     return {};
   }
@@ -263,20 +265,26 @@ export class ModelBase<TDependencies = any>
     return this._container.containerKey;
   }
 
-  public getContainer(...args: any[]): any {
-    return (this._nyaxContext.getContainer as any)(...args);
+  public get getContainer(): any {
+    return this._nyaxContext.getContainer;
   }
-  public getState(...args: any[]): any {
-    if (args[0] === undefined) {
-      return this._nyaxContext.getContainer(
-        this.modelNamespace,
-        this.containerKey
-      ).isRegistered
-        ? this.state
-        : undefined;
+  public get getState(): any {
+    if (!this._getState) {
+      this._getState = (...args: any[]): any => {
+        if (args[0] === undefined) {
+          return this._nyaxContext.getContainer(
+            this.modelNamespace,
+            this.containerKey
+          ).isRegistered
+            ? this.state
+            : undefined;
+        }
+
+        return (this._nyaxContext.getState as any)(...args);
+      };
     }
 
-    return (this._nyaxContext.getState as any)(...args);
+    return this._getState;
   }
 }
 
