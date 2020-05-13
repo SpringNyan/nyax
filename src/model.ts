@@ -290,7 +290,7 @@ export class ModelBase<TDependencies = any>
 
 export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
-): Model<
+): ModelInstanceConstructor<
   MergeModelsDependencies<TModels>,
   MergeModelsProperty<TModels, "defaultArgs">,
   MergeModelsProperty<TModels, "initialState">,
@@ -349,7 +349,7 @@ export function mergeModels<TModels extends Model[] | [Model]>(
 
 export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
-): Model<
+): ModelInstanceConstructor<
   MergeSubModelsDependencies<TSubModels>,
   MergeSubModelsProperty<TSubModels, "defaultArgs">,
   MergeSubModelsProperty<TSubModels, "initialState">,
@@ -454,7 +454,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   };
 }
 
-export function createModelBase<TDependencies>(): Model<
+export function createModelBase<TDependencies>(): ModelInstanceConstructor<
   TDependencies,
   {},
   {},
@@ -474,7 +474,7 @@ export function createModel<
   TReducers extends ModelReducers,
   TEffects extends ModelEffects,
   TEpics extends ModelEpics,
-  TOptions extends ModelOptions
+  TOptions extends ModelOptions = {}
 >(
   model: Model<
     TDependencies,

@@ -864,40 +864,99 @@ describe("nyax", () => {
   });
 });
 
-//#region test types
-
-createModel(
-  class extends mergeModels(
-    createModel(
-      class extends ModelBase {
-        public selectors() {
-          return {
-            foo: () => 233,
-          };
-        }
-      }
-    ),
-    mergeSubModels({
-      bar: createModel(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function testTypes() {
+  // test createModel in mergeModels/mergeSubModels
+  createModel(
+    class extends mergeModels(
+      createModel(
         class extends ModelBase {
           public selectors() {
             return {
-              nyan: () => "998",
+              foo: () => 233,
             };
           }
         }
       ),
-    })
-  ) {
-    public selectors() {
-      return {
-        ...super.selectors(),
+      mergeSubModels({
+        bar: createModel(
+          class extends ModelBase {
+            public selectors() {
+              return {
+                nyan: () => "998",
+              };
+            }
+          }
+        ),
+      })
+    ) {
+      public selectors() {
+        return {
+          ...super.selectors(),
 
-        aaa: (): number => this.getters.foo,
-        bbb: (): string => this.getters.bar.nyan,
+          aaa: (): number => this.getters.foo,
+          bbb: (): string => this.getters.bar.nyan,
+        };
+      }
+    }
+  );
+
+  // test getContainer/getState
+  const { getContainer, getState } = createNyax({
+    dependencies: {},
+  });
+
+  class StaticModel1 extends ModelBase {
+    public initialState() {
+      return {
+        foo: "foo",
       };
     }
   }
-);
+  const StaticModel2 = createModel(
+    class StaticModel extends ModelBase {
+      public initialState() {
+        return {
+          foo: "foo",
+        };
+      }
+    }
+  );
+  const StaticModel3 = createModel(
+    class StaticModel extends ModelBase {
+      public initialState() {
+        return {
+          foo: "foo",
+        };
+      }
+    },
+    { isDynamic: false }
+  );
+  const DynamicModel = createModel(
+    class StaticModel extends ModelBase {
+      public initialState() {
+        return {
+          foo: "foo",
+        };
+      }
+    },
+    { isDynamic: true }
+  );
 
-//#endregion
+  getContainer(StaticModel1).state;
+  getContainer(StaticModel2).state;
+  getContainer(StaticModel3).state;
+  getContainer(DynamicModel, "test").state;
+
+  getContainer("test").state;
+  getContainer("test", "test").state;
+
+  getState(StaticModel1)?.foo;
+  getState(StaticModel2)?.foo;
+  getState(StaticModel3)?.foo;
+  getState(DynamicModel)?.any?.foo;
+  getState(DynamicModel, "test")?.foo;
+
+  getState("test").nyan;
+  getState("test", "test").nyan;
+}
