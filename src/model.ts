@@ -495,7 +495,7 @@ export function createModel<
   TEffects,
   TEpics
 > &
-  TOptions {
+  Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>> {
   const Model = class extends ModelBase {
     private readonly __modelInstance = ((): ModelInstance => {
       const modelInstance = new (model as Model)() as ModelBase;
@@ -542,7 +542,7 @@ export function createModel<
     TEffects,
     TEpics
   > &
-    TOptions;
+    Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>;
 }
 
 export function registerModel<TModel extends Model>(

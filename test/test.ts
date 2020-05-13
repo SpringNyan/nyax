@@ -863,3 +863,41 @@ describe("nyax", () => {
     expect(effectErrorCounter).eq(3);
   });
 });
+
+//#region test types
+
+createModel(
+  class extends mergeModels(
+    createModel(
+      class extends ModelBase {
+        public selectors() {
+          return {
+            foo: () => 233,
+          };
+        }
+      }
+    ),
+    mergeSubModels({
+      bar: createModel(
+        class extends ModelBase {
+          public selectors() {
+            return {
+              nyan: () => "998",
+            };
+          }
+        }
+      ),
+    })
+  ) {
+    public selectors() {
+      return {
+        ...super.selectors(),
+
+        aaa: (): number => this.getters.foo,
+        bbb: (): string => this.getters.bar.nyan,
+      };
+    }
+  }
+);
+
+//#endregion
