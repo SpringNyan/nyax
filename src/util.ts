@@ -1,3 +1,7 @@
+export type Expand<T> = {
+  "0": { [K in keyof T]: T[K] };
+}["0"];
+
 export type UnionToIntersection<U> = (
   U extends any ? (k: U) => void : never
 ) extends (k: infer I) => void

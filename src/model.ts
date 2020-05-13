@@ -4,7 +4,12 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import { ConvertArgs, ModelDefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import {
+  ConvertArgs,
+  ModelDefaultArgs,
+  ModelDefaultArgsMark,
+  NYAX_DEFAULT_ARGS_KEY,
+} from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
 import { NyaxContext } from "./context";
@@ -16,6 +21,7 @@ import { ConvertState, GetState, ModelInitialState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
+  Expand,
   flattenObject,
   mergeObjects,
   traverseObject,
@@ -190,9 +196,7 @@ export type MergeSubModelsProperty<
   [K in keyof TSubModels]: ReturnType<
     InstanceType<TSubModels[K]>[TPropertyKey]
   > &
-    (TPropertyKey extends "defaultArgs"
-      ? { [NYAX_DEFAULT_ARGS_KEY]: true }
-      : {});
+    (TPropertyKey extends "defaultArgs" ? ModelDefaultArgsMark : {});
 };
 
 export class ModelBase<TDependencies = any>
@@ -290,14 +294,14 @@ export class ModelBase<TDependencies = any>
 
 export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
-): Model<
-  MergeModelsDependencies<TModels>,
-  MergeModelsProperty<TModels, "defaultArgs">,
-  MergeModelsProperty<TModels, "initialState">,
-  MergeModelsProperty<TModels, "selectors">,
-  MergeModelsProperty<TModels, "reducers">,
-  MergeModelsProperty<TModels, "effects">,
-  MergeModelsProperty<TModels, "epics">
+): ModelInstanceConstructor<
+  Expand<MergeModelsDependencies<TModels>>,
+  Expand<MergeModelsProperty<TModels, "defaultArgs">>,
+  Expand<MergeModelsProperty<TModels, "initialState">>,
+  Expand<MergeModelsProperty<TModels, "selectors">>,
+  Expand<MergeModelsProperty<TModels, "reducers">>,
+  Expand<MergeModelsProperty<TModels, "effects">>,
+  Expand<MergeModelsProperty<TModels, "epics">>
 > {
   return class extends ModelBase {
     private readonly __modelInstances: ModelInstance[] = models.map((model) => {
@@ -349,14 +353,14 @@ export function mergeModels<TModels extends Model[] | [Model]>(
 
 export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
-): Model<
-  MergeSubModelsDependencies<TSubModels>,
-  MergeSubModelsProperty<TSubModels, "defaultArgs">,
-  MergeSubModelsProperty<TSubModels, "initialState">,
-  MergeSubModelsProperty<TSubModels, "selectors">,
-  MergeSubModelsProperty<TSubModels, "reducers">,
-  MergeSubModelsProperty<TSubModels, "effects">,
-  MergeSubModelsProperty<TSubModels, "epics">
+): ModelInstanceConstructor<
+  Expand<MergeSubModelsDependencies<TSubModels>>,
+  Expand<MergeSubModelsProperty<TSubModels, "defaultArgs">>,
+  Expand<MergeSubModelsProperty<TSubModels, "initialState">>,
+  Expand<MergeSubModelsProperty<TSubModels, "selectors">>,
+  Expand<MergeSubModelsProperty<TSubModels, "reducers">>,
+  Expand<MergeSubModelsProperty<TSubModels, "effects">>,
+  Expand<MergeSubModelsProperty<TSubModels, "epics">>
 > {
   return class extends ModelBase {
     private readonly __subModelInstances = ((): Record<
@@ -454,7 +458,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   };
 }
 
-export function createModelBase<TDependencies>(): Model<
+export function createModelBase<TDependencies>(): ModelInstanceConstructor<
   TDependencies,
   {},
   {},
@@ -474,7 +478,7 @@ export function createModel<
   TReducers extends ModelReducers,
   TEffects extends ModelEffects,
   TEpics extends ModelEpics,
-  TOptions extends ModelOptions
+  TOptions extends ModelOptions = {}
 >(
   model: Model<
     TDependencies,
@@ -487,15 +491,15 @@ export function createModel<
   >,
   options?: TOptions
 ): ModelInstanceConstructor<
-  TDependencies,
-  TDefaultArgs,
-  TInitialState,
-  TSelectors,
-  TReducers,
-  TEffects,
-  TEpics
+  Expand<TDependencies>,
+  Expand<TDefaultArgs>,
+  Expand<TInitialState>,
+  Expand<TSelectors>,
+  Expand<TReducers>,
+  Expand<TEffects>,
+  Expand<TEpics>
 > &
-  TOptions {
+  Expand<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
   const Model = class extends ModelBase {
     private readonly __modelInstance = ((): ModelInstance => {
       const modelInstance = new (model as Model)() as ModelBase;
@@ -534,15 +538,15 @@ export function createModel<
     Model.isLazy = options.isLazy;
   }
   return Model as ModelInstanceConstructor<
-    TDependencies,
-    TDefaultArgs,
-    TInitialState,
-    TSelectors,
-    TReducers,
-    TEffects,
-    TEpics
+    Expand<TDependencies>,
+    Expand<TDefaultArgs>,
+    Expand<TInitialState>,
+    Expand<TSelectors>,
+    Expand<TReducers>,
+    Expand<TEffects>,
+    Expand<TEpics>
   > &
-    TOptions;
+    Expand<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>>;
 }
 
 export function registerModel<TModel extends Model>(

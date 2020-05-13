@@ -1,7 +1,12 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import { ExtractModelArgs, ExtractModelState, Model } from "./model";
+import {
+  ExtractModelArgs,
+  ExtractModelState,
+  Model,
+  ModelInstanceConstructor,
+} from "./model";
 import { is, isObject } from "./util";
 
 export interface ModelInitialState {
@@ -90,12 +95,10 @@ export interface GetState<TState = unknown> {
   ): TModel["isDynamic"] extends true
     ? Record<string, ExtractModelState<TModel> | undefined> | undefined
     : ExtractModelState<TModel> | undefined;
-  <TModel extends Model>(
+  <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
     modelOrModelNamespace: TModel | string,
     containerKey: string
-  ): TModel["isDynamic"] extends true
-    ? ExtractModelState<TModel> | undefined
-    : never;
+  ): ExtractModelState<TModel> | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
