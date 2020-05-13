@@ -4,7 +4,12 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import { ConvertArgs, ModelDefaultArgs, NYAX_DEFAULT_ARGS_KEY } from "./arg";
+import {
+  ConvertArgs,
+  ModelDefaultArgs,
+  ModelDefaultArgsMark,
+  NYAX_DEFAULT_ARGS_KEY,
+} from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
 import { NyaxContext } from "./context";
@@ -191,9 +196,7 @@ export type MergeSubModelsProperty<
   [K in keyof TSubModels]: ReturnType<
     InstanceType<TSubModels[K]>[TPropertyKey]
   > &
-    (TPropertyKey extends "defaultArgs"
-      ? { [NYAX_DEFAULT_ARGS_KEY]: true }
-      : {});
+    (TPropertyKey extends "defaultArgs" ? ModelDefaultArgsMark : {});
 };
 
 export class ModelBase<TDependencies = any>

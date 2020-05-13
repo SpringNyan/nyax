@@ -15,9 +15,13 @@ export interface ModelDefaultArgs {
   [key: string]: any | ModelDefaultArgs;
 }
 
-export interface MarkedModelDefaultArgs extends ModelDefaultArgs {
+export interface ModelDefaultArgsMark {
   [NYAX_DEFAULT_ARGS_KEY]: true;
 }
+
+export interface MarkedModelDefaultArgs
+  extends ModelDefaultArgs,
+    ModelDefaultArgsMark {}
 
 export type ConvertArgsParam<
   TDefaultArgs
