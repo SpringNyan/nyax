@@ -21,9 +21,9 @@ import { ConvertState, GetState, ModelInitialState } from "./state";
 import {
   convertNamespaceToPath,
   defineGetter,
-  Expand,
   flattenObject,
   mergeObjects,
+  Spread,
   traverseObject,
   UnionToIntersection,
 } from "./util";
@@ -192,12 +192,14 @@ export type MergeModelsProperty<
 export type MergeSubModelsProperty<
   TSubModels extends Record<string, Model>,
   TPropertyKey extends ModelPropertyKey
-> = {
-  [K in keyof TSubModels]: ReturnType<
-    InstanceType<TSubModels[K]>[TPropertyKey]
-  > &
-    (TPropertyKey extends "defaultArgs" ? ModelDefaultArgsMark : {});
-};
+> = Spread<
+  {
+    [K in keyof TSubModels]: ReturnType<
+      InstanceType<TSubModels[K]>[TPropertyKey]
+    > &
+      (TPropertyKey extends "defaultArgs" ? ModelDefaultArgsMark : {});
+  }
+>;
 
 export class ModelBase<TDependencies = any>
   implements ModelInstance<TDependencies, {}, {}, {}, {}, {}, {}> {
@@ -295,13 +297,13 @@ export class ModelBase<TDependencies = any>
 export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
 ): ModelInstanceConstructor<
-  Expand<MergeModelsDependencies<TModels>>,
-  Expand<MergeModelsProperty<TModels, "defaultArgs">>,
-  Expand<MergeModelsProperty<TModels, "initialState">>,
-  Expand<MergeModelsProperty<TModels, "selectors">>,
-  Expand<MergeModelsProperty<TModels, "reducers">>,
-  Expand<MergeModelsProperty<TModels, "effects">>,
-  Expand<MergeModelsProperty<TModels, "epics">>
+  MergeModelsDependencies<TModels>,
+  MergeModelsProperty<TModels, "defaultArgs">,
+  MergeModelsProperty<TModels, "initialState">,
+  MergeModelsProperty<TModels, "selectors">,
+  MergeModelsProperty<TModels, "reducers">,
+  MergeModelsProperty<TModels, "effects">,
+  MergeModelsProperty<TModels, "epics">
 > {
   return class extends ModelBase {
     private readonly __modelInstances: ModelInstance[] = models.map((model) => {
@@ -354,13 +356,13 @@ export function mergeModels<TModels extends Model[] | [Model]>(
 export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
 ): ModelInstanceConstructor<
-  Expand<MergeSubModelsDependencies<TSubModels>>,
-  Expand<MergeSubModelsProperty<TSubModels, "defaultArgs">>,
-  Expand<MergeSubModelsProperty<TSubModels, "initialState">>,
-  Expand<MergeSubModelsProperty<TSubModels, "selectors">>,
-  Expand<MergeSubModelsProperty<TSubModels, "reducers">>,
-  Expand<MergeSubModelsProperty<TSubModels, "effects">>,
-  Expand<MergeSubModelsProperty<TSubModels, "epics">>
+  MergeSubModelsDependencies<TSubModels>,
+  MergeSubModelsProperty<TSubModels, "defaultArgs">,
+  MergeSubModelsProperty<TSubModels, "initialState">,
+  MergeSubModelsProperty<TSubModels, "selectors">,
+  MergeSubModelsProperty<TSubModels, "reducers">,
+  MergeSubModelsProperty<TSubModels, "effects">,
+  MergeSubModelsProperty<TSubModels, "epics">
 > {
   return class extends ModelBase {
     private readonly __subModelInstances = ((): Record<
@@ -491,15 +493,15 @@ export function createModel<
   >,
   options?: TOptions
 ): ModelInstanceConstructor<
-  Expand<TDependencies>,
-  Expand<TDefaultArgs>,
-  Expand<TInitialState>,
-  Expand<TSelectors>,
-  Expand<TReducers>,
-  Expand<TEffects>,
-  Expand<TEpics>
+  TDependencies,
+  TDefaultArgs,
+  TInitialState,
+  TSelectors,
+  TReducers,
+  TEffects,
+  TEpics
 > &
-  Expand<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
+  Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
   const Model = class extends ModelBase {
     private readonly __modelInstance = ((): ModelInstance => {
       const modelInstance = new (model as Model)() as ModelBase;
@@ -538,15 +540,15 @@ export function createModel<
     Model.isLazy = options.isLazy;
   }
   return Model as ModelInstanceConstructor<
-    Expand<TDependencies>,
-    Expand<TDefaultArgs>,
-    Expand<TInitialState>,
-    Expand<TSelectors>,
-    Expand<TReducers>,
-    Expand<TEffects>,
-    Expand<TEpics>
+    TDependencies,
+    TDefaultArgs,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TEpics
   > &
-    Expand<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>>;
+    Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>>;
 }
 
 export function registerModel<TModel extends Model>(
