@@ -1,4 +1,4 @@
-export type Expand<T> = {
+export type Spread<T> = {
   "0": { [K in keyof T]: T[K] };
 }["0"];
 
