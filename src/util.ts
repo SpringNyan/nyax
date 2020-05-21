@@ -11,9 +11,9 @@ export type UnionToIntersection<U> = (
 export type DeepRecord<K extends keyof any, T> = Record<K, T | Record<K, T>>;
 
 export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends ((...args: any[]) => any) | any[]
-    ? T[P]
-    : DeepPartial<T[P]>;
+  [K in keyof T]?: T[K] extends ((...args: any[]) => any) | any[]
+    ? T[K]
+    : DeepPartial<T[K]>;
 };
 
 export function is(x: any, y: any): boolean {
