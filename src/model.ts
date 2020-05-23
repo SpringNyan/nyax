@@ -17,7 +17,8 @@ import { ModelEffects } from "./effect";
 import { ModelEpics } from "./epic";
 import { ModelReducers } from "./reducer";
 import { ConvertGetters, ModelSelectors } from "./selector";
-import { ConvertState, GetState, ModelInitialState } from "./state";
+import { ConvertState, ModelInitialState } from "./state";
+import { Nyax } from "./store";
 import {
   convertNamespaceToPath,
   defineGetter,
@@ -59,8 +60,8 @@ export interface ModelInstance<
   modelNamespace: string;
   containerKey: string | undefined;
 
+  nyax: Nyax;
   getContainer: GetContainer;
-  getState: GetState<this["state"]>;
 }
 
 export type ModelInstanceConstructor<
@@ -215,8 +216,6 @@ export class ModelBase<TDependencies = any>
     | "containerKey"
   >;
 
-  private __getStateCache: any;
-
   public defaultArgs(): {} {
     return {};
   }
@@ -271,26 +270,11 @@ export class ModelBase<TDependencies = any>
     return this.__container.containerKey;
   }
 
+  public get nyax(): any {
+    return this.__nyaxContext.nyax;
+  }
   public get getContainer(): any {
     return this.__nyaxContext.getContainer;
-  }
-  public get getState(): any {
-    if (!this.__getStateCache) {
-      this.__getStateCache = (...args: any[]): any => {
-        if (args[0] === undefined) {
-          return this.__nyaxContext.getContainer(
-            this.modelNamespace,
-            this.containerKey
-          ).isRegistered
-            ? this.state
-            : undefined;
-        }
-
-        return (this.__nyaxContext.getState as any)(...args);
-      };
-    }
-
-    return this.__getStateCache;
   }
 }
 

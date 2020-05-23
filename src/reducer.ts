@@ -83,7 +83,15 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     if (payload.state !== undefined) {
       return payload.state;
     } else {
-      return rootState;
+      const registerPayloads: RegisterActionPayload[] = [];
+      nyaxContext.modelContextByModel.forEach((context, model) => {
+        if (!model.isDynamic && !model.isLazy) {
+          registerPayloads.push({
+            modelNamespace: context.modelNamespace,
+          });
+        }
+      });
+      return batchRegister(undefined, registerPayloads);
     }
   }
 

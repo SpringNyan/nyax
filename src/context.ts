@@ -10,9 +10,11 @@ import {
 } from "./container";
 import { Model } from "./model";
 import { createGetState, GetState } from "./state";
-import { NyaxOptions } from "./store";
+import { Nyax, NyaxOptions } from "./store";
 
 export interface NyaxContext {
+  nyax: Nyax;
+
   store: Store;
   options: NyaxOptions;
 
@@ -61,6 +63,9 @@ export interface ModelContext {
 
 export function createNyaxContext(): NyaxContext {
   const nyaxContext: NyaxContext = {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    nyax: undefined!,
+
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     store: undefined!,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

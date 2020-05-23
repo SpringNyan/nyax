@@ -52,6 +52,47 @@ export function createNyax(options: NyaxOptions): Nyax {
   const nyaxContext = createNyaxContext();
   nyaxContext.options = options;
 
+  const nyax: Nyax = {
+    get store() {
+      return nyaxContext.store;
+    },
+    registerModels: (models): void => {
+      const registerActionPayloads = registerModels(nyaxContext, models);
+      nyaxContext.store.dispatch(
+        batchRegisterActionHelper.create(registerActionPayloads)
+      );
+    },
+    get getContainer() {
+      return nyaxContext.getContainer;
+    },
+    get getState() {
+      return nyaxContext.getState;
+    },
+    reload: (state): void => {
+      nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
+    },
+    gc: (filterFn): void => {
+      if (!filterFn) {
+        filterFn = (container): boolean => !container.isRegistered;
+      }
+
+      const containers: Container[] = [];
+      nyaxContext.modelContextByModel.forEach((context) => {
+        context.containerByContainerKey.forEach((container) => {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          if (filterFn!(container)) {
+            containers.push(container);
+          }
+        });
+      });
+
+      containers.forEach((container) => {
+        container.unregister();
+      });
+    },
+  };
+  nyaxContext.nyax = nyax;
+
   const reducer: Reducer = createRootReducer(nyaxContext);
   const epic: Epic = (action$, state$, ...rest) => {
     nyaxContext.rootAction$ = action$;
@@ -84,37 +125,5 @@ export function createNyax(options: NyaxOptions): Nyax {
 
   nyaxContext.switchEpic$.next();
 
-  return {
-    store: nyaxContext.store,
-    registerModels: (models): void => {
-      const registerActionPayloads = registerModels(nyaxContext, models);
-      nyaxContext.store.dispatch(
-        batchRegisterActionHelper.create(registerActionPayloads)
-      );
-    },
-    getContainer: nyaxContext.getContainer,
-    getState: nyaxContext.getState,
-    reload: (state): void => {
-      nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
-    },
-    gc: (filterFn): void => {
-      if (!filterFn) {
-        filterFn = (container): boolean => !container.isRegistered;
-      }
-
-      const containers: Container[] = [];
-      nyaxContext.modelContextByModel.forEach((context) => {
-        context.containerByContainerKey.forEach((container) => {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          if (filterFn!(container)) {
-            containers.push(container);
-          }
-        });
-      });
-
-      containers.forEach((container) => {
-        container.unregister();
-      });
-    },
-  };
+  return nyax;
 }
