@@ -1,5 +1,4 @@
 import typescript from "@rollup/plugin-typescript";
-import cleanup from "rollup-plugin-cleanup";
 import pkg from "./package.json";
 
 export default {
@@ -14,11 +13,6 @@ export default {
       format: "esm",
     },
   ],
-  plugins: [
-    typescript(),
-    cleanup({
-      comments: "none",
-    }),
-  ],
+  plugins: [typescript()],
   external: ["immer", "redux", "redux-observable", "rxjs", "rxjs/operators"],
 };

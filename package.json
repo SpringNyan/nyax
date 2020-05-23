@@ -31,7 +31,6 @@
     "redux-observable": "^1.2.0",
     "rimraf": "^3.0.2",
     "rollup": "^2.10.8",
-    "rollup-plugin-cleanup": "^3.1.1",
     "rxjs": "^6.5.5",
     "ts-node": "^8.10.1",
     "tslib": "^2.0.0",
