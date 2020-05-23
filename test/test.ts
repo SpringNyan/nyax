@@ -52,7 +52,7 @@ describe("nyax", () => {
                 return foo + bar;
               }
             ),
-            state: () => this.getState(),
+            rootState: () => this.nyax.getState(),
           };
         }
 
@@ -126,7 +126,8 @@ describe("nyax", () => {
 
     expect(getState(FooModel)).eq(foo.state);
     expect(getState(FooModel)?.foo).eq(foo.state.foo);
-    expect(foo.getters.state).eq(foo.state);
+
+    expect(foo.getters.rootState).eq(store.getState());
 
     await (async () => {
       const promise = foo.actions.setFooAfter20ms.dispatch("foo20");
@@ -176,9 +177,9 @@ describe("nyax", () => {
             return getContainer(FooModel).getters.fooBar;
           },
 
-          fooState: () => this.getState(FooModel),
+          fooState: () => this.nyax.getState(FooModel),
           testGetStateWithoutBind: () => {
-            const { getState } = this;
+            const { getState } = this.nyax;
             return getState(FooModel);
           },
         };
@@ -201,9 +202,10 @@ describe("nyax", () => {
     expect(barFoo.getters.fooGetterFooBar).eq("foo20666");
     expect(barFoo.getters.testGetContainerWithoutBind).eq("foo20666");
 
-    expect(barFoo.getters.state).eq(barFoo.state);
     expect(barFoo.getters.fooState).eq(foo.state);
     expect(barFoo.getters.testGetStateWithoutBind).eq(foo.state);
+
+    expect(barFoo.getters.rootState).eq(store.getState());
 
     const BarLazyFooModel = createModel(class extends FooModel {}, {
       isLazy: true,
@@ -270,7 +272,6 @@ describe("nyax", () => {
               () => this.state.num,
               (str, num) => str + num
             ),
-            state: () => this.getState(),
           };
         }
 
@@ -313,7 +314,6 @@ describe("nyax", () => {
     expect(barNyan.isRegistered).eq(false);
 
     expect(getState(BarModel)).eq(undefined);
-    expect(barNyan.getters.state).eq(undefined);
 
     expect(barNyan.state.str).eq("str");
     expect(barNyan.state.obj.bar).eq(998);
