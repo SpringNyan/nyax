@@ -17,7 +17,6 @@ import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
 import { Models, registerModels } from "./model";
-import { createRootReducer } from "./reducer";
 import { GetState } from "./state";
 
 export interface NyaxOptions {
@@ -93,7 +92,7 @@ export function createNyax(options: NyaxOptions): Nyax {
   };
   nyaxContext.nyax = nyax;
 
-  const reducer: Reducer = createRootReducer(nyaxContext);
+  const reducer: Reducer = nyaxContext.rootReducer;
   const epic: Epic = (action$, state$, ...rest) => {
     nyaxContext.rootAction$ = action$;
     nyaxContext.rootState$ = state$;

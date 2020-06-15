@@ -36,12 +36,16 @@ export interface ContainerBase<
   actions: TActionHelpers;
 }
 
-export interface Container<TModel extends Model = Model>
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ContainerCore<TModel extends Model = Model>
   extends ContainerBase<
     ExtractModelState<TModel>,
     ExtractModelGetters<TModel>,
     ExtractModelActionHelpers<TModel>
-  > {
+  > {}
+
+export interface Container<TModel extends Model = Model>
+  extends ContainerCore<TModel> {
   modelNamespace: string;
   containerKey: string | undefined;
 

@@ -44,7 +44,6 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function reload(payload: ReloadActionPayload): void {
     nyaxContext.switchEpic$.next();
 
@@ -54,7 +53,10 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
       context.containerByContainerKey.clear();
     });
 
-    const rootState = nyaxContext.store.getState();
+    const rootState = nyaxContext.rootReducer(
+      nyaxContext.store.getState(),
+      reloadActionHelper.create(payload)
+    );
 
     const registerPayloads: RegisterActionPayload[] = [];
     if (isObject(rootState)) {

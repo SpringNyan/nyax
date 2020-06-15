@@ -95,7 +95,13 @@ describe("nyax", () => {
       }
     );
 
-    const { store, getContainer, getState, registerModels } = createNyax({
+    const {
+      store,
+      getContainer,
+      getState,
+      registerModels,
+      reload,
+    } = createNyax({
       dependencies,
     });
 
@@ -238,6 +244,20 @@ describe("nyax", () => {
     expect(getState(BarLazyFooModel)?.foo).eq(barLazyFoo.state.foo);
 
     expect(getState()).eq(store.getState());
+
+    const tempState = store.getState();
+
+    reload();
+    expect(foo.state.foo).eq("foo");
+    expect(foo.state.bar).eq(998);
+    expect(barLazyFoo.isRegistered).eq(false);
+    expect(barLazyFoo.state.foo).eq("foo");
+
+    reload(tempState);
+    expect(foo.state.foo).eq("foo20");
+    expect(foo.state.bar).eq(666);
+    expect(barLazyFoo.isRegistered).eq(true);
+    expect(barLazyFoo.state.foo).eq("for");
   });
 
   it("test dynamic model", async () => {
