@@ -1,7 +1,7 @@
 export type { Action, ActionHelper, AnyAction } from "./action";
 export { createRequiredArg } from "./arg";
 export { createSubContainer } from "./container";
-export type { Container, GetContainer } from "./container";
+export type { Container, ContainerCore, GetContainer } from "./container";
 export {
   createModel,
   createModelBase,
