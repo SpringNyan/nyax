@@ -1,4 +1,4 @@
-import { Store } from "redux";
+import { Reducer, Store } from "redux";
 import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
@@ -9,6 +9,7 @@ import {
   GetContainerInternal,
 } from "./container";
 import { Model } from "./model";
+import { createRootReducer } from "./reducer";
 import { createGetState, GetState } from "./state";
 import { Nyax, NyaxOptions } from "./store";
 
@@ -23,6 +24,8 @@ export interface NyaxContext {
 
   getContainer: GetContainerInternal;
   getState: GetState;
+
+  rootReducer: Reducer;
 
   addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
@@ -81,6 +84,9 @@ export function createNyaxContext(): NyaxContext {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getState: undefined!,
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    rootReducer: undefined!,
+
     addEpic$: new Subject(),
     switchEpic$: new Subject(),
 
@@ -124,6 +130,8 @@ export function createNyaxContext(): NyaxContext {
 
   nyaxContext.getContainer = createGetContainer(nyaxContext);
   nyaxContext.getState = createGetState(nyaxContext);
+
+  nyaxContext.rootReducer = createRootReducer(nyaxContext);
 
   return nyaxContext;
 }
