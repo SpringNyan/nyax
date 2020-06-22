@@ -12,16 +12,14 @@ export interface RequiredArg<T = any> {
 }
 
 export interface ModelDefaultArgs {
-  [key: string]: any | ModelDefaultArgs;
+  [key: string]: any | ModelInnerDefaultArgs;
 }
 
-export interface ModelDefaultArgsMark {
+export type ModelInnerDefaultArgs<
+  TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
+> = {
   [NYAX_DEFAULT_ARGS_KEY]: true;
-}
-
-export interface MarkedModelDefaultArgs
-  extends ModelDefaultArgs,
-    ModelDefaultArgsMark {}
+} & TInnerDefaultArgs;
 
 export type ConvertArgsParam<
   TDefaultArgs
@@ -41,10 +39,10 @@ export type ConvertArgsParam<
       Partial<
         Pick<
           {
-            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends MarkedModelDefaultArgs
-              ? ConvertArgsParam<
-                  Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>
-                >
+            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends ModelInnerDefaultArgs<
+              infer TInnerDefaultArgs
+            >
+              ? ConvertArgsParam<TInnerDefaultArgs>
               : TDefaultArgs[K];
           },
           {
@@ -60,8 +58,8 @@ export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
         ? T
-        : TDefaultArgs[K] extends MarkedModelDefaultArgs
-        ? ConvertArgs<Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>>
+        : TDefaultArgs[K] extends ModelInnerDefaultArgs<infer TInnerDefaultArgs>
+        ? ConvertArgs<TInnerDefaultArgs>
         : TDefaultArgs[K];
     }
   : never;
@@ -78,7 +76,7 @@ export function isRequiredArg(obj: any): obj is RequiredArg {
   return obj?.[NYAX_REQUIRED_ARG_KEY] === true;
 }
 
-export function isMarkedDefaultArgs(obj: any): obj is MarkedModelDefaultArgs {
+export function isMarkedDefaultArgs(obj: any): obj is ModelInnerDefaultArgs {
   return obj?.[NYAX_DEFAULT_ARGS_KEY] === true;
 }
 

@@ -7,7 +7,7 @@ import {
 import {
   ConvertArgs,
   ModelDefaultArgs,
-  ModelDefaultArgsMark,
+  ModelInnerDefaultArgs,
   NYAX_DEFAULT_ARGS_KEY,
 } from "./arg";
 import { NYAX_NOTHING } from "./common";
@@ -179,9 +179,27 @@ export type ModelPropertyKey =
   | "effects"
   | "epics";
 
+export type MergeModelsDefaultArgs<
+  TModels extends Model[]
+> = UnionToIntersection<
+  {
+    [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<TModels[K]>;
+  }[number]
+>;
+
+export type MergeSubModelsDefaultArgs<
+  TSubModels extends Record<string, Model>
+> = Spread<
+  {
+    [K in keyof TSubModels]: ModelInnerDefaultArgs<
+      ExtractModelDefaultArgs<TSubModels[K]>
+    >;
+  }
+>;
+
 export type MergeModelsProperty<
   TModels extends Model[],
-  TPropertyKey extends ModelPropertyKey
+  TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ReturnType<
@@ -192,18 +210,28 @@ export type MergeModelsProperty<
 
 export type MergeSubModelsProperty<
   TSubModels extends Record<string, Model>,
-  TPropertyKey extends ModelPropertyKey
+  TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = Spread<
   {
     [K in keyof TSubModels]: ReturnType<
       InstanceType<TSubModels[K]>[TPropertyKey]
-    > &
-      (TPropertyKey extends "defaultArgs" ? ModelDefaultArgsMark : {});
+    >;
   }
 >;
 
 export class ModelBase<TDependencies = any>
-  implements ModelInstance<TDependencies, {}, {}, {}, {}, {}, {}> {
+  implements
+    ModelInstance<
+      TDependencies,
+      /* eslint-disable @typescript-eslint/ban-types */
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+      /* eslint-enable @typescript-eslint/ban-types */
+    > {
   public __nyaxContext!: NyaxContext;
   public __container!: Pick<
     ContainerImpl,
@@ -216,6 +244,7 @@ export class ModelBase<TDependencies = any>
     | "containerKey"
   >;
 
+  /* eslint-disable @typescript-eslint/ban-types */
   public defaultArgs(): {} {
     return {};
   }
@@ -234,6 +263,7 @@ export class ModelBase<TDependencies = any>
   public epics(): {} {
     return {};
   }
+  /* eslint-enable @typescript-eslint/ban-types */
 
   public get dependencies(): TDependencies {
     return this.__nyaxContext.dependencies;
@@ -282,7 +312,7 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
 ): ModelInstanceConstructor<
   MergeModelsDependencies<TModels>,
-  MergeModelsProperty<TModels, "defaultArgs">,
+  MergeModelsDefaultArgs<TModels>,
   MergeModelsProperty<TModels, "initialState">,
   MergeModelsProperty<TModels, "selectors">,
   MergeModelsProperty<TModels, "reducers">,
@@ -341,7 +371,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
 ): ModelInstanceConstructor<
   MergeSubModelsDependencies<TSubModels>,
-  MergeSubModelsProperty<TSubModels, "defaultArgs">,
+  MergeSubModelsDefaultArgs<TSubModels>,
   MergeSubModelsProperty<TSubModels, "initialState">,
   MergeSubModelsProperty<TSubModels, "selectors">,
   MergeSubModelsProperty<TSubModels, "reducers">,
@@ -446,12 +476,14 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
 
 export function createModelBase<TDependencies>(): ModelInstanceConstructor<
   TDependencies,
+  /* eslint-disable @typescript-eslint/ban-types */
   {},
   {},
   {},
   {},
   {},
   {}
+  /* eslint-enable @typescript-eslint/ban-types */
 > {
   return class extends ModelBase<TDependencies> {};
 }
@@ -464,6 +496,7 @@ export function createModel<
   TReducers extends ModelReducers,
   TEffects extends ModelEffects,
   TEpics extends ModelEpics,
+  // eslint-disable-next-line @typescript-eslint/ban-types
   TOptions extends ModelOptions = {}
 >(
   model: Model<
