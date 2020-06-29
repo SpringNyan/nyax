@@ -72,12 +72,14 @@ export function createRequiredArg<T>(defaultValue?: T): RequiredArg<T> {
   };
 }
 
-export function isRequiredArg(obj: any): obj is RequiredArg {
-  return obj?.[NYAX_REQUIRED_ARG_KEY] === true;
+export function isRequiredArg(obj: unknown): obj is RequiredArg {
+  return (obj as RequiredArg | undefined)?.[NYAX_REQUIRED_ARG_KEY] === true;
 }
 
-export function isMarkedDefaultArgs(obj: any): obj is ModelInnerDefaultArgs {
-  return obj?.[NYAX_DEFAULT_ARGS_KEY] === true;
+export function isInnerDefaultArgs(obj: unknown): obj is ModelInnerDefaultArgs {
+  return (
+    (obj as ModelInnerDefaultArgs | undefined)?.[NYAX_DEFAULT_ARGS_KEY] === true
+  );
 }
 
 export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
@@ -93,7 +95,7 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
 
   if (argsParam) {
     Object.keys(argsParam).forEach((key) => {
-      if (!isMarkedDefaultArgs(defaultArgs[key])) {
+      if (!isInnerDefaultArgs(defaultArgs[key])) {
         args[key] = argsParam[key];
       }
     });
@@ -105,7 +107,7 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
     }
     const defaultArg = defaultArgs[key];
 
-    if (isMarkedDefaultArgs(defaultArg)) {
+    if (isInnerDefaultArgs(defaultArg)) {
       args[key] = buildArgs(defaultArg, argsParam?.[key], optional);
     } else if (isRequiredArg(defaultArg)) {
       if (optional && defaultArg.defaultValue !== NYAX_NOTHING) {

@@ -18,7 +18,7 @@ export type ConvertState<
 > = TInitialState extends infer TInitialState ? TInitialState : never;
 
 export function getSubState(
-  state: any,
+  state: unknown,
   modelPath: string,
   containerKey: string | undefined
 ): any {
@@ -34,8 +34,8 @@ export function getSubState(
 }
 
 export function setSubState(
-  state: any,
-  value: any,
+  state: unknown,
+  value: unknown,
   modelPath: string,
   containerKey: string | undefined
 ): any {
@@ -51,14 +51,14 @@ export function setSubState(
       return state;
     }
 
-    state = { ...state };
+    const nextState = { ...state };
     if (value === NYAX_NOTHING) {
-      delete state[modelPath];
+      delete nextState[modelPath];
     } else {
-      state[modelPath] = value;
+      nextState[modelPath] = value;
     }
 
-    return state;
+    return nextState;
   } else {
     const subState = setSubState(
       state[modelPath],

@@ -45,8 +45,8 @@ export class ActionHelperBaseImpl<TPayload>
   implements Omit<ActionHelper<TPayload, never>, "dispatch"> {
   constructor(public readonly type: string) {}
 
-  public is(action: any): action is Action<TPayload> {
-    return action?.type === this.type;
+  public is(action: unknown): action is Action<TPayload> {
+    return (action as Action | undefined)?.type === this.type;
   }
 
   public create(payload: TPayload): Action<TPayload> {

@@ -4,10 +4,6 @@
   "plugins": ["@typescript-eslint"],
   "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   "rules": {
-    "@typescript-eslint/explicit-module-boundary-types": [
-      "warn",
-      { "allowArgumentsExplicitlyTypedAsAny": true }
-    ],
     "@typescript-eslint/no-explicit-any": "off"
   }
 }
