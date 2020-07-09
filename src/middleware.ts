@@ -1,5 +1,6 @@
 import { Middleware } from "redux";
 import {
+  Action,
   AnyAction,
   batchRegisterActionHelper,
   batchUnregisterActionHelper,
@@ -118,7 +119,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     if (container?.isRegistered) {
       const effect = container.effectByPath[actionName];
       if (effect) {
-        const promise = effect(action.payload);
+        const promise = effect((action as Action<unknown>).payload);
         promise.then(
           (value) => {
             if (dispatchDeferred) {

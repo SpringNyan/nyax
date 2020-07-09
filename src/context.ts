@@ -20,7 +20,7 @@ export interface NyaxContext {
   options: NyaxOptions;
 
   rootAction$: ActionsObservable<AnyAction>;
-  rootState$: StateObservable<any>;
+  rootState$: StateObservable<unknown>;
 
   getContainer: GetContainerInternal;
   getState: GetState;
@@ -30,38 +30,38 @@ export interface NyaxContext {
   addEpic$: Subject<Epic>;
   switchEpic$: Subject<void>;
 
-  cachedRootState: any | typeof NYAX_NOTHING;
+  cachedRootState: unknown | typeof NYAX_NOTHING;
 
   modelContextByModel: Map<Model, ModelContext>;
   modelByModelNamespace: Map<string, Model>;
 
-  containerByNamespace: Map<string, ContainerImpl>;
+  containerByNamespace: Map<string, ContainerImpl<Model>>;
   dispatchDeferredByAction: Map<
     AnyAction,
     {
-      resolve: (value: any) => void;
-      reject: (error: any) => void;
+      resolve: (value: unknown) => void;
+      reject: (error: unknown) => void;
     }
   >;
 
-  dependencies: any;
+  dependencies: unknown;
   onUnhandledEffectError: (
-    error: any,
-    promise: Promise<any> | undefined
+    error: unknown,
+    promise: Promise<unknown> | undefined
   ) => void;
   onUnhandledEpicError: (
-    error: any,
+    error: unknown,
     caught: Observable<AnyAction>
   ) => Observable<AnyAction>;
 
-  getRootState: () => any;
+  getRootState: () => unknown;
 }
 
 export interface ModelContext {
   modelNamespace: string;
   modelPath: string;
 
-  containerByContainerKey: Map<string | undefined, ContainerImpl>;
+  containerByContainerKey: Map<string | undefined, ContainerImpl<Model>>;
 }
 
 export function createNyaxContext(): NyaxContext {
@@ -98,7 +98,7 @@ export function createNyaxContext(): NyaxContext {
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
 
-    get dependencies(): any {
+    get dependencies() {
       return nyaxContext.options.dependencies;
     },
     onUnhandledEffectError: (error, promise) => {

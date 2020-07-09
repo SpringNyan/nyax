@@ -19,12 +19,12 @@ export class NyaxPromise<T> implements Promise<T> {
   public then<TResult1 = T, TResult2 = never>(
     onfulfilled?:
       | ((value: T) => TResult1 | PromiseLike<TResult1>)
-      | null
-      | undefined,
+      | undefined
+      | null,
     onrejected?:
       | ((reason: any) => TResult2 | PromiseLike<TResult2>)
-      | null
       | undefined
+      | null
   ): Promise<TResult1 | TResult2> {
     if (onrejected) {
       this.hasRejectionHandler = true;
@@ -36,8 +36,8 @@ export class NyaxPromise<T> implements Promise<T> {
   public catch<TResult = never>(
     onrejected?:
       | ((reason: any) => TResult | PromiseLike<TResult>)
-      | null
       | undefined
+      | null
   ): Promise<T | TResult> {
     if (onrejected) {
       this.hasRejectionHandler = true;
@@ -46,7 +46,7 @@ export class NyaxPromise<T> implements Promise<T> {
     return this._promise.catch(onrejected);
   }
 
-  public finally(onfinally?: (() => void) | null | undefined): Promise<T> {
+  public finally(onfinally?: (() => void) | undefined | null): Promise<T> {
     return this._promise.finally(onfinally);
   }
 }

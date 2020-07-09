@@ -3,7 +3,7 @@ import {
   batchUnregisterActionHelper,
   createActionHelpers,
 } from "./action";
-import { ConvertArgsParam, createArgs } from "./arg";
+import { ConvertRegisterArgs, createArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
@@ -26,38 +26,32 @@ import { createGetters } from "./selector";
 import { createState, getSubState } from "./state";
 import { flattenObject, joinLastString } from "./util";
 
-export interface ContainerBase<
-  TState = any,
-  TGetters = any,
-  TActionHelpers = any
-> {
+export interface ContainerBase<TState, TGetters, TActionHelpers> {
   state: TState;
   getters: TGetters;
   actions: TActionHelpers;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ContainerCore<TModel extends Model = Model>
+export interface ContainerCore<TModel extends Model>
   extends ContainerBase<
     ExtractModelState<TModel>,
     ExtractModelGetters<TModel>,
     ExtractModelActionHelpers<TModel>
   > {}
 
-export interface Container<TModel extends Model = Model>
-  extends ContainerCore<TModel> {
+export interface Container<TModel extends Model> extends ContainerCore<TModel> {
   modelNamespace: string;
   containerKey: string | undefined;
 
   isRegistered: boolean;
   canRegister: boolean;
 
-  register(args?: ConvertArgsParam<ExtractModelDefaultArgs<TModel>>): void;
+  register(args?: ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>): void;
   unregister(): void;
 }
 
-export class ContainerImpl<TModel extends Model = Model>
-  implements Container<TModel> {
+export class ContainerImpl<TModel extends Model> implements Container<TModel> {
   public readonly modelContext: ModelContext;
 
   public readonly modelNamespace: string;
@@ -71,21 +65,21 @@ export class ContainerImpl<TModel extends Model = Model>
   public readonly epics: ExtractModelEpics<TModel>;
 
   public readonly reducerByPath: Record<string, ModelReducer>;
-  public readonly effectByPath: Record<string, ModelEffect>;
+  public readonly effectByPath: Record<string, ModelEffect<unknown, unknown>>;
 
   public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
   public draftState:
     | ExtractModelState<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
 
-  private _initialStateCache: any;
+  private _initialStateCache: unknown;
 
-  private _lastRootState: any;
-  private _lastState: any;
+  private _lastRootState: unknown;
+  private _lastState: unknown;
 
-  private _gettersCache: any;
+  private _gettersCache: unknown;
 
-  private _actionsCache: any;
+  private _actionsCache: unknown;
 
   constructor(
     private readonly _nyaxContext: NyaxContext,
@@ -121,7 +115,7 @@ export class ContainerImpl<TModel extends Model = Model>
     if (this.isRegistered) {
       const rootState = this._nyaxContext.getRootState();
       if (this._lastRootState === rootState) {
-        return this._lastState;
+        return this._lastState as ExtractModelState<TModel>;
       }
 
       const state = getSubState(
@@ -143,7 +137,7 @@ export class ContainerImpl<TModel extends Model = Model>
           createArgs(this, undefined, true)
         );
       }
-      return this._initialStateCache;
+      return this._initialStateCache as ExtractModelState<TModel>;
     }
 
     throw new Error("Namespace is already bound by other container");
@@ -160,7 +154,7 @@ export class ContainerImpl<TModel extends Model = Model>
         this._gettersCache = createGetters(this);
       }
 
-      return this._gettersCache;
+      return this._gettersCache as ExtractModelGetters<TModel>;
     }
 
     throw new Error("Namespace is already bound by other container");
@@ -177,7 +171,7 @@ export class ContainerImpl<TModel extends Model = Model>
         this._actionsCache = createActionHelpers(this._nyaxContext, this);
       }
 
-      return this._actionsCache;
+      return this._actionsCache as ExtractModelActionHelpers<TModel>;
     }
 
     throw new Error("Namespace is already bound by other container");
@@ -195,7 +189,7 @@ export class ContainerImpl<TModel extends Model = Model>
   }
 
   public register(
-    args?: ConvertArgsParam<ExtractModelDefaultArgs<TModel>>
+    args?: ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>
   ): void {
     if (!this.canRegister) {
       throw new Error("Namespace is already bound");
@@ -304,7 +298,7 @@ export function createGetContainer(
 }
 
 export function createSubContainer<
-  TContainer extends ContainerBase,
+  TContainer extends ContainerBase<any, any, any>,
   TSubKey extends string
 >(
   container: TContainer,
