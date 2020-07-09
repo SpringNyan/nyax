@@ -1,4 +1,4 @@
-# nyax
+# Nyax
 
 A Redux Framework
 
