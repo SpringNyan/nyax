@@ -2,10 +2,10 @@ import { ContainerImpl } from "./container";
 import { ExtractModelGetters, Model } from "./model";
 import { defineGetter, is, mergeObjects } from "./util";
 
-export type ModelSelector<TResult = any> = () => TResult;
+export type ModelSelector<TResult> = () => TResult;
 
 export interface ModelSelectors {
-  [key: string]: ModelSelector | ModelSelectors;
+  [key: string]: ModelSelector<unknown> | ModelSelectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
@@ -19,15 +19,15 @@ export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
   : never;
 
 export interface SelectorCache {
-  lastArgs?: any[];
-  lastResult?: any;
+  lastArgs?: unknown[];
+  lastResult?: unknown;
 }
 
-export type InputSelector<TResult = any> = (lastResult?: TResult) => TResult;
-export type OutputSelector<TResult = any> = (cache?: SelectorCache) => TResult;
+export type InputSelector<TResult> = (lastResult?: TResult) => TResult;
+export type OutputSelector<TResult> = (cache?: SelectorCache) => TResult;
 
 export function createSelector<
-  TSelectors extends Array<InputSelector> | [InputSelector],
+  TSelectors extends InputSelector<any>[] | [InputSelector<any>],
   TResult
 >(
   selectors: TSelectors,
@@ -164,15 +164,15 @@ export function createSelector<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
     lastResult?: TResult
   ) => TResult
 ): OutputSelector<TResult>;
-export function createSelector(...args: any[]): OutputSelector {
+export function createSelector(...args: unknown[]): OutputSelector<unknown> {
   const arrayMode = Array.isArray(args[0]);
-  const selectors: InputSelector[] = arrayMode
+  const selectors = (arrayMode
     ? args[0]
-    : args.slice(0, args.length - 1);
-  const combiner: (...args: any[]) => any = args[args.length - 1];
+    : args.slice(0, args.length - 1)) as InputSelector<unknown>[];
+  const combiner = args[args.length - 1] as (...args: unknown[]) => unknown;
 
   let defaultCache: SelectorCache | undefined;
-  const outputSelector: OutputSelector = (cache) => {
+  const outputSelector: OutputSelector<unknown> = (cache) => {
     if (!cache) {
       if (!defaultCache) {
         defaultCache = {};
@@ -183,7 +183,7 @@ export function createSelector(...args: any[]): OutputSelector {
     let shouldUpdate = !cache.lastArgs;
 
     const lastArgs = cache.lastArgs ?? [];
-    const currArgs: any[] = [];
+    const currArgs: unknown[] = [];
     for (let i = 0; i < selectors.length; ++i) {
       currArgs.push(selectors[i](lastArgs[i]));
       if (!shouldUpdate && !is(currArgs[i], lastArgs[i])) {
@@ -207,24 +207,20 @@ export function createSelector(...args: any[]): OutputSelector {
 export function createGetters<TModel extends Model>(
   container: ContainerImpl<TModel>
 ): ExtractModelGetters<TModel> {
-  const getters: Record<string, any> = {};
+  const getters: Record<string, unknown> = {};
   const cacheByPath = new Map<string, SelectorCache>();
 
-  mergeObjects(
-    getters,
-    container.selectors,
-    (selector: OutputSelector, key, parent, paths) => {
-      const path = paths.join(".");
-      defineGetter(parent, key, () => {
-        let cache = cacheByPath.get(path);
-        if (!cache) {
-          cache = {};
-          cacheByPath.set(path, cache);
-        }
-        return selector(cache);
-      });
-    }
-  );
+  mergeObjects(getters, container.selectors, (selector, key, parent, paths) => {
+    const path = paths.join(".");
+    defineGetter(parent, key, () => {
+      let cache = cacheByPath.get(path);
+      if (!cache) {
+        cache = {};
+        cacheByPath.set(path, cache);
+      }
+      return (selector as OutputSelector<unknown>)(cache);
+    });
+  });
 
   return getters as ExtractModelGetters<TModel>;
 }

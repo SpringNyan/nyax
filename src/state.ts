@@ -10,7 +10,7 @@ import {
 import { is, isObject } from "./util";
 
 export interface ModelInitialState {
-  [key: string]: any | ModelInitialState;
+  [key: string]: unknown | ModelInitialState;
 }
 
 export type ConvertState<
@@ -21,7 +21,7 @@ export function getSubState(
   state: unknown,
   modelPath: string,
   containerKey: string | undefined
-): any {
+): unknown {
   if (!isObject(state)) {
     throw new Error("state is not an object");
   }
@@ -38,7 +38,7 @@ export function setSubState(
   value: unknown,
   modelPath: string,
   containerKey: string | undefined
-): any {
+): unknown {
   if (state === undefined) {
     state = {};
   }
@@ -133,11 +133,13 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
       throw new Error("Model is not registered");
     }
 
-    const state = rootState?.[modelContext.modelPath];
+    const state = (rootState as Record<string, unknown>)?.[
+      modelContext.modelPath
+    ];
 
     if (model.isDynamic) {
       if (containerKey !== undefined) {
-        return state?.[containerKey];
+        return (state as Record<string, unknown>)?.[containerKey];
       } else {
         return state;
       }

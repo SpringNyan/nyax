@@ -64,7 +64,7 @@ export class ContainerImpl<TModel extends Model> implements Container<TModel> {
   public readonly effects: ExtractModelEffects<TModel>;
   public readonly epics: ExtractModelEpics<TModel>;
 
-  public readonly reducerByPath: Record<string, ModelReducer>;
+  public readonly reducerByPath: Record<string, ModelReducer<unknown>>;
   public readonly effectByPath: Record<string, ModelEffect<unknown, unknown>>;
 
   public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
@@ -127,7 +127,7 @@ export class ContainerImpl<TModel extends Model> implements Container<TModel> {
       this._lastRootState = rootState;
       this._lastState = state;
 
-      return state;
+      return state as ExtractModelState<TModel>;
     }
 
     if (this.canRegister) {

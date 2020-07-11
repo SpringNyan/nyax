@@ -18,7 +18,7 @@ export function createEpic(
   container: ContainerImpl<Model>
 ): Epic {
   return (): Observable<AnyAction> => {
-    const outputObservables: Array<Observable<AnyAction>> = [];
+    const outputObservables: Observable<AnyAction>[] = [];
     traverseObject(container.epics, (epic: ModelEpic) => {
       outputObservables.push(
         epic().pipe(

@@ -16,11 +16,11 @@ import {
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
-import { Models, registerModels } from "./model";
+import { Model, Models, registerModels } from "./model";
 import { GetState } from "./state";
 
 export interface NyaxOptions {
-  dependencies: any;
+  dependencies: unknown;
 
   createStore?: (params: {
     reducer: Reducer;
@@ -29,11 +29,11 @@ export interface NyaxOptions {
   }) => Store;
 
   onUnhandledEffectError?: (
-    error: any,
-    promise: Promise<any> | undefined
+    error: unknown,
+    promise: Promise<unknown> | undefined
   ) => void;
   onUnhandledEpicError?: (
-    error: any,
+    error: unknown,
     caught: Observable<AnyAction>
   ) => Observable<AnyAction>;
 }
@@ -43,8 +43,8 @@ export interface Nyax {
   registerModels: (models: Models) => void;
   getContainer: GetContainer;
   getState: GetState;
-  reload: (state?: any) => void;
-  gc: (filterFn?: (container: Container) => boolean) => void;
+  reload: (state?: unknown) => void;
+  gc: (filterFn?: (container: Container<Model>) => boolean) => void;
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -75,7 +75,7 @@ export function createNyax(options: NyaxOptions): Nyax {
         filterFn = (container): boolean => !container.isRegistered;
       }
 
-      const containers: Container[] = [];
+      const containers: Container<Model>[] = [];
       nyaxContext.modelContextByModel.forEach((context) => {
         context.containerByContainerKey.forEach((container) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
