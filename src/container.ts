@@ -8,6 +8,7 @@ import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
+  AnyModel,
   ExtractModelActionHelpers,
   ExtractModelArgs,
   ExtractModelDefaultArgs,
@@ -33,14 +34,15 @@ export interface ContainerBase<TState, TGetters, TActionHelpers> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ContainerCore<TModel extends Model>
+export interface ContainerCore<TModel extends AnyModel = Model>
   extends ContainerBase<
     ExtractModelState<TModel>,
     ExtractModelGetters<TModel>,
     ExtractModelActionHelpers<TModel>
   > {}
 
-export interface Container<TModel extends Model> extends ContainerCore<TModel> {
+export interface Container<TModel extends AnyModel = Model>
+  extends ContainerCore<TModel> {
   modelNamespace: string;
   containerKey: string | undefined;
 
@@ -51,7 +53,8 @@ export interface Container<TModel extends Model> extends ContainerCore<TModel> {
   unregister(): void;
 }
 
-export class ContainerImpl<TModel extends Model> implements Container<TModel> {
+export class ContainerImpl<TModel extends AnyModel = Model>
+  implements Container<TModel> {
   public readonly modelContext: ModelContext;
 
   public readonly modelNamespace: string;
@@ -64,21 +67,19 @@ export class ContainerImpl<TModel extends Model> implements Container<TModel> {
   public readonly effects: ExtractModelEffects<TModel>;
   public readonly epics: ExtractModelEpics<TModel>;
 
-  public readonly reducerByPath: Record<string, ModelReducer<unknown>>;
-  public readonly effectByPath: Record<string, ModelEffect<unknown, unknown>>;
+  public readonly reducerByPath: Record<string, ModelReducer>;
+  public readonly effectByPath: Record<string, ModelEffect>;
 
   public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
   public draftState:
     | ExtractModelState<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
 
-  private _initialStateCache: unknown;
-
   private _lastRootState: unknown;
   private _lastState: unknown;
 
+  private _initialStateCache: unknown;
   private _gettersCache: unknown;
-
   private _actionsCache: unknown;
 
   constructor(
@@ -247,7 +248,7 @@ export interface GetContainer {
 }
 
 export interface GetContainerInternal {
-  <TModel extends Model>(
+  <TModel extends AnyModel>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel>;
@@ -256,7 +257,7 @@ export interface GetContainerInternal {
 export function createGetContainer(
   nyaxContext: NyaxContext
 ): GetContainerInternal {
-  return <TModel extends Model>(
+  return <TModel extends AnyModel>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel> => {

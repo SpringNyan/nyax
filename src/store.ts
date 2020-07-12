@@ -16,7 +16,7 @@ import {
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
-import { Model, Models, registerModels } from "./model";
+import { Models, registerModels } from "./model";
 import { GetState } from "./state";
 
 export interface NyaxOptions {
@@ -44,7 +44,7 @@ export interface Nyax {
   getContainer: GetContainer;
   getState: GetState;
   reload: (state?: unknown) => void;
-  gc: (filterFn?: (container: Container<Model>) => boolean) => void;
+  gc: (filter?: (container: Container) => boolean) => void;
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -55,7 +55,7 @@ export function createNyax(options: NyaxOptions): Nyax {
     get store() {
       return nyaxContext.store;
     },
-    registerModels: (models): void => {
+    registerModels: (models) => {
       const registerActionPayloads = registerModels(nyaxContext, models);
       nyaxContext.store.dispatch(
         batchRegisterActionHelper.create(registerActionPayloads)
@@ -67,19 +67,19 @@ export function createNyax(options: NyaxOptions): Nyax {
     get getState() {
       return nyaxContext.getState;
     },
-    reload: (state): void => {
+    reload: (state) => {
       nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
     },
-    gc: (filterFn): void => {
-      if (!filterFn) {
-        filterFn = (container): boolean => !container.isRegistered;
+    gc: (filter) => {
+      if (!filter) {
+        filter = (container) => !container.isRegistered;
       }
 
-      const containers: Container<Model>[] = [];
+      const containers: Container[] = [];
       nyaxContext.modelContextByModel.forEach((context) => {
         context.containerByContainerKey.forEach((container) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          if (filterFn!(container)) {
+          if (filter!(container)) {
             containers.push(container);
           }
         });

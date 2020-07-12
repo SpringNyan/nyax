@@ -15,10 +15,10 @@ import { ExtractModelDefaultArgs, Model } from "./model";
 import { createState, getSubState, setSubState } from "./state";
 import { splitLastString } from "./util";
 
-export type ModelReducer<TPayload> = (payload: TPayload) => void;
+export type ModelReducer<TPayload = unknown> = (payload: TPayload) => void;
 
 export interface ModelReducers {
-  [key: string]: ModelReducer<unknown> | ModelReducers;
+  [key: string]: ModelReducer | ModelReducers;
 }
 
 export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
@@ -132,7 +132,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       container.modelContext.modelPath,
       container.containerKey
     );
-    const newState = produce(state, (draft: unknown) => {
+    const newState = produce(state, (draft) => {
       container.draftState = draft;
       reducer(action.payload);
       container.draftState = NYAX_NOTHING;
@@ -146,7 +146,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     );
   };
 
-  return (rootState, action): unknown => {
+  return (rootState, action) => {
     nyaxContext.cachedRootState = rootState;
     rootState = rootReducer(rootState, action);
     nyaxContext.cachedRootState = NYAX_NOTHING;

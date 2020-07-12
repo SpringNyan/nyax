@@ -4,7 +4,6 @@ import { catchError, filter, takeUntil } from "rxjs/operators";
 import { AnyAction, batchUnregisterActionHelper } from "./action";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import { Model } from "./model";
 import { traverseObject } from "./util";
 
 export type ModelEpic = () => Observable<AnyAction>;
@@ -15,7 +14,7 @@ export interface ModelEpics {
 
 export function createEpic(
   nyaxContext: NyaxContext,
-  container: ContainerImpl<Model>
+  container: ContainerImpl
 ): Epic {
   return (): Observable<AnyAction> => {
     const outputObservables: Observable<AnyAction>[] = [];

@@ -2,7 +2,7 @@ import { NyaxPromise } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
-import { ExtractModelActionHelpers, Model } from "./model";
+import { AnyModel, ExtractModelActionHelpers } from "./model";
 import { ConvertPayloadResultPairsFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
@@ -10,7 +10,7 @@ export interface AnyAction {
   type: string;
 }
 
-export interface Action<TPayload> {
+export interface Action<TPayload = unknown> {
   type: string;
   payload: TPayload;
 }
@@ -59,10 +59,7 @@ export class ActionHelperBaseImpl<TPayload>
 export class ActionHelperImpl<TPayload, TResult>
   extends ActionHelperBaseImpl<TPayload>
   implements ActionHelper<TPayload, TResult> {
-  constructor(
-    private readonly _nyaxContext: NyaxContext,
-    public readonly type: string
-  ) {
+  constructor(private readonly _nyaxContext: NyaxContext, type: string) {
     super(type);
   }
 
@@ -89,7 +86,7 @@ export class ActionHelperImpl<TPayload, TResult>
   }
 }
 
-export function createActionHelpers<TModel extends Model>(
+export function createActionHelpers<TModel extends AnyModel>(
   nyaxContext: NyaxContext,
   container: ContainerImpl<TModel>
 ): ExtractModelActionHelpers<TModel> {

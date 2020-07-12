@@ -1,11 +1,11 @@
 import { ContainerImpl } from "./container";
-import { ExtractModelGetters, Model } from "./model";
+import { AnyModel, ExtractModelGetters } from "./model";
 import { defineGetter, is, mergeObjects } from "./util";
 
-export type ModelSelector<TResult> = () => TResult;
+export type ModelSelector<TResult = unknown> = () => TResult;
 
 export interface ModelSelectors {
-  [key: string]: ModelSelector<unknown> | ModelSelectors;
+  [key: string]: ModelSelector | ModelSelectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
@@ -19,7 +19,7 @@ export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
   : never;
 
 export interface SelectorCache {
-  lastArgs?: unknown[];
+  lastDeps?: unknown[];
   lastResult?: unknown;
 }
 
@@ -180,22 +180,22 @@ export function createSelector(...args: unknown[]): OutputSelector<unknown> {
       cache = defaultCache;
     }
 
-    let shouldUpdate = !cache.lastArgs;
+    let shouldUpdate = !cache.lastDeps;
 
-    const lastArgs = cache.lastArgs ?? [];
-    const currArgs: unknown[] = [];
+    const lastDeps = cache.lastDeps ?? [];
+    const currDeps: unknown[] = [];
     for (let i = 0; i < selectors.length; ++i) {
-      currArgs.push(selectors[i](lastArgs[i]));
-      if (!shouldUpdate && !is(currArgs[i], lastArgs[i])) {
+      currDeps.push(selectors[i](lastDeps[i]));
+      if (!shouldUpdate && !is(currDeps[i], lastDeps[i])) {
         shouldUpdate = true;
       }
     }
 
-    cache.lastArgs = currArgs;
+    cache.lastDeps = currDeps;
     if (shouldUpdate) {
       cache.lastResult = arrayMode
-        ? combiner(currArgs, cache.lastResult)
-        : combiner(...currArgs, cache.lastResult);
+        ? combiner(currDeps, cache.lastResult)
+        : combiner(...currDeps, cache.lastResult);
     }
 
     return cache.lastResult;
@@ -204,7 +204,7 @@ export function createSelector(...args: unknown[]): OutputSelector<unknown> {
   return outputSelector;
 }
 
-export function createGetters<TModel extends Model>(
+export function createGetters<TModel extends AnyModel>(
   container: ContainerImpl<TModel>
 ): ExtractModelGetters<TModel> {
   const getters: Record<string, unknown> = {};

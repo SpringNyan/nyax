@@ -1,22 +1,22 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
-import { ExtractModelArgs, ExtractModelDefaultArgs, Model } from "./model";
+import { AnyModel, ExtractModelArgs, ExtractModelDefaultArgs } from "./model";
 import { isObject } from "./util";
 
 export const NYAX_REQUIRED_ARG_KEY: unique symbol = "__nyax_required_arg__" as any;
 export const NYAX_DEFAULT_ARGS_KEY: unique symbol = "__nyax_default_args__" as any;
 
-export interface RequiredArg<T> {
+export interface RequiredArg<T = unknown> {
   [NYAX_REQUIRED_ARG_KEY]: true;
   defaultValue: T | typeof NYAX_NOTHING;
 }
 
 export interface ModelDefaultArgs {
-  [key: string]: unknown | ModelInnerDefaultArgs<ModelDefaultArgs>;
+  [key: string]: unknown | ModelInnerDefaultArgs;
 }
 
 export type ModelInnerDefaultArgs<
-  TInnerDefaultArgs extends ModelDefaultArgs
+  TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
 > = {
   [NYAX_DEFAULT_ARGS_KEY]: true;
 } & TInnerDefaultArgs;
@@ -57,24 +57,19 @@ export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
 export function createRequiredArg<T>(defaultValue?: T): RequiredArg<T> {
   return {
     [NYAX_REQUIRED_ARG_KEY]: true,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    defaultValue: arguments.length > 0 ? defaultValue! : NYAX_NOTHING,
+    defaultValue: arguments.length > 0 ? (defaultValue as T) : NYAX_NOTHING,
   };
 }
 
-export function isRequiredArg(obj: unknown): obj is RequiredArg<unknown> {
-  return (
-    (obj as RequiredArg<unknown> | undefined)?.[NYAX_REQUIRED_ARG_KEY] === true
-  );
+export function isRequiredArg(obj: unknown): obj is RequiredArg {
+  return (obj as RequiredArg | undefined)?.[NYAX_REQUIRED_ARG_KEY] === true;
 }
 
 export function isModelInnerDefaultArgs(
   obj: unknown
-): obj is ModelInnerDefaultArgs<ModelDefaultArgs> {
+): obj is ModelInnerDefaultArgs {
   return (
-    (obj as ModelInnerDefaultArgs<ModelDefaultArgs> | undefined)?.[
-      NYAX_DEFAULT_ARGS_KEY
-    ] === true
+    (obj as ModelInnerDefaultArgs | undefined)?.[NYAX_DEFAULT_ARGS_KEY] === true
   );
 }
 
@@ -125,7 +120,7 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   return args as ConvertArgs<TDefaultArgs>;
 }
 
-export function createArgs<TModel extends Model>(
+export function createArgs<TModel extends AnyModel>(
   container: ContainerImpl<TModel>,
   registerArgs:
     | ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>

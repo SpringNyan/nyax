@@ -35,7 +35,7 @@ export interface NyaxContext {
   modelContextByModel: Map<Model, ModelContext>;
   modelByModelNamespace: Map<string, Model>;
 
-  containerByNamespace: Map<string, ContainerImpl<Model>>;
+  containerByNamespace: Map<string, ContainerImpl>;
   dispatchDeferredByAction: Map<
     AnyAction,
     {
@@ -61,7 +61,7 @@ export interface ModelContext {
   modelNamespace: string;
   modelPath: string;
 
-  containerByContainerKey: Map<string | undefined, ContainerImpl<Model>>;
+  containerByContainerKey: Map<string | undefined, ContainerImpl>;
 }
 
 export function createNyaxContext(): NyaxContext {

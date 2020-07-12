@@ -30,13 +30,13 @@ import {
 } from "./util";
 
 export interface ModelInstance<
-  TDependencies = any,
-  TDefaultArgs = any,
-  TInitialState = any,
-  TSelectors = any,
-  TReducers = any,
-  TEffects = any,
-  TEpics = any
+  TDependencies = unknown,
+  TDefaultArgs = unknown,
+  TInitialState = unknown,
+  TSelectors = unknown,
+  TReducers = unknown,
+  TEffects = unknown,
+  TEpics = unknown
 > {
   defaultArgs(): TDefaultArgs;
   initialState(): TInitialState;
@@ -65,13 +65,13 @@ export interface ModelInstance<
 }
 
 export type ModelInstanceConstructor<
-  TDependencies = any,
-  TDefaultArgs = any,
-  TInitialState = any,
-  TSelectors = any,
-  TReducers = any,
-  TEffects = any,
-  TEpics = any
+  TDependencies = unknown,
+  TDefaultArgs = unknown,
+  TInitialState = unknown,
+  TSelectors = unknown,
+  TReducers = unknown,
+  TEffects = unknown,
+  TEpics = unknown
 > = new () => ModelInstance<
   TDependencies,
   TDefaultArgs,
@@ -88,13 +88,13 @@ export interface ModelOptions {
 }
 
 export interface Model<
-  TDependencies = any,
-  TDefaultArgs = any,
-  TInitialState = any,
-  TSelectors = any,
-  TReducers = any,
-  TEffects = any,
-  TEpics = any
+  TDependencies = unknown,
+  TDefaultArgs = unknown,
+  TInitialState = unknown,
+  TSelectors = unknown,
+  TReducers = unknown,
+  TEffects = unknown,
+  TEpics = unknown
 >
   extends ModelInstanceConstructor<
       TDependencies,
@@ -107,56 +107,58 @@ export interface Model<
     >,
     ModelOptions {}
 
+export type AnyModel = Model<any, any, any, any, any, any, any>;
+
 export interface Models {
   [key: string]: Model | Models;
 }
 
-export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
+export type ExtractModelDefaultArgs<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["defaultArgs"]
 >;
 
-export type ExtractModelInitialState<TModel extends Model> = ReturnType<
+export type ExtractModelInitialState<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["initialState"]
 >;
 
-export type ExtractModelSelectors<TModel extends Model> = ReturnType<
+export type ExtractModelSelectors<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["selectors"]
 >;
 
-export type ExtractModelReducers<TModel extends Model> = ReturnType<
+export type ExtractModelReducers<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["reducers"]
 >;
 
-export type ExtractModelEffects<TModel extends Model> = ReturnType<
+export type ExtractModelEffects<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["effects"]
 >;
 
-export type ExtractModelEpics<TModel extends Model> = ReturnType<
+export type ExtractModelEpics<TModel extends AnyModel> = ReturnType<
   InstanceType<TModel>["epics"]
 >;
 
-export type ExtractModelDependencies<TModel extends Model> = InstanceType<
+export type ExtractModelDependencies<TModel extends AnyModel> = InstanceType<
   TModel
 >["dependencies"];
 
-export type ExtractModelArgs<TModel extends Model> = InstanceType<
+export type ExtractModelArgs<TModel extends AnyModel> = InstanceType<
   TModel
 >["args"];
 
-export type ExtractModelState<TModel extends Model> = InstanceType<
+export type ExtractModelState<TModel extends AnyModel> = InstanceType<
   TModel
 >["state"];
 
-export type ExtractModelGetters<TModel extends Model> = InstanceType<
+export type ExtractModelGetters<TModel extends AnyModel> = InstanceType<
   TModel
 >["getters"];
 
-export type ExtractModelActionHelpers<TModel extends Model> = InstanceType<
+export type ExtractModelActionHelpers<TModel extends AnyModel> = InstanceType<
   TModel
 >["actions"];
 
 export type MergeModelsDependencies<
-  TModels extends Model[]
+  TModels extends AnyModel[]
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ExtractModelDependencies<TModels[K]>;
@@ -164,7 +166,7 @@ export type MergeModelsDependencies<
 >;
 
 export type MergeSubModelsDependencies<
-  TSubModels extends Record<string, Model>
+  TSubModels extends Record<string, AnyModel>
 > = UnionToIntersection<
   {
     [K in keyof TSubModels]: ExtractModelDependencies<TSubModels[K]>;
@@ -180,7 +182,7 @@ export type ModelPropertyKey =
   | "epics";
 
 export type MergeModelsDefaultArgs<
-  TModels extends Model[]
+  TModels extends AnyModel[]
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<TModels[K]>;
@@ -188,7 +190,7 @@ export type MergeModelsDefaultArgs<
 >;
 
 export type MergeSubModelsDefaultArgs<
-  TSubModels extends Record<string, Model>
+  TSubModels extends Record<string, AnyModel>
 > = Spread<
   {
     [K in keyof TSubModels]: ModelInnerDefaultArgs<
@@ -198,7 +200,7 @@ export type MergeSubModelsDefaultArgs<
 >;
 
 export type MergeModelsProperty<
-  TModels extends Model[],
+  TModels extends AnyModel[],
   TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = UnionToIntersection<
   {
@@ -209,7 +211,7 @@ export type MergeModelsProperty<
 >;
 
 export type MergeSubModelsProperty<
-  TSubModels extends Record<string, Model>,
+  TSubModels extends Record<string, AnyModel>,
   TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = Spread<
   {
@@ -308,7 +310,7 @@ export class ModelBase<TDependencies = any>
   }
 }
 
-export function mergeModels<TModels extends Model[] | [Model]>(
+export function mergeModels<TModels extends AnyModel[] | [AnyModel]>(
   ...models: TModels
 ): ModelInstanceConstructor<
   MergeModelsDependencies<TModels>,
@@ -367,7 +369,7 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   };
 }
 
-export function mergeSubModels<TSubModels extends Record<string, Model>>(
+export function mergeSubModels<TSubModels extends Record<string, AnyModel>>(
   subModels: TSubModels
 ): ModelInstanceConstructor<
   MergeSubModelsDependencies<TSubModels>,
@@ -568,7 +570,7 @@ export function createModel<
     Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>>;
 }
 
-export function registerModel<TModel extends Model>(
+export function registerModel<TModel extends AnyModel>(
   nyaxContext: NyaxContext,
   modelNamespace: string,
   model: TModel
