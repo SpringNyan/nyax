@@ -31,12 +31,12 @@ import {
 
 export interface ModelInstance<
   TDependencies = unknown,
-  TDefaultArgs = unknown,
-  TInitialState = unknown,
-  TSelectors = unknown,
-  TReducers = unknown,
-  TEffects = unknown,
-  TEpics = unknown
+  TDefaultArgs = ModelDefaultArgs,
+  TInitialState = ModelInitialState,
+  TSelectors = ModelSelectors,
+  TReducers = ModelReducers,
+  TEffects = ModelEffects,
+  TEpics = ModelEpics
 > {
   defaultArgs(): TDefaultArgs;
   initialState(): TInitialState;
@@ -55,7 +55,7 @@ export interface ModelInstance<
   >;
 
   rootAction$: ActionsObservable<AnyAction>;
-  rootState$: StateObservable<any>;
+  rootState$: StateObservable<unknown>;
 
   modelNamespace: string;
   containerKey: string | undefined;
@@ -66,12 +66,12 @@ export interface ModelInstance<
 
 export type ModelInstanceConstructor<
   TDependencies = unknown,
-  TDefaultArgs = unknown,
-  TInitialState = unknown,
-  TSelectors = unknown,
-  TReducers = unknown,
-  TEffects = unknown,
-  TEpics = unknown
+  TDefaultArgs = ModelDefaultArgs,
+  TInitialState = ModelInitialState,
+  TSelectors = ModelSelectors,
+  TReducers = ModelReducers,
+  TEffects = ModelEffects,
+  TEpics = ModelEpics
 > = new () => ModelInstance<
   TDependencies,
   TDefaultArgs,
@@ -82,6 +82,16 @@ export type ModelInstanceConstructor<
   TEpics
 >;
 
+export type AnyModelInstanceConstructor = ModelInstanceConstructor<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
+
 export interface ModelOptions {
   isDynamic?: boolean;
   isLazy?: boolean;
@@ -89,12 +99,12 @@ export interface ModelOptions {
 
 export interface Model<
   TDependencies = unknown,
-  TDefaultArgs = unknown,
-  TInitialState = unknown,
-  TSelectors = unknown,
-  TReducers = unknown,
-  TEffects = unknown,
-  TEpics = unknown
+  TDefaultArgs = ModelDefaultArgs,
+  TInitialState = ModelInitialState,
+  TSelectors = ModelSelectors,
+  TReducers = ModelReducers,
+  TEffects = ModelEffects,
+  TEpics = ModelEpics
 >
   extends ModelInstanceConstructor<
       TDependencies,
@@ -111,6 +121,10 @@ export type AnyModel = Model<any, any, any, any, any, any, any>;
 
 export interface Models {
   [key: string]: Model | Models;
+}
+
+export interface AnyModels {
+  [key: string]: AnyModel | AnyModels;
 }
 
 export type ExtractModelDefaultArgs<TModel extends AnyModel> = ReturnType<
@@ -221,7 +235,7 @@ export type MergeSubModelsProperty<
   }
 >;
 
-export class ModelBase<TDependencies = any>
+export class ModelBase<TDependencies>
   implements
     ModelInstance<
       TDependencies,
@@ -246,28 +260,26 @@ export class ModelBase<TDependencies = any>
     | "containerKey"
   >;
 
-  /* eslint-disable @typescript-eslint/ban-types */
-  public defaultArgs(): {} {
+  public defaultArgs(): any {
     return {};
   }
-  public initialState(): {} {
+  public initialState(): any {
     return {};
   }
-  public selectors(): {} {
+  public selectors(): any {
     return {};
   }
-  public reducers(): {} {
+  public reducers(): any {
     return {};
   }
-  public effects(): {} {
+  public effects(): any {
     return {};
   }
-  public epics(): {} {
+  public epics(): any {
     return {};
   }
-  /* eslint-enable @typescript-eslint/ban-types */
 
-  public get dependencies(): TDependencies {
+  public get dependencies(): any {
     return this.__nyaxContext.dependencies;
   }
   public get args(): any {
@@ -321,9 +333,11 @@ export function mergeModels<TModels extends AnyModel[] | [AnyModel]>(
   MergeModelsProperty<TModels, "effects">,
   MergeModelsProperty<TModels, "epics">
 > {
-  return class extends ModelBase {
+  return class extends ModelBase<MergeModelsDependencies<TModels>> {
     private readonly __modelInstances: ModelInstance[] = models.map((model) => {
-      const modelInstance = new model() as ModelBase;
+      const modelInstance = new model() as ModelBase<
+        MergeModelsDependencies<TModels>
+      >;
       defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
       defineGetter(modelInstance, "__container", () => this.__container);
       return modelInstance;
@@ -380,7 +394,7 @@ export function mergeSubModels<TSubModels extends Record<string, AnyModel>>(
   MergeSubModelsProperty<TSubModels, "effects">,
   MergeSubModelsProperty<TSubModels, "epics">
 > {
-  return class extends ModelBase {
+  return class extends ModelBase<MergeSubModelsDependencies<TSubModels>> {
     private readonly __subModelInstances = ((): Record<
       string,
       ModelInstance
@@ -390,7 +404,9 @@ export function mergeSubModels<TSubModels extends Record<string, AnyModel>>(
 
       return Object.keys(subModels).reduce<Record<string, ModelInstance>>(
         (obj, key) => {
-          const modelInstance = new subModels[key]() as ModelBase;
+          const modelInstance = new subModels[key]() as ModelBase<
+            MergeSubModelsDependencies<TSubModels>
+          >;
 
           defineGetter(
             modelInstance,
@@ -521,9 +537,9 @@ export function createModel<
   TEpics
 > &
   Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
-  const Model = class extends ModelBase {
+  const Model = class extends ModelBase<TDependencies> {
     private readonly __modelInstance = ((): ModelInstance => {
-      const modelInstance = new (model as Model)() as ModelBase;
+      const modelInstance = new (model as Model)() as ModelBase<TDependencies>;
       defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
       defineGetter(modelInstance, "__container", () => this.__container);
       return modelInstance;

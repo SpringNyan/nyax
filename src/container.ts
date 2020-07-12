@@ -9,6 +9,7 @@ import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
   AnyModel,
+  AnyModelInstanceConstructor,
   ExtractModelActionHelpers,
   ExtractModelArgs,
   ExtractModelDefaultArgs,
@@ -20,7 +21,6 @@ import {
   ExtractModelState,
   Model,
   ModelBase,
-  ModelInstanceConstructor,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -237,12 +237,11 @@ export class ContainerImpl<TModel extends AnyModel = Model>
   }
 }
 
-// TODO
 export interface GetContainer {
-  <TModel extends ModelInstanceConstructor & { isDynamic?: false }>(
+  <TModel extends AnyModelInstanceConstructor & { isDynamic?: false }>(
     modelOrModelNamespace: TModel | string
   ): Container<TModel>;
-  <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
+  <TModel extends AnyModelInstanceConstructor & { isDynamic: true }>(
     modelOrModelNamespace: TModel | string,
     containerKey: string
   ): Container<TModel>;

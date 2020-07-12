@@ -3,9 +3,9 @@ import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import {
   AnyModel,
+  AnyModelInstanceConstructor,
   ExtractModelArgs,
   ExtractModelState,
-  ModelInstanceConstructor,
 } from "./model";
 import { is, isObject } from "./util";
 
@@ -92,7 +92,6 @@ export function createState<TModel extends AnyModel>(
   return state;
 }
 
-// TODO
 export interface GetState {
   (): unknown;
   <TModel extends AnyModel>(
@@ -100,7 +99,7 @@ export interface GetState {
   ): TModel["isDynamic"] extends true
     ? Partial<Record<string, ExtractModelState<TModel>>> | undefined
     : ExtractModelState<TModel> | undefined;
-  <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
+  <TModel extends AnyModelInstanceConstructor & { isDynamic: true }>(
     modelOrModelNamespace: TModel | string,
     containerKey: string
   ): ExtractModelState<TModel> | undefined;
