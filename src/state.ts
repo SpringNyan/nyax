@@ -13,6 +13,10 @@ export interface ModelInitialState {
   [key: string]: unknown | ModelInitialState;
 }
 
+export interface AnyModelInitialState {
+  [key: string]: any | AnyModelInitialState;
+}
+
 export type ConvertState<
   TInitialState
 > = TInitialState extends infer TInitialState ? TInitialState : never;
@@ -88,6 +92,7 @@ export function createState<TModel extends AnyModel>(
   return state;
 }
 
+// TODO
 export interface GetState {
   (): unknown;
   <TModel extends AnyModel>(

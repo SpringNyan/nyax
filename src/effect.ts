@@ -6,6 +6,10 @@ export interface ModelEffects {
   [key: string]: ModelEffect | ModelEffects;
 }
 
+export interface AnyModelEffects {
+  [key: string]: ModelEffect<any, any> | AnyModelEffects;
+}
+
 export type ConvertPayloadResultPairsFromModelEffects<TEffects> = {
   [K in keyof TEffects]: TEffects[K] extends ModelEffect<
     infer TPayload,

@@ -15,8 +15,12 @@ export interface ModelDefaultArgs {
   [key: string]: unknown | ModelInnerDefaultArgs;
 }
 
+export interface AnyModelDefaultArgs {
+  [key: string]: any | ModelInnerDefaultArgs<AnyModelDefaultArgs>;
+}
+
 export type ModelInnerDefaultArgs<
-  TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
+  TInnerDefaultArgs extends AnyModelDefaultArgs = ModelDefaultArgs
 > = {
   [NYAX_DEFAULT_ARGS_KEY]: true;
 } & TInnerDefaultArgs;
@@ -37,9 +41,9 @@ export type ConvertRegisterArgs<
             >
           ? ConvertRegisterArgs<TInnerDefaultArgs>
           : TDefaultArgs[K];
-      } extends infer TConverted
-      ? Pick<TConverted, Extract<keyof TConverted, TRequiredKey>> &
-          Partial<Pick<TConverted, Exclude<keyof TConverted, TRequiredKey>>>
+      } extends infer TArgs
+      ? Pick<TArgs, Extract<keyof TArgs, TRequiredKey>> &
+          Partial<Pick<TArgs, Exclude<keyof TArgs, TRequiredKey>>>
       : never
     : never
   : never;
@@ -73,7 +77,7 @@ export function isModelInnerDefaultArgs(
   );
 }
 
-export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
+export function buildArgs<TDefaultArgs extends AnyModelDefaultArgs>(
   defaultArgs: TDefaultArgs,
   registerArgs: ConvertRegisterArgs<TDefaultArgs> | undefined,
   optional: boolean

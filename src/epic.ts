@@ -12,6 +12,10 @@ export interface ModelEpics {
   [key: string]: ModelEpic | ModelEpics;
 }
 
+export interface AnyModelEpics {
+  [key: string]: ModelEpic | AnyModelEpics;
+}
+
 export function createEpic(
   nyaxContext: NyaxContext,
   container: ContainerImpl

@@ -8,13 +8,15 @@ export type UnionToIntersection<U> = (
   ? I
   : never;
 
-export type DeepRecord<K extends keyof any, T> = Record<K, T | Record<K, T>>;
-
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends ((...args: any[]) => any) | any[]
     ? T[K]
     : DeepPartial<T[K]>;
 };
+
+export interface DeepRecord<T> {
+  [key: string]: T | DeepRecord<T>;
+}
 
 export function is(x: unknown, y: unknown): boolean {
   if (x === y) {
@@ -29,16 +31,16 @@ export function isObject(obj: unknown): obj is Record<string, unknown> {
 }
 
 export function mergeObjects<T>(
-  target: DeepRecord<string, T>,
-  source: DeepRecord<string, T>,
+  target: DeepRecord<T>,
+  source: DeepRecord<T>,
   fn?: (
     item: T,
     key: string,
-    parent: DeepRecord<string, T>,
+    parent: DeepRecord<T>,
     paths: readonly string[]
   ) => void,
   paths: string[] = []
-): DeepRecord<string, T> {
+): DeepRecord<T> {
   if (!isObject(target)) {
     throw new Error("target is not an object");
   }
@@ -82,11 +84,11 @@ export function mergeObjects<T>(
 }
 
 export function traverseObject<T>(
-  obj: DeepRecord<string, T>,
+  obj: DeepRecord<T>,
   fn: (
     item: T,
     key: string,
-    parent: DeepRecord<string, T>,
+    parent: DeepRecord<T>,
     paths: readonly string[]
   ) => void
 ): void {
@@ -94,7 +96,7 @@ export function traverseObject<T>(
 }
 
 export function flattenObject<T>(
-  obj: DeepRecord<string, T>,
+  obj: DeepRecord<T>,
   separator = "."
 ): Record<string, T> {
   const result: Record<string, T> = {};

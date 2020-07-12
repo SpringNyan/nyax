@@ -8,6 +8,10 @@ export interface ModelSelectors {
   [key: string]: ModelSelector | ModelSelectors;
 }
 
+export interface AnyModelSelectors {
+  [key: string]: ModelSelector<any> | AnyModelSelectors;
+}
+
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
   ? {
       [K in keyof TSelectors]: TSelectors[K] extends ModelSelector<

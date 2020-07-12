@@ -21,6 +21,10 @@ export interface ModelReducers {
   [key: string]: ModelReducer | ModelReducers;
 }
 
+export interface AnyModelReducers {
+  [key: string]: ModelReducer<any> | AnyModelReducers;
+}
+
 export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
   [K in keyof TReducers]: TReducers[K] extends ModelReducer<infer TPayload>
     ? [TPayload, unknown]

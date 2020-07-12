@@ -237,6 +237,7 @@ export class ContainerImpl<TModel extends AnyModel = Model>
   }
 }
 
+// TODO
 export interface GetContainer {
   <TModel extends ModelInstanceConstructor & { isDynamic?: false }>(
     modelOrModelNamespace: TModel | string
