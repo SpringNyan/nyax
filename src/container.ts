@@ -98,12 +98,17 @@ export class ContainerImpl<TModel extends Model = Model>
 
     this.modelInstance = this._createModelInstance();
 
-    this.selectors = this.modelInstance.selectors();
-    this.reducers = this.modelInstance.reducers();
-    this.effects = this.modelInstance.effects();
-    this.epics = this.modelInstance.epics();
-    this.reducerByPath = flattenObject(this.reducers);
-    this.effectByPath = flattenObject(this.effects);
+    this.selectors = this.modelInstance.selectors() as ExtractModelSelectors<
+      TModel
+    >;
+    this.reducers = this.modelInstance.reducers() as ExtractModelReducers<
+      TModel
+    >;
+    this.effects = this.modelInstance.effects() as ExtractModelEffects<TModel>;
+    this.epics = this.modelInstance.epics() as ExtractModelEpics<TModel>;
+
+    this.reducerByPath = flattenObject<ModelReducer>(this.reducers);
+    this.effectByPath = flattenObject<ModelEffect>(this.effects);
   }
 
   public get state(): ExtractModelState<TModel> {
@@ -230,8 +235,8 @@ export class ContainerImpl<TModel extends Model = Model>
 
   private _createModelInstance(): InstanceType<TModel> {
     const modelInstance = new this.model() as ModelBase;
-    modelInstance.__nyaxContext = this._nyaxContext;
-    modelInstance.__container = this;
+    modelInstance.__nyax_nyaxContext = this._nyaxContext;
+    modelInstance.__nyax_container = this;
     return modelInstance as InstanceType<TModel>;
   }
 }

@@ -85,7 +85,7 @@ export function createState<TModel extends Model>(
   const state = container.modelInstance.initialState();
   container.args = NYAX_NOTHING;
 
-  return state;
+  return state as ExtractModelState<TModel>;
 }
 
 export interface GetState {

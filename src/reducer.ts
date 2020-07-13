@@ -12,7 +12,12 @@ import { ConvertRegisterArgs, createArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { NyaxContext } from "./context";
 import { ExtractModelDefaultArgs, Model } from "./model";
-import { createState, getSubState, setSubState } from "./state";
+import {
+  createState,
+  getSubState,
+  ModelInitialState,
+  setSubState,
+} from "./state";
 import { splitLastString } from "./util";
 
 export type ModelReducer<TPayload = unknown> = (payload: TPayload) => void;
@@ -133,7 +138,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       container.containerKey
     );
     const newState = produce(state, (draft) => {
-      container.draftState = draft;
+      container.draftState = draft as ModelInitialState;
       reducer(action.payload);
       container.draftState = NYAX_NOTHING;
     });

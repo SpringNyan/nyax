@@ -219,7 +219,7 @@ export type MergeSubModelsProperty<
   }
 >;
 
-export class ModelBase<TDependencies>
+export class ModelBase<TDependencies = unknown>
   implements
     ModelInstance<
       TDependencies,
@@ -232,8 +232,8 @@ export class ModelBase<TDependencies>
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
-  public __nyaxContext!: NyaxContext;
-  public __container!: Pick<
+  public __nyax_nyaxContext!: NyaxContext;
+  public __nyax_container!: Pick<
     ContainerImpl,
     | "args"
     | "draftState"
@@ -264,45 +264,47 @@ export class ModelBase<TDependencies>
   }
 
   public get dependencies(): any {
-    return this.__nyaxContext.dependencies;
+    return this.__nyax_nyaxContext.dependencies;
   }
   public get args(): any {
-    const args = this.__container.args;
+    const args = this.__nyax_container.args;
     if (args !== NYAX_NOTHING) {
       return args;
     }
     throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
-    const draftState = this.__container.draftState;
-    return draftState !== NYAX_NOTHING ? draftState : this.__container.state;
+    const draftState = this.__nyax_container.draftState;
+    return draftState !== NYAX_NOTHING
+      ? draftState
+      : this.__nyax_container.state;
   }
   public get getters(): any {
-    return this.__container.getters;
+    return this.__nyax_container.getters;
   }
   public get actions(): any {
-    return this.__container.actions;
+    return this.__nyax_container.actions;
   }
 
   public get rootAction$(): any {
-    return this.__nyaxContext.rootAction$;
+    return this.__nyax_nyaxContext.rootAction$;
   }
   public get rootState$(): any {
-    return this.__nyaxContext.rootState$;
+    return this.__nyax_nyaxContext.rootState$;
   }
 
   public get modelNamespace(): any {
-    return this.__container.modelNamespace;
+    return this.__nyax_container.modelNamespace;
   }
   public get containerKey(): any {
-    return this.__container.containerKey;
+    return this.__nyax_container.containerKey;
   }
 
   public get nyax(): any {
-    return this.__nyaxContext.nyax;
+    return this.__nyax_nyaxContext.nyax;
   }
   public get getContainer(): any {
-    return this.__nyaxContext.getContainer;
+    return this.__nyax_nyaxContext.getContainer;
   }
 }
 
@@ -317,13 +319,19 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   MergeModelsProperty<TModels, "effects">,
   MergeModelsProperty<TModels, "epics">
 > {
-  return class extends ModelBase<MergeModelsDependencies<TModels>> {
+  return class extends ModelBase {
     private readonly __modelInstances: ModelInstance[] = models.map((model) => {
-      const modelInstance = new model() as ModelBase<
-        MergeModelsDependencies<TModels>
-      >;
-      defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
-      defineGetter(modelInstance, "__container", () => this.__container);
+      const modelInstance = new model() as ModelBase;
+      defineGetter(
+        modelInstance,
+        "__nyax_nyaxContext",
+        () => this.__nyax_nyaxContext
+      );
+      defineGetter(
+        modelInstance,
+        "__nyax_container",
+        () => this.__nyax_container
+      );
       return modelInstance;
     });
 
@@ -378,54 +386,49 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   MergeSubModelsProperty<TSubModels, "effects">,
   MergeSubModelsProperty<TSubModels, "epics">
 > {
-  return class extends ModelBase<MergeSubModelsDependencies<TSubModels>> {
-    private readonly __subModelInstances = ((): Record<
-      string,
-      ModelInstance
-    > => {
+  return class extends ModelBase {
+    private readonly __subModelInstances = (() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
       return Object.keys(subModels).reduce<Record<string, ModelInstance>>(
         (obj, key) => {
-          const modelInstance = new subModels[key]() as ModelBase<
-            MergeSubModelsDependencies<TSubModels>
-          >;
+          const modelInstance = new subModels[key]() as ModelBase;
 
           defineGetter(
             modelInstance,
-            "__nyaxContext",
-            () => self.__nyaxContext
+            "__nyax_nyaxContext",
+            () => self.__nyax_nyaxContext
           );
 
           const container = {
             get args(): any {
-              const args = self.__container.args;
+              const args = self.__nyax_container.args;
               return args !== NYAX_NOTHING ? args[key] : NYAX_NOTHING;
             },
             get draftState(): any {
-              const draftState = self.__container.draftState;
+              const draftState = self.__nyax_container.draftState;
               return draftState !== NYAX_NOTHING
                 ? draftState[key]
                 : NYAX_NOTHING;
             },
             get state(): any {
-              return self.__container.state[key];
+              return self.__nyax_container.state[key];
             },
             get getters(): any {
-              return self.__container.getters[key];
+              return self.__nyax_container.getters[key];
             },
             get actions(): any {
-              return self.__container.actions[key];
+              return self.__nyax_container.actions[key];
             },
             get modelNamespace(): any {
-              return self.__container.modelNamespace;
+              return self.__nyax_container.modelNamespace;
             },
             get containerKey(): any {
-              return self.__container.containerKey;
+              return self.__nyax_container.containerKey;
             },
           };
-          defineGetter(modelInstance, "__container", () => container);
+          defineGetter(modelInstance, "__nyax_container", () => container);
 
           obj[key] = modelInstance;
           return obj;
@@ -461,10 +464,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
     private _mergeSubProperty<TPropertyKey extends ModelPropertyKey>(
       propertyKey: TPropertyKey
     ): Record<string, ReturnType<ModelInstance[TPropertyKey]>> {
-      const result: Record<
-        string,
-        ReturnType<ModelInstance[TPropertyKey]>
-      > = {};
+      const result: Record<string, any> = {};
       Object.keys(this.__subModelInstances).forEach((key) => {
         result[key] = this.__subModelInstances[key][propertyKey]();
         if (propertyKey === "defaultArgs") {
@@ -522,10 +522,18 @@ export function createModel<
 > &
   Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
   const Model = class extends ModelBase<TDependencies> {
-    private readonly __modelInstance = ((): ModelInstance => {
+    private readonly __modelInstance = (() => {
       const modelInstance = new (model as Model)() as ModelBase<TDependencies>;
-      defineGetter(modelInstance, "__nyaxContext", () => this.__nyaxContext);
-      defineGetter(modelInstance, "__container", () => this.__container);
+      defineGetter(
+        modelInstance,
+        "__nyax_nyaxContext",
+        () => this.__nyax_nyaxContext
+      );
+      defineGetter(
+        modelInstance,
+        "__nyax_container",
+        () => this.__nyax_container
+      );
       return modelInstance;
     })();
 
