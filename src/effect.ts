@@ -3,11 +3,7 @@ export type ModelEffect<TPayload = unknown, TResult = unknown> = (
 ) => Promise<TResult>;
 
 export interface ModelEffects {
-  [key: string]: ModelEffect | ModelEffects;
-}
-
-export interface AnyModelEffects {
-  [key: string]: ModelEffect<any, any> | AnyModelEffects;
+  [key: string]: ModelEffect<any, unknown> | ModelEffects;
 }
 
 export type ConvertPayloadResultPairsFromModelEffects<TEffects> = {

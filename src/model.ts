@@ -82,16 +82,6 @@ export type ModelInstanceConstructor<
   TEpics
 >;
 
-export type AnyModelInstanceConstructor = ModelInstanceConstructor<
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
->;
-
 export interface ModelOptions {
   isDynamic?: boolean;
   isLazy?: boolean;
@@ -117,62 +107,56 @@ export interface Model<
     >,
     ModelOptions {}
 
-export type AnyModel = Model<any, any, any, any, any, any, any>;
-
 export interface Models {
   [key: string]: Model | Models;
 }
 
-export interface AnyModels {
-  [key: string]: AnyModel | AnyModels;
-}
-
-export type ExtractModelDefaultArgs<TModel extends AnyModel> = ReturnType<
+export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
   InstanceType<TModel>["defaultArgs"]
 >;
 
-export type ExtractModelInitialState<TModel extends AnyModel> = ReturnType<
+export type ExtractModelInitialState<TModel extends Model> = ReturnType<
   InstanceType<TModel>["initialState"]
 >;
 
-export type ExtractModelSelectors<TModel extends AnyModel> = ReturnType<
+export type ExtractModelSelectors<TModel extends Model> = ReturnType<
   InstanceType<TModel>["selectors"]
 >;
 
-export type ExtractModelReducers<TModel extends AnyModel> = ReturnType<
+export type ExtractModelReducers<TModel extends Model> = ReturnType<
   InstanceType<TModel>["reducers"]
 >;
 
-export type ExtractModelEffects<TModel extends AnyModel> = ReturnType<
+export type ExtractModelEffects<TModel extends Model> = ReturnType<
   InstanceType<TModel>["effects"]
 >;
 
-export type ExtractModelEpics<TModel extends AnyModel> = ReturnType<
+export type ExtractModelEpics<TModel extends Model> = ReturnType<
   InstanceType<TModel>["epics"]
 >;
 
-export type ExtractModelDependencies<TModel extends AnyModel> = InstanceType<
+export type ExtractModelDependencies<TModel extends Model> = InstanceType<
   TModel
 >["dependencies"];
 
-export type ExtractModelArgs<TModel extends AnyModel> = InstanceType<
+export type ExtractModelArgs<TModel extends Model> = InstanceType<
   TModel
 >["args"];
 
-export type ExtractModelState<TModel extends AnyModel> = InstanceType<
+export type ExtractModelState<TModel extends Model> = InstanceType<
   TModel
 >["state"];
 
-export type ExtractModelGetters<TModel extends AnyModel> = InstanceType<
+export type ExtractModelGetters<TModel extends Model> = InstanceType<
   TModel
 >["getters"];
 
-export type ExtractModelActionHelpers<TModel extends AnyModel> = InstanceType<
+export type ExtractModelActionHelpers<TModel extends Model> = InstanceType<
   TModel
 >["actions"];
 
 export type MergeModelsDependencies<
-  TModels extends AnyModel[]
+  TModels extends Model[]
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ExtractModelDependencies<TModels[K]>;
@@ -180,7 +164,7 @@ export type MergeModelsDependencies<
 >;
 
 export type MergeSubModelsDependencies<
-  TSubModels extends Record<string, AnyModel>
+  TSubModels extends Record<string, Model>
 > = UnionToIntersection<
   {
     [K in keyof TSubModels]: ExtractModelDependencies<TSubModels[K]>;
@@ -196,7 +180,7 @@ export type ModelPropertyKey =
   | "epics";
 
 export type MergeModelsDefaultArgs<
-  TModels extends AnyModel[]
+  TModels extends Model[]
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<TModels[K]>;
@@ -204,7 +188,7 @@ export type MergeModelsDefaultArgs<
 >;
 
 export type MergeSubModelsDefaultArgs<
-  TSubModels extends Record<string, AnyModel>
+  TSubModels extends Record<string, Model>
 > = Spread<
   {
     [K in keyof TSubModels]: ModelInnerDefaultArgs<
@@ -214,7 +198,7 @@ export type MergeSubModelsDefaultArgs<
 >;
 
 export type MergeModelsProperty<
-  TModels extends AnyModel[],
+  TModels extends Model[],
   TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = UnionToIntersection<
   {
@@ -225,7 +209,7 @@ export type MergeModelsProperty<
 >;
 
 export type MergeSubModelsProperty<
-  TSubModels extends Record<string, AnyModel>,
+  TSubModels extends Record<string, Model>,
   TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
 > = Spread<
   {
@@ -322,7 +306,7 @@ export class ModelBase<TDependencies>
   }
 }
 
-export function mergeModels<TModels extends AnyModel[] | [AnyModel]>(
+export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
 ): ModelInstanceConstructor<
   MergeModelsDependencies<TModels>,
@@ -383,7 +367,7 @@ export function mergeModels<TModels extends AnyModel[] | [AnyModel]>(
   };
 }
 
-export function mergeSubModels<TSubModels extends Record<string, AnyModel>>(
+export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
 ): ModelInstanceConstructor<
   MergeSubModelsDependencies<TSubModels>,
@@ -586,7 +570,7 @@ export function createModel<
     Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>>;
 }
 
-export function registerModel<TModel extends AnyModel>(
+export function registerModel<TModel extends Model>(
   nyaxContext: NyaxContext,
   modelNamespace: string,
   model: TModel

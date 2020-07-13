@@ -1,6 +1,6 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
-import { AnyModel, ExtractModelArgs, ExtractModelDefaultArgs } from "./model";
+import { ExtractModelArgs, ExtractModelDefaultArgs, Model } from "./model";
 import { isObject } from "./util";
 
 export const NYAX_REQUIRED_ARG_KEY: unique symbol = "__nyax_required_arg__" as any;
@@ -15,12 +15,8 @@ export interface ModelDefaultArgs {
   [key: string]: unknown | ModelInnerDefaultArgs;
 }
 
-export interface AnyModelDefaultArgs {
-  [key: string]: any | ModelInnerDefaultArgs<AnyModelDefaultArgs>;
-}
-
 export type ModelInnerDefaultArgs<
-  TInnerDefaultArgs extends AnyModelDefaultArgs = ModelDefaultArgs
+  TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
 > = {
   [NYAX_DEFAULT_ARGS_KEY]: true;
 } & TInnerDefaultArgs;
@@ -77,7 +73,7 @@ export function isModelInnerDefaultArgs(
   );
 }
 
-export function buildArgs<TDefaultArgs extends AnyModelDefaultArgs>(
+export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   defaultArgs: TDefaultArgs,
   registerArgs: ConvertRegisterArgs<TDefaultArgs> | undefined,
   optional: boolean
@@ -124,7 +120,7 @@ export function buildArgs<TDefaultArgs extends AnyModelDefaultArgs>(
   return args as ConvertArgs<TDefaultArgs>;
 }
 
-export function createArgs<TModel extends AnyModel>(
+export function createArgs<TModel extends Model>(
   container: ContainerImpl<TModel>,
   registerArgs:
     | ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>

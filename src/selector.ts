@@ -1,15 +1,11 @@
 import { ContainerImpl } from "./container";
-import { AnyModel, ExtractModelGetters } from "./model";
+import { ExtractModelGetters, Model } from "./model";
 import { defineGetter, is, mergeObjects } from "./util";
 
 export type ModelSelector<TResult = unknown> = () => TResult;
 
 export interface ModelSelectors {
-  [key: string]: ModelSelector | ModelSelectors;
-}
-
-export interface AnyModelSelectors {
-  [key: string]: ModelSelector<any> | AnyModelSelectors;
+  [key: string]: ModelSelector<unknown> | ModelSelectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
@@ -208,7 +204,7 @@ export function createSelector(...args: unknown[]): OutputSelector<unknown> {
   return outputSelector;
 }
 
-export function createGetters<TModel extends AnyModel>(
+export function createGetters<TModel extends Model>(
   container: ContainerImpl<TModel>
 ): ExtractModelGetters<TModel> {
   const getters: Record<string, unknown> = {};

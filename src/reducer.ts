@@ -18,11 +18,7 @@ import { splitLastString } from "./util";
 export type ModelReducer<TPayload = unknown> = (payload: TPayload) => void;
 
 export interface ModelReducers {
-  [key: string]: ModelReducer | ModelReducers;
-}
-
-export interface AnyModelReducers {
-  [key: string]: ModelReducer<any> | AnyModelReducers;
+  [key: string]: ModelReducer<any> | ModelReducers;
 }
 
 export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {

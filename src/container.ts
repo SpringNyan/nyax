@@ -8,8 +8,6 @@ import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
-  AnyModel,
-  AnyModelInstanceConstructor,
   ExtractModelActionHelpers,
   ExtractModelArgs,
   ExtractModelDefaultArgs,
@@ -21,6 +19,7 @@ import {
   ExtractModelState,
   Model,
   ModelBase,
+  ModelInstanceConstructor,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -34,14 +33,14 @@ export interface ContainerBase<TState, TGetters, TActionHelpers> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ContainerCore<TModel extends AnyModel = Model>
+export interface ContainerCore<TModel extends Model = Model>
   extends ContainerBase<
     ExtractModelState<TModel>,
     ExtractModelGetters<TModel>,
     ExtractModelActionHelpers<TModel>
   > {}
 
-export interface Container<TModel extends AnyModel = Model>
+export interface Container<TModel extends Model = Model>
   extends ContainerCore<TModel> {
   modelNamespace: string;
   containerKey: string | undefined;
@@ -53,7 +52,7 @@ export interface Container<TModel extends AnyModel = Model>
   unregister(): void;
 }
 
-export class ContainerImpl<TModel extends AnyModel = Model>
+export class ContainerImpl<TModel extends Model = Model>
   implements Container<TModel> {
   public readonly modelContext: ModelContext;
 
@@ -238,17 +237,17 @@ export class ContainerImpl<TModel extends AnyModel = Model>
 }
 
 export interface GetContainer {
-  <TModel extends AnyModelInstanceConstructor & { isDynamic?: false }>(
+  <TModel extends ModelInstanceConstructor & { isDynamic?: false }>(
     modelOrModelNamespace: TModel | string
   ): Container<TModel>;
-  <TModel extends AnyModelInstanceConstructor & { isDynamic: true }>(
+  <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
     modelOrModelNamespace: TModel | string,
     containerKey: string
   ): Container<TModel>;
 }
 
 export interface GetContainerInternal {
-  <TModel extends AnyModel>(
+  <TModel extends Model>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel>;
@@ -257,7 +256,7 @@ export interface GetContainerInternal {
 export function createGetContainer(
   nyaxContext: NyaxContext
 ): GetContainerInternal {
-  return <TModel extends AnyModel>(
+  return <TModel extends Model>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel> => {
