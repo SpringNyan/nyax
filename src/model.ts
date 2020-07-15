@@ -238,7 +238,7 @@ export class ModelBase<TDependencies = unknown>
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
-  public __nyax_context!: NyaxContext;
+  public __nyax_nyaxContext!: NyaxContext;
   public __nyax_container!: Pick<
     ContainerImpl<any>,
     | "args"
@@ -270,7 +270,7 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get dependencies(): any {
-    return this.__nyax_context.dependencies;
+    return this.__nyax_nyaxContext.dependencies;
   }
   public get args(): any {
     const args = this.__nyax_container.args;
@@ -293,10 +293,10 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get rootAction$(): any {
-    return this.__nyax_context.rootAction$;
+    return this.__nyax_nyaxContext.rootAction$;
   }
   public get rootState$(): any {
-    return this.__nyax_context.rootState$;
+    return this.__nyax_nyaxContext.rootState$;
   }
 
   public get modelNamespace(): any {
@@ -307,10 +307,10 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get nyax(): any {
-    return this.__nyax_context.nyax;
+    return this.__nyax_nyaxContext.nyax;
   }
   public get getContainer(): any {
-    return this.__nyax_context.getContainer;
+    return this.__nyax_nyaxContext.getContainer;
   }
 }
 
@@ -326,9 +326,13 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   MergeModelsProperty<TModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly __modelInstances = models.map((model) => {
+    private readonly __nyax_modelInstances = models.map((model) => {
       const modelInstance = new model() as ModelBase;
-      defineGetter(modelInstance, "__nyax_context", () => this.__nyax_context);
+      defineGetter(
+        modelInstance,
+        "__nyax_nyaxContext",
+        () => this.__nyax_nyaxContext
+      );
       defineGetter(
         modelInstance,
         "__nyax_container",
@@ -366,7 +370,7 @@ export function mergeModels<TModels extends Model[] | [Model]>(
     ): ReturnType<ModelInstance[TPropertyKey]> {
       const result = {} as ReturnType<ModelInstance[TPropertyKey]>;
 
-      this.__modelInstances
+      this.__nyax_modelInstances
         .map((modelInstance) => modelInstance[propertyKey]())
         .forEach((property) => {
           mergeObjects(result, property);
@@ -389,7 +393,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   MergeSubModelsProperty<TSubModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly __subModelInstances = (() => {
+    private readonly __nyax_subModelInstances = (() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
@@ -399,8 +403,8 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
 
           defineGetter(
             modelInstance,
-            "__nyax_context",
-            () => self.__nyax_context
+            "__nyax_nyaxContext",
+            () => self.__nyax_nyaxContext
           );
 
           const container = {
@@ -467,8 +471,8 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       propertyKey: TPropertyKey
     ): Record<string, ReturnType<ModelInstance[TPropertyKey]>> {
       const result: Record<string, any> = {};
-      Object.keys(this.__subModelInstances).forEach((key) => {
-        result[key] = this.__subModelInstances[key][propertyKey]();
+      Object.keys(this.__nyax_subModelInstances).forEach((key) => {
+        result[key] = this.__nyax_subModelInstances[key][propertyKey]();
         if (propertyKey === "defaultArgs") {
           result[key][NYAX_DEFAULT_ARGS_KEY] = true;
         }
@@ -526,7 +530,11 @@ export function createModel<
   const Model = class extends ModelBase {
     private readonly __nyax_modelInstance = (() => {
       const modelInstance = new model() as ModelBase;
-      defineGetter(modelInstance, "__nyax_context", () => this.__nyax_context);
+      defineGetter(
+        modelInstance,
+        "__nyax_nyaxContext",
+        () => this.__nyax_nyaxContext
+      );
       defineGetter(
         modelInstance,
         "__nyax_container",
