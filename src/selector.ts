@@ -5,7 +5,7 @@ import { defineGetter, is, mergeObjects } from "./util";
 export type ModelSelector<TResult = unknown> = () => TResult;
 
 export interface ModelSelectors {
-  [key: string]: ModelSelector<unknown> | ModelSelectors;
+  [key: string]: ModelSelector | ModelSelectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors

@@ -39,8 +39,8 @@ export interface NyaxContext {
   dispatchDeferredByAction: Map<
     AnyAction,
     {
-      resolve: (value: unknown) => void;
-      reject: (error: unknown) => void;
+      resolve(value: unknown): void;
+      reject(error: unknown): void;
     }
   >;
 

@@ -8,10 +8,9 @@ import {
   ReloadActionPayload,
   UnregisterActionPayload,
 } from "./action";
-import { ConvertRegisterArgs, createArgs } from "./arg";
+import { ConvertRegisterArgs, createArgs, ModelDefaultArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { NyaxContext } from "./context";
-import { ExtractModelDefaultArgs, Model } from "./model";
 import {
   createState,
   getSubState,
@@ -20,10 +19,10 @@ import {
 } from "./state";
 import { splitLastString } from "./util";
 
-export type ModelReducer<TPayload = unknown> = (payload: TPayload) => void;
+export type ModelReducer<TPayload = any> = (payload: TPayload) => void;
 
 export interface ModelReducers {
-  [key: string]: ModelReducer<any> | ModelReducers;
+  [key: string]: ModelReducer | ModelReducers;
 }
 
 export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
@@ -51,9 +50,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
           container,
           createArgs(
             container,
-            payload.args as
-              | ConvertRegisterArgs<ExtractModelDefaultArgs<Model>>
-              | undefined,
+            payload.args as ConvertRegisterArgs<ModelDefaultArgs> | undefined,
             false
           )
         );

@@ -26,7 +26,13 @@ import { createGetters } from "./selector";
 import { createState, getSubState } from "./state";
 import { flattenObject, joinLastString } from "./util";
 
-export interface ContainerBase<TState, TGetters, TActionHelpers> {
+export interface ContainerBase<
+  /* eslint-disable @typescript-eslint/ban-types */
+  TState = {},
+  TGetters = {},
+  TActionHelpers = {}
+  /* eslint-enable @typescript-eslint/ban-types */
+> {
   state: TState;
   getters: TGetters;
   actions: TActionHelpers;
@@ -235,7 +241,7 @@ export class ContainerImpl<TModel extends Model = Model>
 
   private _createModelInstance(): InstanceType<TModel> {
     const modelInstance = new this.model() as ModelBase;
-    modelInstance.__nyax_nyaxContext = this._nyaxContext;
+    modelInstance.__nyax_context = this._nyaxContext;
     modelInstance.__nyax_container = this;
     return modelInstance as InstanceType<TModel>;
   }

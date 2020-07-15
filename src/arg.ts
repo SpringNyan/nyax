@@ -12,7 +12,7 @@ export interface RequiredArg<T = unknown> {
 }
 
 export interface ModelDefaultArgs {
-  [key: string]: unknown | ModelInnerDefaultArgs;
+  [key: string]: unknown | RequiredArg | ModelInnerDefaultArgs;
 }
 
 export type ModelInnerDefaultArgs<

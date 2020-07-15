@@ -30,13 +30,15 @@ import {
 } from "./util";
 
 export interface ModelInstance<
+  /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = ModelDefaultArgs,
-  TInitialState = ModelInitialState,
-  TSelectors = ModelSelectors,
-  TReducers = ModelReducers,
-  TEffects = ModelEffects,
-  TEpics = ModelEpics
+  TDefaultArgs = {},
+  TInitialState = {},
+  TSelectors = {},
+  TReducers = {},
+  TEffects = {},
+  TEpics = {}
+  /* eslint-enable @typescript-eslint/ban-types */
 > {
   defaultArgs(): TDefaultArgs;
   initialState(): TInitialState;
@@ -65,13 +67,15 @@ export interface ModelInstance<
 }
 
 export type ModelInstanceConstructor<
+  /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = ModelDefaultArgs,
-  TInitialState = ModelInitialState,
-  TSelectors = ModelSelectors,
-  TReducers = ModelReducers,
-  TEffects = ModelEffects,
-  TEpics = ModelEpics
+  TDefaultArgs = {},
+  TInitialState = {},
+  TSelectors = {},
+  TReducers = {},
+  TEffects = {},
+  TEpics = {}
+  /* eslint-enable @typescript-eslint/ban-types */
 > = new () => ModelInstance<
   TDependencies,
   TDefaultArgs,
@@ -88,13 +92,15 @@ export interface ModelOptions {
 }
 
 export interface Model<
+  /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = ModelDefaultArgs,
-  TInitialState = ModelInitialState,
-  TSelectors = ModelSelectors,
-  TReducers = ModelReducers,
-  TEffects = ModelEffects,
-  TEpics = ModelEpics
+  TDefaultArgs = {},
+  TInitialState = {},
+  TSelectors = {},
+  TReducers = {},
+  TEffects = {},
+  TEpics = {}
+  /* eslint-enable @typescript-eslint/ban-types */
 >
   extends ModelInstanceConstructor<
       TDependencies,
@@ -222,8 +228,8 @@ export type MergeSubModelsProperty<
 export class ModelBase<TDependencies = unknown>
   implements
     ModelInstance<
-      TDependencies,
       /* eslint-disable @typescript-eslint/ban-types */
+      TDependencies,
       {},
       {},
       {},
@@ -232,9 +238,9 @@ export class ModelBase<TDependencies = unknown>
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
-  public __nyax_nyaxContext!: NyaxContext;
+  public __nyax_context!: NyaxContext;
   public __nyax_container!: Pick<
-    ContainerImpl,
+    ContainerImpl<any>,
     | "args"
     | "draftState"
     | "state"
@@ -264,7 +270,7 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get dependencies(): any {
-    return this.__nyax_nyaxContext.dependencies;
+    return this.__nyax_context.dependencies;
   }
   public get args(): any {
     const args = this.__nyax_container.args;
@@ -287,10 +293,10 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get rootAction$(): any {
-    return this.__nyax_nyaxContext.rootAction$;
+    return this.__nyax_context.rootAction$;
   }
   public get rootState$(): any {
-    return this.__nyax_nyaxContext.rootState$;
+    return this.__nyax_context.rootState$;
   }
 
   public get modelNamespace(): any {
@@ -301,10 +307,10 @@ export class ModelBase<TDependencies = unknown>
   }
 
   public get nyax(): any {
-    return this.__nyax_nyaxContext.nyax;
+    return this.__nyax_context.nyax;
   }
   public get getContainer(): any {
-    return this.__nyax_nyaxContext.getContainer;
+    return this.__nyax_context.getContainer;
   }
 }
 
@@ -320,13 +326,9 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   MergeModelsProperty<TModels, "epics">
 > {
   return class extends ModelBase {
-    private readonly __modelInstances: ModelInstance[] = models.map((model) => {
+    private readonly __modelInstances = models.map((model) => {
       const modelInstance = new model() as ModelBase;
-      defineGetter(
-        modelInstance,
-        "__nyax_nyaxContext",
-        () => this.__nyax_nyaxContext
-      );
+      defineGetter(modelInstance, "__nyax_context", () => this.__nyax_context);
       defineGetter(
         modelInstance,
         "__nyax_container",
@@ -391,14 +393,14 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
-      return Object.keys(subModels).reduce<Record<string, ModelInstance>>(
+      return Object.keys(subModels).reduce<Record<string, ModelBase>>(
         (obj, key) => {
           const modelInstance = new subModels[key]() as ModelBase;
 
           defineGetter(
             modelInstance,
-            "__nyax_nyaxContext",
-            () => self.__nyax_nyaxContext
+            "__nyax_context",
+            () => self.__nyax_context
           );
 
           const container = {
@@ -477,8 +479,8 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
 }
 
 export function createModelBase<TDependencies>(): ModelInstanceConstructor<
-  TDependencies,
   /* eslint-disable @typescript-eslint/ban-types */
+  TDependencies,
   {},
   {},
   {},
@@ -521,14 +523,10 @@ export function createModel<
   TEpics
 > &
   Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
-  const Model = class extends ModelBase<TDependencies> {
+  const Model = class extends ModelBase {
     private readonly __modelInstance = (() => {
-      const modelInstance = new (model as Model)() as ModelBase<TDependencies>;
-      defineGetter(
-        modelInstance,
-        "__nyax_nyaxContext",
-        () => this.__nyax_nyaxContext
-      );
+      const modelInstance = new model() as ModelBase;
+      defineGetter(modelInstance, "__nyax_context", () => this.__nyax_context);
       defineGetter(
         modelInstance,
         "__nyax_container",

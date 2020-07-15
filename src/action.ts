@@ -15,7 +15,7 @@ export interface Action<TPayload = unknown> {
   payload: TPayload;
 }
 
-export interface ActionHelper<TPayload, TResult> {
+export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   type: string;
   is(action: unknown): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
@@ -68,7 +68,7 @@ export class ActionHelperImpl<TPayload, TResult>
 
     const promise = new NyaxPromise<TResult>((resolve, reject) => {
       this._nyaxContext.dispatchDeferredByAction.set(action, {
-        resolve: resolve as (value: unknown) => void,
+        resolve,
         reject: (reason) => {
           reject(reason);
           Promise.resolve().then(() => {
