@@ -524,7 +524,7 @@ export function createModel<
 > &
   Spread<Pick<TOptions, Extract<keyof TOptions, keyof ModelOptions>>> {
   const Model = class extends ModelBase {
-    private readonly __modelInstance = (() => {
+    private readonly __nyax_modelInstance = (() => {
       const modelInstance = new model() as ModelBase;
       defineGetter(modelInstance, "__nyax_context", () => this.__nyax_context);
       defineGetter(
@@ -536,27 +536,27 @@ export function createModel<
     })();
 
     public defaultArgs(): any {
-      return this.__modelInstance.defaultArgs();
+      return this.__nyax_modelInstance.defaultArgs();
     }
 
     public initialState(): any {
-      return this.__modelInstance.initialState();
+      return this.__nyax_modelInstance.initialState();
     }
 
     public selectors(): any {
-      return this.__modelInstance.selectors();
+      return this.__nyax_modelInstance.selectors();
     }
 
     public reducers(): any {
-      return this.__modelInstance.reducers();
+      return this.__nyax_modelInstance.reducers();
     }
 
     public effects(): any {
-      return this.__modelInstance.effects();
+      return this.__nyax_modelInstance.effects();
     }
 
     public epics(): any {
-      return this.__modelInstance.epics();
+      return this.__nyax_modelInstance.epics();
     }
   } as Model;
 
