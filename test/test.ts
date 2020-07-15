@@ -783,11 +783,11 @@ describe("nyax", () => {
         promise?.catch(() => {
           // noop
         });
-        expect(error.message).eq("effect error");
+        expect((error as Error).message).eq("effect error");
         effectErrorCounter += 1;
       },
       onUnhandledEpicError: (error, caught) => {
-        expect(error.message).eq("epic error");
+        expect((error as Error).message).eq("epic error");
         epicErrorCounter += 1;
         return caught;
       },
@@ -977,6 +977,7 @@ function testTypes() {
   getState(DynamicModel)?.any?.foo;
   getState(DynamicModel, "test")?.foo;
 
-  getState("test").nyan;
-  getState("test", "test").nyan;
+  getState<typeof StaticModel1>("test")?.foo;
+  getState<typeof DynamicModel>("test")?.any?.foo;
+  getState<typeof DynamicModel>("test", "test")?.foo;
 }
