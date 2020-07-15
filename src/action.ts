@@ -8,17 +8,16 @@ import { joinLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
   type: string;
-  payload?: any;
 }
 
-export interface Action<TPayload = any> {
+export interface Action<TPayload = unknown> {
   type: string;
   payload: TPayload;
 }
 
-export interface ActionHelper<TPayload = any, TResult = any> {
+export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   type: string;
-  is(action: any): action is Action<TPayload>;
+  is(action: unknown): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
   dispatch(payload: TPayload): Promise<TResult>;
 }
@@ -45,8 +44,8 @@ export class ActionHelperBaseImpl<TPayload>
   implements Omit<ActionHelper<TPayload, never>, "dispatch"> {
   constructor(public readonly type: string) {}
 
-  public is(action: any): action is Action<TPayload> {
-    return action?.type === this.type;
+  public is(action: unknown): action is Action<TPayload> {
+    return (action as Action<TPayload> | undefined)?.type === this.type;
   }
 
   public create(payload: TPayload): Action<TPayload> {
@@ -60,10 +59,7 @@ export class ActionHelperBaseImpl<TPayload>
 export class ActionHelperImpl<TPayload, TResult>
   extends ActionHelperBaseImpl<TPayload>
   implements ActionHelper<TPayload, TResult> {
-  constructor(
-    private readonly _nyaxContext: NyaxContext,
-    public readonly type: string
-  ) {
+  constructor(private readonly _nyaxContext: NyaxContext, type: string) {
     super(type);
   }
 
@@ -94,9 +90,9 @@ export function createActionHelpers<TModel extends Model>(
   nyaxContext: NyaxContext,
   container: ContainerImpl<TModel>
 ): ExtractModelActionHelpers<TModel> {
-  const actionHelpers: Record<string, any> = {};
+  const actionHelpers: Record<string, unknown> = {};
 
-  const obj: Record<string, any> = {};
+  const obj: Record<string, unknown> = {};
   mergeObjects(obj, container.reducers);
   mergeObjects(obj, container.effects);
 
@@ -113,8 +109,8 @@ export function createActionHelpers<TModel extends Model>(
 export interface RegisterActionPayload {
   modelNamespace: string;
   containerKey?: string;
-  args?: any;
-  state?: any;
+  args?: unknown;
+  state?: unknown;
 }
 
 export const batchRegisterActionHelper = new ActionHelperBaseImpl<
@@ -131,7 +127,7 @@ export const batchUnregisterActionHelper = new ActionHelperBaseImpl<
 >("@@nyax/unregister");
 
 export interface ReloadActionPayload {
-  state?: any;
+  state?: unknown;
 }
 
 export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(

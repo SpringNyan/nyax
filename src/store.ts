@@ -20,7 +20,7 @@ import { Models, registerModels } from "./model";
 import { GetState } from "./state";
 
 export interface NyaxOptions {
-  dependencies: any;
+  dependencies: unknown;
 
   createStore?: (params: {
     reducer: Reducer;
@@ -29,11 +29,11 @@ export interface NyaxOptions {
   }) => Store;
 
   onUnhandledEffectError?: (
-    error: any,
-    promise: Promise<any> | undefined
+    error: unknown,
+    promise: Promise<unknown> | undefined
   ) => void;
   onUnhandledEpicError?: (
-    error: any,
+    error: unknown,
     caught: Observable<AnyAction>
   ) => Observable<AnyAction>;
 }
@@ -43,8 +43,8 @@ export interface Nyax {
   registerModels: (models: Models) => void;
   getContainer: GetContainer;
   getState: GetState;
-  reload: (state?: any) => void;
-  gc: (filterFn?: (container: Container) => boolean) => void;
+  reload: (state?: unknown) => void;
+  gc: (filter?: (container: Container) => boolean) => void;
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -55,7 +55,7 @@ export function createNyax(options: NyaxOptions): Nyax {
     get store() {
       return nyaxContext.store;
     },
-    registerModels: (models): void => {
+    registerModels: (models) => {
       const registerActionPayloads = registerModels(nyaxContext, models);
       nyaxContext.store.dispatch(
         batchRegisterActionHelper.create(registerActionPayloads)
@@ -67,19 +67,19 @@ export function createNyax(options: NyaxOptions): Nyax {
     get getState() {
       return nyaxContext.getState;
     },
-    reload: (state): void => {
+    reload: (state) => {
       nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
     },
-    gc: (filterFn): void => {
-      if (!filterFn) {
-        filterFn = (container): boolean => !container.isRegistered;
+    gc: (filter) => {
+      if (!filter) {
+        filter = (container) => !container.isRegistered;
       }
 
       const containers: Container[] = [];
       nyaxContext.modelContextByModel.forEach((context) => {
         context.containerByContainerKey.forEach((container) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          if (filterFn!(container)) {
+          if (filter!(container)) {
             containers.push(container);
           }
         });

@@ -10,7 +10,7 @@ import {
 import { is, isObject } from "./util";
 
 export interface ModelInitialState {
-  [key: string]: any | ModelInitialState;
+  [key: string]: unknown | ModelInitialState;
 }
 
 export type ConvertState<
@@ -18,10 +18,10 @@ export type ConvertState<
 > = TInitialState extends infer TInitialState ? TInitialState : never;
 
 export function getSubState(
-  state: any,
+  state: unknown,
   modelPath: string,
   containerKey: string | undefined
-): any {
+): unknown {
   if (!isObject(state)) {
     throw new Error("state is not an object");
   }
@@ -34,11 +34,11 @@ export function getSubState(
 }
 
 export function setSubState(
-  state: any,
-  value: any,
+  state: unknown,
+  value: unknown,
   modelPath: string,
   containerKey: string | undefined
-): any {
+): unknown {
   if (state === undefined) {
     state = {};
   }
@@ -51,14 +51,14 @@ export function setSubState(
       return state;
     }
 
-    state = { ...state };
+    const nextState = { ...state };
     if (value === NYAX_NOTHING) {
-      delete state[modelPath];
+      delete nextState[modelPath];
     } else {
-      state[modelPath] = value;
+      nextState[modelPath] = value;
     }
 
-    return state;
+    return nextState;
   } else {
     const subState = setSubState(
       state[modelPath],
@@ -85,15 +85,15 @@ export function createState<TModel extends Model>(
   const state = container.modelInstance.initialState();
   container.args = NYAX_NOTHING;
 
-  return state;
+  return state as ExtractModelState<TModel>;
 }
 
 export interface GetState {
-  (): unknown;
+  (): unknown | undefined;
   <TModel extends Model>(
     modelOrModelNamespace: TModel | string
   ): TModel["isDynamic"] extends true
-    ? Record<string, ExtractModelState<TModel> | undefined> | undefined
+    ? Partial<Record<string, ExtractModelState<TModel>>> | undefined
     : ExtractModelState<TModel> | undefined;
   <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
     modelOrModelNamespace: TModel | string,
@@ -108,7 +108,7 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
   ):
     | unknown
     | ExtractModelState<TModel>
-    | Record<string, ExtractModelState<TModel> | undefined>
+    | Partial<Record<string, ExtractModelState<TModel>>>
     | undefined => {
     const rootState = nyaxContext.getRootState();
 
@@ -133,11 +133,13 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
       throw new Error("Model is not registered");
     }
 
-    const state = rootState?.[modelContext.modelPath];
+    const state = (rootState as Record<string, unknown>)?.[
+      modelContext.modelPath
+    ];
 
     if (model.isDynamic) {
       if (containerKey !== undefined) {
-        return state?.[containerKey];
+        return (state as Record<string, unknown>)?.[containerKey];
       } else {
         return state;
       }

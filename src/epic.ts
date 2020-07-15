@@ -16,8 +16,8 @@ export function createEpic(
   nyaxContext: NyaxContext,
   container: ContainerImpl
 ): Epic {
-  return (): Observable<AnyAction> => {
-    const outputObservables: Array<Observable<AnyAction>> = [];
+  return () => {
+    const outputObservables: Observable<AnyAction>[] = [];
     traverseObject(container.epics, (epic: ModelEpic) => {
       outputObservables.push(
         epic().pipe(

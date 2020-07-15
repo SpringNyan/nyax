@@ -6,62 +6,50 @@ import { isObject } from "./util";
 export const NYAX_REQUIRED_ARG_KEY: unique symbol = "__nyax_required_arg__" as any;
 export const NYAX_DEFAULT_ARGS_KEY: unique symbol = "__nyax_default_args__" as any;
 
-export interface RequiredArg<T = any> {
+export interface RequiredArg<T = unknown> {
   [NYAX_REQUIRED_ARG_KEY]: true;
   defaultValue: T | typeof NYAX_NOTHING;
 }
 
 export interface ModelDefaultArgs {
-  [key: string]: any | ModelDefaultArgs;
+  [key: string]: unknown | RequiredArg | ModelInnerDefaultArgs;
 }
 
-export interface ModelDefaultArgsMark {
+export type ModelInnerDefaultArgs<
+  TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
+> = {
   [NYAX_DEFAULT_ARGS_KEY]: true;
-}
+} & TInnerDefaultArgs;
 
-export interface MarkedModelDefaultArgs
-  extends ModelDefaultArgs,
-    ModelDefaultArgsMark {}
-
-export type ConvertArgsParam<
+export type ConvertRegisterArgs<
   TDefaultArgs
 > = TDefaultArgs extends infer TDefaultArgs
-  ? Pick<
-      {
+  ? {
+      [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<any>
+        ? K
+        : never;
+    }[keyof TDefaultArgs] extends infer TRequiredKey
+    ? {
         [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
           ? T
-          : never;
-      },
-      {
-        [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg
-          ? K
-          : never;
-      }[keyof TDefaultArgs]
-    > &
-      Partial<
-        Pick<
-          {
-            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends MarkedModelDefaultArgs
-              ? ConvertArgsParam<
-                  Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>
-                >
-              : TDefaultArgs[K];
-          },
-          {
-            [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg
-              ? never
-              : K;
-          }[keyof TDefaultArgs]
-        >
-      >
+          : TDefaultArgs[K] extends ModelInnerDefaultArgs<
+              infer TInnerDefaultArgs
+            >
+          ? ConvertRegisterArgs<TInnerDefaultArgs>
+          : TDefaultArgs[K];
+      } extends infer TArgs
+      ? Pick<TArgs, Extract<keyof TArgs, TRequiredKey>> &
+          Partial<Pick<TArgs, Exclude<keyof TArgs, TRequiredKey>>>
+      : never
+    : never
   : never;
 
 export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
         ? T
-        : TDefaultArgs[K] extends MarkedModelDefaultArgs
-        ? ConvertArgs<Omit<TDefaultArgs[K], typeof NYAX_DEFAULT_ARGS_KEY>>
+        : TDefaultArgs[K] extends ModelInnerDefaultArgs<infer TInnerDefaultArgs>
+        ? ConvertArgs<TInnerDefaultArgs>
         : TDefaultArgs[K];
     }
   : never;
@@ -69,46 +57,55 @@ export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
 export function createRequiredArg<T>(defaultValue?: T): RequiredArg<T> {
   return {
     [NYAX_REQUIRED_ARG_KEY]: true,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    defaultValue: arguments.length > 0 ? defaultValue! : NYAX_NOTHING,
+    defaultValue: arguments.length > 0 ? (defaultValue as T) : NYAX_NOTHING,
   };
 }
 
-export function isRequiredArg(obj: any): obj is RequiredArg {
-  return obj?.[NYAX_REQUIRED_ARG_KEY] === true;
+export function isRequiredArg(obj: unknown): obj is RequiredArg {
+  return (obj as RequiredArg | undefined)?.[NYAX_REQUIRED_ARG_KEY] === true;
 }
 
-export function isMarkedDefaultArgs(obj: any): obj is MarkedModelDefaultArgs {
-  return obj?.[NYAX_DEFAULT_ARGS_KEY] === true;
+export function isModelInnerDefaultArgs(
+  obj: unknown
+): obj is ModelInnerDefaultArgs {
+  return (
+    (obj as ModelInnerDefaultArgs | undefined)?.[NYAX_DEFAULT_ARGS_KEY] === true
+  );
 }
 
 export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   defaultArgs: TDefaultArgs,
-  argsParam: ConvertArgsParam<TDefaultArgs> | undefined,
+  registerArgs: ConvertRegisterArgs<TDefaultArgs> | undefined,
   optional: boolean
 ): ConvertArgs<TDefaultArgs> {
   if (!isObject(defaultArgs)) {
     throw new Error("Default args is not an object");
   }
 
-  const args: Record<string, any> = {};
+  const args: Record<string, unknown> = {};
 
-  if (argsParam) {
-    Object.keys(argsParam).forEach((key) => {
-      if (!isMarkedDefaultArgs(defaultArgs[key])) {
-        args[key] = argsParam[key];
+  if (registerArgs) {
+    Object.keys(registerArgs).forEach((key) => {
+      if (!isModelInnerDefaultArgs(defaultArgs[key])) {
+        args[key] = registerArgs[key];
       }
     });
   }
 
   Object.keys(defaultArgs).forEach((key) => {
-    if (((key as any) as symbol) === NYAX_DEFAULT_ARGS_KEY || key in args) {
+    if ((key as keyof any) === NYAX_DEFAULT_ARGS_KEY || key in args) {
       return;
     }
     const defaultArg = defaultArgs[key];
 
-    if (isMarkedDefaultArgs(defaultArg)) {
-      args[key] = buildArgs(defaultArg, argsParam?.[key], optional);
+    if (isModelInnerDefaultArgs(defaultArg)) {
+      args[key] = buildArgs(
+        defaultArg,
+        registerArgs?.[key] as
+          | ConvertRegisterArgs<ModelDefaultArgs>
+          | undefined,
+        optional
+      );
     } else if (isRequiredArg(defaultArg)) {
       if (optional && defaultArg.defaultValue !== NYAX_NOTHING) {
         args[key] = defaultArg.defaultValue;
@@ -125,12 +122,14 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
 
 export function createArgs<TModel extends Model>(
   container: ContainerImpl<TModel>,
-  argsParam: ConvertArgsParam<ExtractModelDefaultArgs<TModel>> | undefined,
+  registerArgs:
+    | ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>
+    | undefined,
   optional: boolean
 ): ExtractModelArgs<TModel> {
   return buildArgs(
     container.modelInstance.defaultArgs(),
-    argsParam,
+    registerArgs,
     optional
   ) as ExtractModelArgs<TModel>;
 }

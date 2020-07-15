@@ -8,10 +8,15 @@ import {
   ReloadActionPayload,
   UnregisterActionPayload,
 } from "./action";
-import { createArgs } from "./arg";
+import { ConvertRegisterArgs, createArgs, ModelDefaultArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { NyaxContext } from "./context";
-import { createState, getSubState, setSubState } from "./state";
+import {
+  createState,
+  getSubState,
+  ModelInitialState,
+  setSubState,
+} from "./state";
 import { splitLastString } from "./util";
 
 export type ModelReducer<TPayload = any> = (payload: TPayload) => void;
@@ -28,22 +33,26 @@ export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
 
 export function createRootReducer(nyaxContext: NyaxContext): Reducer {
   function batchRegister(
-    rootState: any,
+    rootState: unknown,
     payloads: RegisterActionPayload[]
-  ): any {
+  ): unknown {
     payloads.forEach((payload) => {
       const container = nyaxContext.getContainer(
         payload.modelNamespace,
         payload.containerKey
       );
 
-      let state: any;
+      let state: unknown;
       if (payload.state !== undefined) {
         state = payload.state;
       } else {
         state = createState(
           container,
-          createArgs(container, payload.args, false)
+          createArgs(
+            container,
+            payload.args as ConvertRegisterArgs<ModelDefaultArgs> | undefined,
+            false
+          )
         );
       }
 
@@ -59,9 +68,9 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
   }
 
   function batchUnregister(
-    rootState: any,
+    rootState: unknown,
     payloads: UnregisterActionPayload[]
-  ): any {
+  ): unknown {
     payloads.forEach((payload) => {
       const container = nyaxContext.getContainer(
         payload.modelNamespace,
@@ -79,7 +88,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     return rootState;
   }
 
-  function reload(rootState: any, payload: ReloadActionPayload): any {
+  function reload(rootState: unknown, payload: ReloadActionPayload): unknown {
     if (payload.state !== undefined) {
       return payload.state;
     } else {
@@ -125,8 +134,8 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       container.modelContext.modelPath,
       container.containerKey
     );
-    const newState = produce(state, (draft: any) => {
-      container.draftState = draft;
+    const newState = produce(state, (draft) => {
+      container.draftState = draft as ModelInitialState;
       reducer(action.payload);
       container.draftState = NYAX_NOTHING;
     });
@@ -139,7 +148,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     );
   };
 
-  return (rootState, action): any => {
+  return (rootState, action) => {
     nyaxContext.cachedRootState = rootState;
     rootState = rootReducer(rootState, action);
     nyaxContext.cachedRootState = NYAX_NOTHING;

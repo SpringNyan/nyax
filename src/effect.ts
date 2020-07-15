@@ -1,4 +1,4 @@
-export type ModelEffect<TPayload = any, TResult = any> = (
+export type ModelEffect<TPayload = any, TResult = unknown> = (
   payload: TPayload
 ) => Promise<TResult>;
 
