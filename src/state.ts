@@ -133,13 +133,13 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
       throw new Error("Model is not registered");
     }
 
-    const state = (rootState as Record<string, unknown>)?.[
+    const state = (rootState as Record<string, unknown> | undefined)?.[
       modelContext.modelPath
     ];
 
     if (model.isDynamic) {
       if (containerKey !== undefined) {
-        return (state as Record<string, unknown>)?.[containerKey];
+        return (state as Record<string, unknown> | undefined)?.[containerKey];
       } else {
         return state;
       }
