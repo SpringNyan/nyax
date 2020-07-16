@@ -3,11 +3,11 @@ import { ContainerImpl } from "./container";
 import { ExtractModelArgs, ExtractModelDefaultArgs, Model } from "./model";
 import { isObject } from "./util";
 
-export const NYAX_REQUIRED_ARG_KEY: unique symbol = "__nyax_required_arg__" as any;
-export const NYAX_DEFAULT_ARGS_KEY: unique symbol = "__nyax_default_args__" as any;
+export const NYAX_REQUIRED_ARG: unique symbol = "__nyax_required_arg__" as any;
+export const NYAX_DEFAULT_ARGS: unique symbol = "__nyax_default_args__" as any;
 
 export interface RequiredArg<T = unknown> {
-  [NYAX_REQUIRED_ARG_KEY]: true;
+  [NYAX_REQUIRED_ARG]: true;
   defaultValue: T | typeof NYAX_NOTHING;
 }
 
@@ -15,11 +15,13 @@ export interface ModelDefaultArgs {
   [key: string]: unknown | RequiredArg | ModelInnerDefaultArgs;
 }
 
+export interface ModelInnerDefaultArgsBase {
+  [NYAX_DEFAULT_ARGS]: true;
+}
+
 export type ModelInnerDefaultArgs<
   TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
-> = {
-  [NYAX_DEFAULT_ARGS_KEY]: true;
-} & TInnerDefaultArgs;
+> = ModelInnerDefaultArgsBase & TInnerDefaultArgs;
 
 export type ConvertRegisterArgs<
   TDefaultArgs
@@ -56,20 +58,20 @@ export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
 
 export function createRequiredArg<T>(defaultValue?: T): RequiredArg<T> {
   return {
-    [NYAX_REQUIRED_ARG_KEY]: true,
+    [NYAX_REQUIRED_ARG]: true,
     defaultValue: arguments.length > 0 ? (defaultValue as T) : NYAX_NOTHING,
   };
 }
 
 export function isRequiredArg(obj: unknown): obj is RequiredArg {
-  return (obj as RequiredArg | undefined)?.[NYAX_REQUIRED_ARG_KEY] === true;
+  return (obj as RequiredArg | undefined)?.[NYAX_REQUIRED_ARG] === true;
 }
 
 export function isModelInnerDefaultArgs(
   obj: unknown
 ): obj is ModelInnerDefaultArgs {
   return (
-    (obj as ModelInnerDefaultArgs | undefined)?.[NYAX_DEFAULT_ARGS_KEY] === true
+    (obj as ModelInnerDefaultArgs | undefined)?.[NYAX_DEFAULT_ARGS] === true
   );
 }
 
@@ -93,7 +95,7 @@ export function buildArgs<TDefaultArgs extends ModelDefaultArgs>(
   }
 
   Object.keys(defaultArgs).forEach((key) => {
-    if ((key as keyof any) === NYAX_DEFAULT_ARGS_KEY || key in args) {
+    if ((key as keyof any) === NYAX_DEFAULT_ARGS || key in args) {
       return;
     }
     const defaultArg = defaultArgs[key];

@@ -8,7 +8,7 @@ import {
   ConvertArgs,
   ModelDefaultArgs,
   ModelInnerDefaultArgs,
-  NYAX_DEFAULT_ARGS_KEY,
+  NYAX_DEFAULT_ARGS,
 } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
@@ -474,7 +474,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       Object.keys(this.__nyax_subModelInstances).forEach((key) => {
         result[key] = this.__nyax_subModelInstances[key][propertyKey]();
         if (propertyKey === "defaultArgs") {
-          result[key][NYAX_DEFAULT_ARGS_KEY] = true;
+          result[key][NYAX_DEFAULT_ARGS] = true;
         }
       });
       return result;
