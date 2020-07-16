@@ -15,11 +15,13 @@ export interface ModelDefaultArgs {
   [key: string]: unknown | RequiredArg | ModelInnerDefaultArgs;
 }
 
+export interface ModelInnerDefaultArgsBase {
+  [NYAX_DEFAULT_ARGS]: true;
+}
+
 export type ModelInnerDefaultArgs<
   TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
-> = {
-  [NYAX_DEFAULT_ARGS]: true;
-} & TInnerDefaultArgs;
+> = ModelInnerDefaultArgsBase & TInnerDefaultArgs;
 
 export type ConvertRegisterArgs<
   TDefaultArgs
