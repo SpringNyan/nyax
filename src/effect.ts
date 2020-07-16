@@ -1,6 +1,6 @@
-export type ModelEffect<TPayload = any, TResult = unknown> = (
-  payload: TPayload
-) => Promise<TResult>;
+export type ModelEffect<TPayload = unknown, TResult = unknown> = {
+  bivarianceHack(payload: TPayload): Promise<TResult>;
+}["bivarianceHack"];
 
 export interface ModelEffects {
   [key: string]: ModelEffect | ModelEffects;

@@ -20,7 +20,9 @@ import {
 } from "./state";
 import { splitLastString } from "./util";
 
-export type ModelReducer<TPayload = any> = (payload: TPayload) => void;
+export type ModelReducer<TPayload = unknown> = {
+  bivarianceHack(payload: TPayload): void;
+}["bivarianceHack"];
 
 export interface ModelReducers {
   [key: string]: ModelReducer | ModelReducers;
