@@ -87,7 +87,12 @@ export type ModelInstanceConstructor<
 >;
 
 export interface ModelOptions {
+  namespace?: string;
+
   isDynamic?: boolean;
+  isOnDemand?: boolean;
+
+  /** @deprecated Use `isOnDemand` */
   isLazy?: boolean;
 }
 
@@ -504,8 +509,7 @@ export function createModel<
   TReducers extends ModelReducers,
   TEffects extends ModelEffects,
   TEpics extends ModelEpics,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TOptions extends ModelOptions = {}
+  TOptions extends ModelOptions | undefined
 >(
   model: Model<
     TDependencies,
@@ -569,7 +573,11 @@ export function createModel<
   } as Model;
 
   if (options) {
+    Model.namespace = options.namespace;
+
     Model.isDynamic = options.isDynamic;
+    Model.isOnDemand = options.isOnDemand;
+
     Model.isLazy = options.isLazy;
   }
   return Model as ModelInstanceConstructor<

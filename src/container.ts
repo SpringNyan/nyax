@@ -48,6 +48,7 @@ export interface ContainerCore<TModel extends Model = Model>
 
 export interface Container<TModel extends Model = Model>
   extends ContainerCore<TModel> {
+  model: TModel;
   modelNamespace: string;
   containerKey: string | undefined;
 
