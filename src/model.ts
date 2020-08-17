@@ -122,6 +122,24 @@ export interface Models {
   [key: string]: Model | Models;
 }
 
+export type LazyModel<TModel extends Model> =
+  | {
+      _status: -1;
+      _result: () => Promise<{ default: TModel }>;
+    }
+  | {
+      _status: 0;
+      _result: Promise<{ default: TModel }>;
+    }
+  | {
+      _status: 1;
+      _result: TModel;
+    }
+  | {
+      _status: 2;
+      _result: unknown;
+    };
+
 export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
   InstanceType<TModel>["defaultArgs"]
 >;
@@ -638,4 +656,13 @@ export function registerModels(
 
 export function flattenModels(models: Models): Record<string, Model> {
   return flattenObject(models, "/") as Record<string, Model>;
+}
+
+export function createLazyModel<TModel extends Model>(
+  factory: () => Promise<{ default: TModel }>
+): LazyModel<TModel> {
+  return {
+    _status: -1,
+    _result: factory,
+  };
 }

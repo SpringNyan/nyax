@@ -17,9 +17,9 @@ import {
   ExtractModelReducers,
   ExtractModelSelectors,
   ExtractModelState,
+  LazyModel,
   Model,
   ModelBase,
-  ModelInstanceConstructor,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -249,13 +249,13 @@ export class ContainerImpl<TModel extends Model = Model>
 }
 
 export interface GetContainer {
-  <TModel extends ModelInstanceConstructor & { isDynamic?: false }>(
-    modelOrModelNamespace: TModel | string
-  ): Container<TModel>;
-  <TModel extends ModelInstanceConstructor & { isDynamic: true }>(
-    modelOrModelNamespace: TModel | string,
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | LazyModel<TModel> | string
+  ): TModel extends { isDynamic: true } ? never : Container<TModel>;
+  <TModel extends Model>(
+    modelOrModelNamespace: TModel | LazyModel<TModel> | string,
     containerKey: string
-  ): Container<TModel>;
+  ): TModel extends { isDynamic?: false } ? never : Container<TModel>;
 }
 
 export interface GetContainerInternal {
