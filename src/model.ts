@@ -12,7 +12,7 @@ import {
 } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
-import { NyaxContext } from "./context";
+import { ModelContext, NyaxContext } from "./context";
 import { ModelEffects } from "./effect";
 import { ModelEpics } from "./epic";
 import { ModelReducers } from "./reducer";
@@ -118,26 +118,10 @@ export interface Model<
     >,
     ModelOptions {}
 
-export interface Models {
-  [key: string]: Model | Models;
-}
-
-export type LazyModel<TModel extends Model> =
+export type Models =
+  | Model[]
   | {
-      _status: -1;
-      _result: () => Promise<{ default: TModel }>;
-    }
-  | {
-      _status: 0;
-      _result: Promise<{ default: TModel }>;
-    }
-  | {
-      _status: 1;
-      _result: TModel;
-    }
-  | {
-      _status: 2;
-      _result: unknown;
+      [key: string]: Model | Models;
     };
 
 export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
@@ -619,18 +603,20 @@ export function registerModel<TModel extends Model>(
     throw new Error("Model is already registered");
   }
 
-  if (nyaxContext.modelByModelNamespace.has(modelNamespace)) {
+  if (nyaxContext.modelContextByModelNamespace.has(modelNamespace)) {
     throw new Error("Model namespace is already bound");
   }
 
-  nyaxContext.modelContextByModel.set(model, {
+  const modelContext: ModelContext = {
+    model,
     modelNamespace,
     modelPath: convertNamespaceToPath(modelNamespace),
 
     containerByContainerKey: new Map(),
-  });
+  };
 
-  nyaxContext.modelByModelNamespace.set(modelNamespace, model);
+  nyaxContext.modelContextByModel.set(model, modelContext);
+  nyaxContext.modelContextByModelNamespace.set(modelNamespace, modelContext);
 }
 
 export function registerModels(
@@ -639,24 +625,70 @@ export function registerModels(
 ): RegisterActionPayload[] {
   const registerActionPayloads: RegisterActionPayload[] = [];
 
-  traverseObject(models, (item, key, parent, paths) => {
-    const modelNamespace = paths.join("/");
-    const model = item as Exclude<typeof item, Models>;
-
+  function register(modelNamespace: string, model: Model) {
     registerModel(nyaxContext, modelNamespace, model);
-    if (!model.isDynamic && !model.isLazy) {
-      registerActionPayloads.push({
-        modelNamespace,
-      });
+    if (!model.isDynamic && !model.isOnDemand && !model.isLazy) {
+      registerActionPayloads.push({ modelNamespace });
     }
-  });
+  }
+
+  if (Array.isArray(models)) {
+    models.forEach((model) => {
+      if (!model.namespace) {
+        throw new Error("Model namespace is missing");
+      }
+      register(model.namespace, model);
+    });
+  } else {
+    traverseObject(models, (item, key, parent, paths) => {
+      const modelNamespace = paths.join("/");
+      const model = item as Model;
+      register(modelNamespace, model);
+    });
+  }
 
   return registerActionPayloads;
 }
 
 export function flattenModels(models: Models): Record<string, Model> {
-  return flattenObject(models, "/") as Record<string, Model>;
+  if (Array.isArray(models)) {
+    return models.reduce<Record<string, Model>>((obj, model) => {
+      if (!model.namespace) {
+        throw new Error("Model namespace is missing");
+      }
+      obj[model.namespace] = model;
+      return obj;
+    }, {});
+  } else {
+    return flattenObject(models, "/") as Record<string, Model>;
+  }
 }
+
+export type LazyModelUninitialized<TModel extends Model> = {
+  _status: -1;
+  _result: () => Promise<{ default: TModel }>;
+};
+
+export type LazyModelPending<TModel extends Model> = {
+  _status: 0;
+  _result: Promise<{ default: TModel }>;
+};
+
+export type LazyModelResolved<TModel extends Model> = {
+  _status: 1;
+  _result: TModel;
+};
+
+export type LazyModelRejected = {
+  _status: 2;
+  _result: unknown;
+};
+
+export type LazyModel<TModel extends Model> =
+  | LazyModelUninitialized<TModel>
+  | LazyModelPending<TModel>
+  | LazyModelResolved<TModel>
+  | LazyModelRejected;
 
 export function createLazyModel<TModel extends Model>(
   factory: () => Promise<{ default: TModel }>
@@ -665,4 +697,52 @@ export function createLazyModel<TModel extends Model>(
     _status: -1,
     _result: factory,
   };
+}
+
+export function updateLazyModel<TModel extends Model>(
+  target: LazyModel<TModel>,
+  value: LazyModel<TModel>
+): LazyModel<TModel> {
+  target._status = value._status;
+  target._result = value._result;
+  return target;
+}
+
+export function resolveModel<TModel extends Model>(
+  modelOrLazyModel: TModel | LazyModel<TModel>
+): TModel {
+  if (typeof modelOrLazyModel === "function") {
+    return modelOrLazyModel;
+  }
+
+  const lazyModel = modelOrLazyModel;
+  if (lazyModel._status === -1) {
+    const promise = lazyModel._result();
+
+    updateLazyModel(lazyModel, {
+      _status: 0,
+      _result: promise,
+    });
+
+    promise.then(
+      (moduleObject) => {
+        updateLazyModel(lazyModel, {
+          _status: 1,
+          _result: moduleObject.default,
+        });
+      },
+      (reason) => {
+        updateLazyModel(lazyModel, {
+          _status: 2,
+          _result: reason,
+        });
+      }
+    );
+  }
+
+  if (lazyModel._status === 1) {
+    return lazyModel._result;
+  } else {
+    throw lazyModel._result;
+  }
 }

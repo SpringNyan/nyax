@@ -20,6 +20,8 @@ import {
   LazyModel,
   Model,
   ModelBase,
+  ModelInstanceConstructor,
+  resolveModel,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -234,10 +236,11 @@ export class ContainerImpl<TModel extends Model = Model>
   }
 
   private get _currentContainer(): this {
-    return this._nyaxContext.getContainer(
+    return (this._nyaxContext.getContainer(
       this.model,
-      this.containerKey
-    ) as this;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.containerKey!
+    ) as unknown) as this;
   }
 
   private _createModelInstance(): InstanceType<TModel> {
@@ -251,43 +254,32 @@ export class ContainerImpl<TModel extends Model = Model>
 export interface GetContainer {
   <TModel extends Model>(
     modelOrModelNamespace: TModel | LazyModel<TModel> | string
-  ): TModel extends { isDynamic: true } ? never : Container<TModel>;
+  ): TModel extends ModelInstanceConstructor & { isDynamic: true }
+    ? never
+    : Container<TModel>;
   <TModel extends Model>(
     modelOrModelNamespace: TModel | LazyModel<TModel> | string,
     containerKey: string
-  ): TModel extends { isDynamic?: false } ? never : Container<TModel>;
+  ): TModel extends ModelInstanceConstructor & { isDynamic?: false }
+    ? never
+    : Container<TModel>;
 }
 
-export interface GetContainerInternal {
-  <TModel extends Model>(
-    modelOrModelNamespace: TModel | string,
-    containerKey?: string
-  ): ContainerImpl<TModel>;
-}
-
-export function createGetContainer(
-  nyaxContext: NyaxContext
-): GetContainerInternal {
+export function createGetContainer(nyaxContext: NyaxContext): GetContainer {
   return <TModel extends Model>(
-    modelOrModelNamespace: TModel | string,
+    modelOrModelNamespace: TModel | LazyModel<TModel> | string,
     containerKey?: string
   ): ContainerImpl<TModel> => {
-    let model: TModel;
-    if (typeof modelOrModelNamespace === "string") {
-      model = nyaxContext.modelByModelNamespace.get(
-        modelOrModelNamespace
-      ) as TModel;
-      if (!model) {
-        throw new Error("Model namespace is not bound");
-      }
-    } else {
-      model = modelOrModelNamespace;
-    }
-
-    const modelContext = nyaxContext.modelContextByModel.get(model);
+    const modelContext =
+      typeof modelOrModelNamespace === "string"
+        ? nyaxContext.modelContextByModelNamespace.get(modelOrModelNamespace)
+        : nyaxContext.modelContextByModel.get(
+            resolveModel(modelOrModelNamespace)
+          );
     if (!modelContext) {
       throw new Error("Model is not registered");
     }
+    const model = modelContext.model;
 
     if (containerKey === undefined && model.isDynamic) {
       throw new Error("Container key is required for dynamic model");
@@ -297,15 +289,13 @@ export function createGetContainer(
       throw new Error("Container key is not available for static model");
     }
 
-    let container = modelContext.containerByContainerKey.get(
-      containerKey
-    ) as ContainerImpl<TModel>;
+    let container = modelContext.containerByContainerKey.get(containerKey);
     if (!container) {
       container = new ContainerImpl(nyaxContext, model, containerKey);
       modelContext.containerByContainerKey.set(containerKey, container);
     }
 
-    return container;
+    return container as ContainerImpl<TModel>;
   };
 }
 

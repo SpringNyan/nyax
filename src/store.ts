@@ -44,7 +44,7 @@ export interface Nyax {
   getContainer: GetContainer;
   getState: GetState;
   reload: (state?: unknown) => void;
-  gc: (filter?: (container: Container) => boolean) => void;
+  getCachedContainers: () => Container[];
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -70,24 +70,14 @@ export function createNyax(options: NyaxOptions): Nyax {
     reload: (state) => {
       nyaxContext.store.dispatch(reloadActionHelper.create({ state }));
     },
-    gc: (filter) => {
-      if (!filter) {
-        filter = (container) => !container.isRegistered;
-      }
-
+    getCachedContainers: () => {
       const containers: Container[] = [];
       nyaxContext.modelContextByModel.forEach((context) => {
         context.containerByContainerKey.forEach((container) => {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          if (filter!(container)) {
-            containers.push(container);
-          }
+          containers.push(container);
         });
       });
-
-      containers.forEach((container) => {
-        container.unregister();
-      });
+      return containers;
     },
   };
   nyaxContext.nyax = nyax;

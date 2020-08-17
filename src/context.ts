@@ -3,11 +3,7 @@ import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
-import {
-  ContainerImpl,
-  createGetContainer,
-  GetContainerInternal,
-} from "./container";
+import { ContainerImpl, createGetContainer, GetContainer } from "./container";
 import { Model } from "./model";
 import { createRootReducer } from "./reducer";
 import { createGetState, GetState } from "./state";
@@ -22,7 +18,7 @@ export interface NyaxContext {
   rootAction$: ActionsObservable<AnyAction>;
   rootState$: StateObservable<unknown>;
 
-  getContainer: GetContainerInternal;
+  getContainer: GetContainer;
   getState: GetState;
 
   rootReducer: Reducer;
@@ -33,7 +29,7 @@ export interface NyaxContext {
   cachedRootState: unknown | typeof NYAX_NOTHING;
 
   modelContextByModel: Map<Model, ModelContext>;
-  modelByModelNamespace: Map<string, Model>;
+  modelContextByModelNamespace: Map<string, ModelContext>;
 
   containerByNamespace: Map<string, ContainerImpl>;
   dispatchDeferredByAction: Map<
@@ -58,6 +54,7 @@ export interface NyaxContext {
 }
 
 export interface ModelContext {
+  model: Model;
   modelNamespace: string;
   modelPath: string;
 
@@ -93,7 +90,7 @@ export function createNyaxContext(): NyaxContext {
     cachedRootState: NYAX_NOTHING,
 
     modelContextByModel: new Map(),
-    modelByModelNamespace: new Map(),
+    modelContextByModelNamespace: new Map(),
 
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
