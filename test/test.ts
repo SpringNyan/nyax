@@ -214,7 +214,7 @@ describe("nyax", () => {
     expect(barFoo.getters.rootState).eq(store.getState());
 
     const BarLazyFooModel = createModel(class extends FooModel {}, {
-      isLazy: true,
+      isOnDemand: true,
     });
     registerModels({
       bar: {
@@ -435,7 +435,7 @@ describe("nyax", () => {
       },
       {
         isDynamic: true,
-        isLazy: true,
+        isOnDemand: true,
       }
     );
     registerModels({
@@ -658,7 +658,7 @@ describe("nyax", () => {
       ),
       {
         isDynamic: true,
-        isLazy: true,
+        isOnDemand: true,
       }
     );
     registerModels({

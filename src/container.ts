@@ -236,11 +236,10 @@ export class ContainerImpl<TModel extends Model = Model>
   }
 
   private get _currentContainer(): this {
-    return (this._nyaxContext.getContainer(
+    return this._nyaxContext.getContainer(
       this.model,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.containerKey!
-    ) as unknown) as this;
+      this.containerKey
+    ) as this;
   }
 
   private _createModelInstance(): InstanceType<TModel> {

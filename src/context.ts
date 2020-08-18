@@ -3,8 +3,8 @@ import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
-import { ContainerImpl, createGetContainer, GetContainer } from "./container";
-import { Model } from "./model";
+import { ContainerImpl, createGetContainer } from "./container";
+import { LazyModel, Model } from "./model";
 import { createRootReducer } from "./reducer";
 import { createGetState, GetState } from "./state";
 import { Nyax, NyaxOptions } from "./store";
@@ -18,7 +18,10 @@ export interface NyaxContext {
   rootAction$: ActionsObservable<AnyAction>;
   rootState$: StateObservable<unknown>;
 
-  getContainer: GetContainer;
+  getContainer: <TModel extends Model>(
+    modelOrModelNamespace: TModel | LazyModel<TModel> | string,
+    containerKey?: string
+  ) => ContainerImpl<TModel>;
   getState: GetState;
 
   rootReducer: Reducer;
@@ -125,7 +128,9 @@ export function createNyaxContext(): NyaxContext {
         : nyaxContext.store.getState(),
   };
 
-  nyaxContext.getContainer = createGetContainer(nyaxContext);
+  nyaxContext.getContainer = createGetContainer(
+    nyaxContext
+  ) as NyaxContext["getContainer"];
   nyaxContext.getState = createGetState(nyaxContext);
 
   nyaxContext.rootReducer = createRootReducer(nyaxContext);

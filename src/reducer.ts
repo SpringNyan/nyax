@@ -97,7 +97,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     } else {
       const registerPayloads: RegisterActionPayload[] = [];
       nyaxContext.modelContextByModel.forEach((context, model) => {
-        if (!model.isDynamic && !model.isLazy) {
+        if (!model.isDynamic && !model.isOnDemand && !model.isLazy) {
           registerPayloads.push({
             modelNamespace: context.modelNamespace,
           });

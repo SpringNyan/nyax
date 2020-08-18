@@ -684,7 +684,7 @@ export type LazyModelRejected = {
   _result: unknown;
 };
 
-export type LazyModel<TModel extends Model> =
+export type LazyModel<TModel extends Model = Model> =
   | LazyModelUninitialized<TModel>
   | LazyModelPending<TModel>
   | LazyModelResolved<TModel>

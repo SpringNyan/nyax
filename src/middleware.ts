@@ -103,12 +103,18 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
       let modelNamespace = namespace;
       let containerKey: string | undefined;
 
-      let model = nyaxContext.modelByModelNamespace.get(modelNamespace);
-      if (!model) {
+      let modelContext = nyaxContext.modelContextByModelNamespace.get(
+        modelNamespace
+      );
+      if (!modelContext) {
         [modelNamespace, containerKey] = splitLastString(modelNamespace);
-        model = nyaxContext.modelByModelNamespace.get(modelNamespace);
+        modelContext = nyaxContext.modelContextByModelNamespace.get(
+          modelNamespace
+        );
       }
-      if (model?.isLazy) {
+
+      const model = modelContext?.model;
+      if (model?.isOnDemand || model?.isLazy) {
         container = nyaxContext.getContainer(model, containerKey);
         container.register();
       }
