@@ -43,6 +43,8 @@ export interface NyaxContext {
     }
   >;
 
+  batchContext: BatchContext;
+
   dependencies: unknown;
   onUnhandledEffectError: (
     error: unknown,
@@ -62,6 +64,16 @@ export interface ModelContext {
   modelPath: string;
 
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
+}
+
+export interface BatchContext {
+  commitTime: number | null;
+  timeoutId: number | null;
+  actions: AnyAction[];
+  callbacks: (() => void)[];
+
+  collecting: boolean;
+  collectedActions: AnyAction[];
 }
 
 export function createNyaxContext(): NyaxContext {
@@ -97,6 +109,16 @@ export function createNyaxContext(): NyaxContext {
 
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
+
+    batchContext: {
+      commitTime: null,
+      timeoutId: null,
+      actions: [],
+      callbacks: [],
+
+      collecting: false,
+      collectedActions: [],
+    },
 
     get dependencies() {
       return nyaxContext.options.dependencies;

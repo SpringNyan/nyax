@@ -113,8 +113,8 @@ export interface RegisterActionPayload {
   state?: unknown;
 }
 
-export const batchRegisterActionHelper = new ActionHelperBaseImpl<
-  RegisterActionPayload[]
+export const registerActionHelper = new ActionHelperBaseImpl<
+  RegisterActionPayload
 >("@@nyax/register");
 
 export interface UnregisterActionPayload {
@@ -122,8 +122,8 @@ export interface UnregisterActionPayload {
   containerKey?: string;
 }
 
-export const batchUnregisterActionHelper = new ActionHelperBaseImpl<
-  UnregisterActionPayload[]
+export const unregisterActionHelper = new ActionHelperBaseImpl<
+  UnregisterActionPayload
 >("@@nyax/unregister");
 
 export interface ReloadActionPayload {
@@ -133,3 +133,54 @@ export interface ReloadActionPayload {
 export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
   "@@nyax/reload"
 );
+
+export interface BatchActionPayload {
+  actions: AnyAction[];
+  timeout?: number | null;
+}
+
+export const batchActionHelper = new ActionHelperBaseImpl<BatchActionPayload>(
+  "@@nyax/batch"
+);
+
+export interface BatchDispatch {
+  (actions: AnyAction[], timeout?: number | null): Promise<void>;
+  <TResults extends unknown[]>(
+    fn: () => { [K in keyof TResults]: Promise<TResults[K]> },
+    timeout?: number | null
+  ): Promise<TResults>;
+}
+
+export function createBatchDispatch(nyaxContext: NyaxContext): BatchDispatch {
+  return ((
+    actionsOrFn: AnyAction[] | (() => Promise<unknown>[]),
+    timeout?: number | null
+  ): Promise<void | unknown[]> => {
+    let promise = new Promise<void | unknown[]>((resolve) => {
+      nyaxContext.batchContext.callbacks.push(resolve);
+    });
+
+    let actions: AnyAction[];
+    if (typeof actionsOrFn === "function") {
+      nyaxContext.batchContext.collecting = true;
+      const results = actionsOrFn();
+      nyaxContext.batchContext.collecting = false;
+
+      promise = promise.then(() => Promise.all(results));
+
+      actions = nyaxContext.batchContext.collectedActions;
+      nyaxContext.batchContext.collectedActions = [];
+    } else {
+      actions = actionsOrFn;
+    }
+
+    nyaxContext.store.dispatch(
+      batchActionHelper.create({
+        actions,
+        timeout: timeout ?? null,
+      })
+    );
+
+    return promise;
+  }) as BatchDispatch;
+}
