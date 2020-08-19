@@ -4,6 +4,8 @@ import {
   ConvertActionHelpers,
   registerActionHelper,
   RegisterActionPayload,
+  unregisterActionHelper,
+  UnregisterActionPayload,
 } from "./action";
 import {
   ConvertArgs,
@@ -653,6 +655,58 @@ export function registerModels(nyaxContext: NyaxContext, models: Models): void {
       registerActionHelper.create(payload)
     )
   );
+}
+
+export function unregisterModels(
+  nyaxContext: NyaxContext,
+  models: Models | string[]
+): void {
+  const modelContextSet = new Set<ModelContext | undefined>();
+
+  if (Array.isArray(models)) {
+    for (let i = 0; i < models.length; ++i) {
+      const model = models[i];
+      modelContextSet.add(
+        typeof model === "string"
+          ? nyaxContext.modelContextByModelNamespace.get(model)
+          : nyaxContext.modelContextByModel.get(model)
+      );
+    }
+  } else {
+    const flatten = flattenModels(models);
+    Object.keys(flatten).forEach((key) => {
+      const model = flatten[key];
+      nyaxContext.modelContextByModelNamespace.get(key);
+      nyaxContext.modelContextByModel.get(model);
+    });
+  }
+
+  const unregisterActionPayloads: UnregisterActionPayload[] = [];
+  modelContextSet.forEach((context) => {
+    if (context) {
+      context.containerByContainerKey.forEach((container) => {
+        if (container.isRegistered) {
+          unregisterActionPayloads.push({
+            modelNamespace: container.modelNamespace,
+            containerKey: container.containerKey,
+          });
+        }
+      });
+    }
+  });
+
+  nyaxContext.batchDispatch(
+    unregisterActionPayloads.map((payload) =>
+      unregisterActionHelper.create(payload)
+    )
+  );
+
+  modelContextSet.forEach((context) => {
+    if (context) {
+      nyaxContext.modelContextByModel.delete(context.model);
+      nyaxContext.modelContextByModelNamespace.delete(context.modelNamespace);
+    }
+  });
 }
 
 export function flattenModels(models: Models): Record<string, Model> {

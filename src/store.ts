@@ -12,7 +12,7 @@ import { AnyAction, BatchDispatch, reloadActionHelper } from "./action";
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
-import { Models, registerModels } from "./model";
+import { Models, registerModels, unregisterModels } from "./model";
 import { GetState } from "./state";
 
 export interface NyaxOptions {
@@ -37,6 +37,7 @@ export interface NyaxOptions {
 export interface Nyax {
   store: Store;
   registerModels: (models: Models) => void;
+  unregisterModels: (models: Models | string[]) => void;
   getContainer: GetContainer;
   getState: GetState;
   batch: BatchDispatch;
@@ -54,6 +55,9 @@ export function createNyax(options: NyaxOptions): Nyax {
     },
     registerModels: (models) => {
       registerModels(nyaxContext, models);
+    },
+    unregisterModels: (models) => {
+      unregisterModels(nyaxContext, models);
     },
     get getContainer() {
       return nyaxContext.getContainer;
