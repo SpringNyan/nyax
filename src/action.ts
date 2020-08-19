@@ -157,19 +157,17 @@ export function createBatchDispatch(nyaxContext: NyaxContext): BatchDispatch {
     timeout?: number | null
   ): Promise<void | unknown[]> => {
     let promise = new Promise<void | unknown[]>((resolve) => {
-      nyaxContext.batchContext.callbacks.push(resolve);
+      nyaxContext.batchCommitCallbacks.push(resolve);
     });
 
     let actions: AnyAction[];
     if (typeof actionsOrFn === "function") {
-      nyaxContext.batchContext.collecting = true;
+      nyaxContext.batchCollectedActions = [];
       const results = actionsOrFn();
-      nyaxContext.batchContext.collecting = false;
+      actions = nyaxContext.batchCollectedActions;
+      nyaxContext.batchCollectedActions = null;
 
       promise = promise.then(() => Promise.all(results));
-
-      actions = nyaxContext.batchContext.collectedActions;
-      nyaxContext.batchContext.collectedActions = [];
     } else {
       actions = actionsOrFn;
     }
@@ -183,4 +181,10 @@ export function createBatchDispatch(nyaxContext: NyaxContext): BatchDispatch {
 
     return promise;
   }) as BatchDispatch;
+}
+
+export function isBatchAction(
+  action: unknown
+): action is Action<BatchActionPayload> {
+  return batchActionHelper.is(action);
 }

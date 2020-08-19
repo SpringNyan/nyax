@@ -2,6 +2,7 @@ import { ActionsObservable, StateObservable } from "redux-observable";
 import {
   AnyAction,
   ConvertActionHelpers,
+  registerActionHelper,
   RegisterActionPayload,
 } from "./action";
 import {
@@ -118,11 +119,13 @@ export interface Model<
     >,
     ModelOptions {}
 
-export type Models =
-  | Model[]
-  | {
-      [key: string]: Model | Models;
-    };
+export type ModelArray = Model[];
+
+export type ModelObject = {
+  [key: string]: Model | ModelObject;
+};
+
+export type Models = ModelArray | ModelObject;
 
 export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
   InstanceType<TModel>["defaultArgs"]
@@ -613,16 +616,14 @@ export function registerModel<TModel extends Model>(
     modelPath: convertNamespaceToPath(modelNamespace),
 
     containerByContainerKey: new Map(),
+    stopEpicEmitterByContainerKey: new Map(),
   };
 
   nyaxContext.modelContextByModel.set(model, modelContext);
   nyaxContext.modelContextByModelNamespace.set(modelNamespace, modelContext);
 }
 
-export function registerModels(
-  nyaxContext: NyaxContext,
-  models: Models
-): RegisterActionPayload[] {
+export function registerModels(nyaxContext: NyaxContext, models: Models): void {
   const registerActionPayloads: RegisterActionPayload[] = [];
 
   function register(modelNamespace: string, model: Model) {
@@ -647,7 +648,11 @@ export function registerModels(
     });
   }
 
-  return registerActionPayloads;
+  nyaxContext.batchDispatch(
+    registerActionPayloads.map((payload) =>
+      registerActionHelper.create(payload)
+    )
+  );
 }
 
 export function flattenModels(models: Models): Record<string, Model> {

@@ -1,7 +1,7 @@
 import { Epic } from "redux-observable";
 import { merge, Observable } from "rxjs";
-import { catchError, filter, takeUntil } from "rxjs/operators";
-import { AnyAction, batchUnregisterActionHelper } from "./action";
+import { catchError, takeUntil } from "rxjs/operators";
+import { AnyAction } from "./action";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { traverseObject } from "./util";
@@ -28,19 +28,15 @@ export function createEpic(
       );
     });
 
-    const takeUntil$ = nyaxContext.rootAction$.pipe(
-      filter((action) => {
-        if (batchUnregisterActionHelper.is(action)) {
-          return action.payload.some(
-            (payload) =>
-              payload.modelNamespace === container.modelNamespace &&
-              payload.containerKey === container.containerKey
-          );
-        } else {
-          return false;
+    const takeUntil$ = new Observable((subscribe) => {
+      container.modelContext.stopEpicEmitterByContainerKey.set(
+        container.containerKey,
+        () => {
+          subscribe.next(true);
+          subscribe.complete();
         }
-      })
-    );
+      );
+    });
 
     return merge(...outputObservables).pipe(takeUntil(takeUntil$));
   };

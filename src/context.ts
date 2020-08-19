@@ -1,7 +1,7 @@
 import { Reducer, Store } from "redux";
 import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
-import { AnyAction } from "./action";
+import { AnyAction, BatchDispatch, createBatchDispatch } from "./action";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, createGetContainer } from "./container";
 import { LazyModel, Model } from "./model";
@@ -23,6 +23,7 @@ export interface NyaxContext {
     containerKey?: string
   ) => ContainerImpl<TModel>;
   getState: GetState;
+  batchDispatch: BatchDispatch;
 
   rootReducer: Reducer;
 
@@ -43,7 +44,11 @@ export interface NyaxContext {
     }
   >;
 
-  batchContext: BatchContext;
+  batchCommitTime: number | null;
+  batchCommitTimeoutId: number | null;
+  batchCommitActions: AnyAction[];
+  batchCommitCallbacks: (() => void)[];
+  batchCollectedActions: AnyAction[] | null;
 
   dependencies: unknown;
   onUnhandledEffectError: (
@@ -64,16 +69,7 @@ export interface ModelContext {
   modelPath: string;
 
   containerByContainerKey: Map<string | undefined, ContainerImpl>;
-}
-
-export interface BatchContext {
-  commitTime: number | null;
-  timeoutId: number | null;
-  actions: AnyAction[];
-  callbacks: (() => void)[];
-
-  collecting: boolean;
-  collectedActions: AnyAction[];
+  stopEpicEmitterByContainerKey: Map<string | undefined, () => void>;
 }
 
 export function createNyaxContext(): NyaxContext {
@@ -95,6 +91,8 @@ export function createNyaxContext(): NyaxContext {
     getContainer: undefined!,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getState: undefined!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    batchDispatch: undefined!,
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     rootReducer: undefined!,
@@ -110,15 +108,11 @@ export function createNyaxContext(): NyaxContext {
     containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
 
-    batchContext: {
-      commitTime: null,
-      timeoutId: null,
-      actions: [],
-      callbacks: [],
-
-      collecting: false,
-      collectedActions: [],
-    },
+    batchCommitTime: null,
+    batchCommitTimeoutId: null,
+    batchCommitActions: [],
+    batchCommitCallbacks: [],
+    batchCollectedActions: null,
 
     get dependencies() {
       return nyaxContext.options.dependencies;
@@ -154,6 +148,7 @@ export function createNyaxContext(): NyaxContext {
     nyaxContext
   ) as NyaxContext["getContainer"];
   nyaxContext.getState = createGetState(nyaxContext);
+  nyaxContext.batchDispatch = createBatchDispatch(nyaxContext);
 
   nyaxContext.rootReducer = createRootReducer(nyaxContext);
 
