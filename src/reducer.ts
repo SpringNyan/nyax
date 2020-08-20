@@ -1,11 +1,13 @@
 import produce from "immer";
 import { Reducer } from "redux";
 import {
-  batchRegisterActionHelper,
-  batchUnregisterActionHelper,
+  Action,
+  batchActionHelper,
+  registerActionHelper,
   RegisterActionPayload,
   reloadActionHelper,
   ReloadActionPayload,
+  unregisterActionHelper,
   UnregisterActionPayload,
 } from "./action";
 import { ConvertRegisterArgs, createArgs, ModelDefaultArgs } from "./arg";
@@ -16,9 +18,9 @@ import {
   createState,
   getSubState,
   ModelInitialState,
-  setSubState,
+  updateSubState,
 } from "./state";
-import { splitLastString } from "./util";
+import { findLastIndex, splitLastString } from "./util";
 
 export type ModelReducer<TPayload = unknown> = {
   bivarianceHack(payload: TPayload): void;
@@ -35,76 +37,52 @@ export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
 };
 
 export function createRootReducer(nyaxContext: NyaxContext): Reducer {
-  function batchRegister(
-    rootState: unknown,
-    payloads: RegisterActionPayload[]
-  ): unknown {
-    payloads.forEach((payload) => {
-      const container = nyaxContext.getContainer(
-        payload.modelNamespace,
-        payload.containerKey
-      );
+  function register(
+    rootState: Record<string, unknown>,
+    payload: RegisterActionPayload
+  ): void {
+    const container = nyaxContext.getContainer(
+      payload.modelNamespace,
+      payload.containerKey
+    );
 
-      let state: unknown;
-      if (payload.state !== undefined) {
-        state = payload.state;
-      } else {
-        state = createState(
-          container,
-          createArgs(
-            container,
-            payload.args as ConvertRegisterArgs<ModelDefaultArgs> | undefined,
-            false
-          )
-        );
-      }
-
-      rootState = setSubState(
-        rootState,
-        state,
-        container.modelContext.modelPath,
-        payload.containerKey
-      );
-    });
-
-    return rootState;
-  }
-
-  function batchUnregister(
-    rootState: unknown,
-    payloads: UnregisterActionPayload[]
-  ): unknown {
-    payloads.forEach((payload) => {
-      const container = nyaxContext.getContainer(
-        payload.modelNamespace,
-        payload.containerKey
-      );
-
-      rootState = setSubState(
-        rootState,
-        NYAX_NOTHING,
-        container.modelContext.modelPath,
-        payload.containerKey
-      );
-    });
-
-    return rootState;
-  }
-
-  function reload(rootState: unknown, payload: ReloadActionPayload): unknown {
+    let state: unknown;
     if (payload.state !== undefined) {
-      return payload.state;
+      state = payload.state;
     } else {
-      const registerPayloads: RegisterActionPayload[] = [];
-      nyaxContext.modelContextByModel.forEach((context, model) => {
-        if (!model.isDynamic && !model.isOnDemand && !model.isLazy) {
-          registerPayloads.push({
-            modelNamespace: context.modelNamespace,
-          });
-        }
-      });
-      return batchRegister(undefined, registerPayloads);
+      state = createState(
+        container,
+        createArgs(
+          container,
+          payload.args as ConvertRegisterArgs<ModelDefaultArgs> | undefined,
+          false
+        )
+      );
     }
+
+    updateSubState(
+      rootState,
+      state,
+      container.modelContext.modelPath,
+      payload.containerKey
+    );
+  }
+
+  function unregister(
+    rootState: Record<string, unknown>,
+    payload: UnregisterActionPayload
+  ): void {
+    const container = nyaxContext.getContainer(
+      payload.modelNamespace,
+      payload.containerKey
+    );
+
+    updateSubState(
+      rootState,
+      NYAX_NOTHING,
+      container.modelContext.modelPath,
+      payload.containerKey
+    );
   }
 
   const rootReducer: Reducer = (rootState, action) => {
@@ -112,43 +90,70 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       rootState = {};
     }
 
-    if (batchRegisterActionHelper.is(action)) {
-      return batchRegister(rootState, action.payload);
-    } else if (batchUnregisterActionHelper.is(action)) {
-      return batchUnregister(rootState, action.payload);
-    } else if (reloadActionHelper.is(action)) {
-      return reload(rootState, action.payload);
-    }
+    const actions = batchActionHelper.is(action)
+      ? action.payload.actions
+      : [action];
 
-    const [namespace, actionName] = splitLastString(action.type);
-
-    const container = nyaxContext.containerByNamespace.get(namespace);
-    if (!container?.isRegistered) {
-      return rootState;
-    }
-
-    const reducer = container.reducerByPath[actionName];
-    if (!reducer) {
-      return rootState;
-    }
-
-    const state = getSubState(
-      rootState,
-      container.modelContext.modelPath,
-      container.containerKey
+    const reloadIndex = findLastIndex(actions, (action) =>
+      reloadActionHelper.is(action)
     );
-    const newState = produce(state, (draft) => {
-      container.draftState = draft as ConvertState<ModelInitialState>;
-      reducer(action.payload);
-      container.draftState = NYAX_NOTHING;
+    if (reloadIndex >= 0) {
+      const reloadAction = actions[reloadIndex] as Action<ReloadActionPayload>;
+      if (reloadAction.payload.state !== undefined) {
+        rootState = reloadAction.payload.state;
+      } else {
+        const registerActionPayloads: RegisterActionPayload[] = [];
+        nyaxContext.modelContextByModel.forEach((context, model) => {
+          if (!model.isDynamic && !model.isOnDemand && !model.isLazy) {
+            registerActionPayloads.push({
+              modelNamespace: context.modelNamespace,
+            });
+          }
+        });
+        rootState = produce({}, (draft: Record<string, unknown>) => {
+          registerActionPayloads.forEach((payload) => {
+            register(draft, payload);
+          });
+        });
+      }
+    }
+
+    rootState = produce(rootState, (draft: Record<string, unknown>) => {
+      for (let i = reloadIndex + 1; i < actions.length; ++i) {
+        const action = actions[i];
+
+        if (registerActionHelper.is(action)) {
+          register(draft, action.payload);
+          continue;
+        } else if (unregisterActionHelper.is(action)) {
+          unregister(draft, action.payload);
+          continue;
+        }
+
+        const [namespace, actionName] = splitLastString(action.type);
+
+        const container = nyaxContext.containerByNamespace.get(namespace);
+        if (!container?.isRegistered) {
+          continue;
+        }
+
+        const reducer = container.reducerByPath[actionName];
+        if (!reducer) {
+          continue;
+        }
+
+        const draftState = getSubState(
+          draft,
+          container.modelContext.modelPath,
+          container.containerKey
+        );
+        container.draftState = draftState as ConvertState<ModelInitialState>;
+        reducer(action.payload);
+        container.draftState = NYAX_NOTHING;
+      }
     });
 
-    return setSubState(
-      rootState,
-      newState,
-      container.modelContext.modelPath,
-      container.containerKey
-    );
+    return rootState;
   };
 
   return (rootState, action) => {

@@ -149,3 +149,12 @@ export function defineGetter<TObject, TKey extends keyof TObject>(
     configurable: true,
   });
 }
+
+export function findLastIndex<T>(arr: T[], fn: (item: T) => boolean): number {
+  for (let i = arr.length - 1; i >= 0; --i) {
+    if (fn(arr[i])) {
+      return i;
+    }
+  }
+  return -1;
+}

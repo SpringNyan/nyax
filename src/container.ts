@@ -202,13 +202,10 @@ export class ContainerImpl<TModel extends Model = Model>
     return !this._nyaxContext.containerByNamespace.has(this.namespace);
   }
 
+  // TODO: return promise?
   public register(
     args?: ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>
   ): void {
-    if (!this.canRegister) {
-      throw new Error("Namespace is already bound");
-    }
-
     this._nyaxContext.store.dispatch(
       registerActionHelper.create({
         modelNamespace: this.modelNamespace,
@@ -219,16 +216,12 @@ export class ContainerImpl<TModel extends Model = Model>
   }
 
   public unregister(): void {
-    if (this.isRegistered) {
-      this._nyaxContext.store.dispatch(
-        unregisterActionHelper.create({
-          modelNamespace: this.modelNamespace,
-          containerKey: this.containerKey,
-        })
-      );
-    }
-
-    this.modelContext.containerByContainerKey.delete(this.containerKey);
+    this._nyaxContext.store.dispatch(
+      unregisterActionHelper.create({
+        modelNamespace: this.modelNamespace,
+        containerKey: this.containerKey,
+      })
+    );
   }
 
   private get _currentContainer(): this {

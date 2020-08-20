@@ -9,7 +9,7 @@ import {
   ModelInstanceConstructor,
   resolveModel,
 } from "./model";
-import { is, isObject } from "./util";
+import { isObject } from "./util";
 
 export interface ModelInitialState {
   [key: string]: unknown | ModelInitialState;
@@ -35,47 +35,28 @@ export function getSubState(
   }
 }
 
-export function setSubState(
-  state: unknown,
+export function updateSubState(
+  state: Record<string, unknown>,
   value: unknown,
   modelPath: string,
   containerKey: string | undefined
-): unknown {
-  if (state === undefined) {
-    state = {};
-  }
-  if (!isObject(state)) {
-    throw new Error("state is not an object");
-  }
-
+): void {
   if (containerKey === undefined) {
-    if (is(state[modelPath], value)) {
-      return state;
-    }
-
-    const nextState = { ...state };
     if (value === NYAX_NOTHING) {
-      delete nextState[modelPath];
+      delete state[modelPath];
     } else {
-      nextState[modelPath] = value;
+      state[modelPath] = value;
     }
-
-    return nextState;
   } else {
-    const subState = setSubState(
-      state[modelPath],
+    if (state[modelPath] === undefined) {
+      state[modelPath] = {};
+    }
+    updateSubState(
+      state[modelPath] as Record<string, unknown>,
       value,
       containerKey,
       undefined
     );
-    if (is(state[modelPath], subState)) {
-      return state;
-    }
-
-    return {
-      ...state,
-      [modelPath]: subState,
-    };
   }
 }
 
@@ -98,7 +79,10 @@ export interface GetState {
     ? Partial<Record<string, ExtractModelState<TModel>>> | undefined
     : TModel extends ModelInstanceConstructor & { isDynamic?: false }
     ? ExtractModelState<TModel> | undefined
-    : unknown | undefined;
+    :
+        | Partial<Record<string, ExtractModelState<TModel>>>
+        | ExtractModelState<TModel>
+        | undefined;
   <TModel extends Model>(
     modelOrModelNamespace: TModel | LazyModel<TModel> | string,
     containerKey: string
@@ -106,7 +90,7 @@ export interface GetState {
     ? ExtractModelState<TModel> | undefined
     : TModel extends ModelInstanceConstructor & { isDynamic?: false }
     ? never
-    : unknown | undefined;
+    : ExtractModelState<TModel> | never | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
