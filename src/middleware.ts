@@ -3,9 +3,11 @@ import {
   Action,
   AnyAction,
   batchActionHelper,
+  registerActionHelper,
   RegisterActionPayload,
   reloadActionHelper,
   ReloadActionPayload,
+  unregisterActionHelper,
   UnregisterActionPayload,
 } from "./action";
 import { NyaxContext } from "./context";
@@ -92,6 +94,9 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
   function commitBatchActions() {
     const actions = nyaxContext.batchCommitActions;
+    if (nyaxContext.batchCommitTimeoutId != null) {
+      clearTimeout(nyaxContext.batchCommitTimeoutId);
+    }
 
     nyaxContext.batchCommitTime = null;
     nyaxContext.batchCommitTimeoutId = null;
@@ -105,46 +110,54 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
   }
 
   return () => (next) => (action: AnyAction): AnyAction => {
-    let actions = [action];
+    let commitActions: AnyAction[] | undefined;
 
     if (batchActionHelper.is(action)) {
       const { actions, timeout } = action.payload;
-      const batchContext = nyaxContext.batchContext;
 
       if (timeout !== undefined) {
-        batchContext.actions.push(...actions);
-        if (timeout == null) {
+        nyaxContext.batchCommitActions.push(...actions);
+
+        if (timeout === null) {
           commitBatchActions();
         } else {
           const commitTime = Date.now() + timeout;
           if (
-            batchContext.commitTime == null ||
-            commitTime < batchContext.commitTime
+            nyaxContext.batchCommitTime == null ||
+            commitTime < nyaxContext.batchCommitTime
           ) {
-            batchContext.commitTime = commitTime;
-            if (batchContext.timeoutId != null) {
-              clearTimeout(batchContext.timeoutId);
+            nyaxContext.batchCommitTime = commitTime;
+            if (nyaxContext.batchCommitTimeoutId != null) {
+              clearTimeout(nyaxContext.batchCommitTimeoutId);
             }
-            batchContext.timeoutId = setTimeout(() => {
+            nyaxContext.batchCommitTimeoutId = setTimeout(() => {
               commitBatchActions();
             }, timeout);
           }
         }
       } else {
-        actions = action.payload.actions;
+        commitActions = actions;
       }
+    } else {
+      commitActions = [action];
     }
+
+    if (!commitActions) {
+      return action;
+    }
+
+    commitActions.forEach((action) => {
+      if (registerActionHelper.is(action)) {
+        register(action.payload);
+      } else if (unregisterActionHelper.is(action)) {
+        unregister(action.payload);
+      } else if (reloadActionHelper.is(action)) {
+        reload(action.payload);
+      }
+    });
 
     const dispatchDeferred = nyaxContext.dispatchDeferredByAction.get(action);
     nyaxContext.dispatchDeferredByAction.delete(action);
-
-    if (batchRegisterActionHelper.is(action)) {
-      register(action.payload);
-    } else if (batchUnregisterActionHelper.is(action)) {
-      unregister(action.payload);
-    } else if (reloadActionHelper.is(action)) {
-      reload(action.payload);
-    }
 
     const [namespace, actionName] = splitLastString(action.type);
     let container = nyaxContext.containerByNamespace.get(namespace);
