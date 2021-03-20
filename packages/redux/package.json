@@ -1,0 +1,41 @@
+{
+  "name": "@nyax/redux",
+  "version": "1.0.0-next.0",
+  "description": "A State Management Framework",
+  "authors": "SpringNyan",
+  "license": "MIT",
+  "repository": "github:SpringNyan/nyax",
+  "files": [
+    "dist",
+    "types"
+  ],
+  "main": "dist/nyax.js",
+  "module": "dist/nyax.esm.js",
+  "types": "types/index.d.ts",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^8.2.0",
+    "@types/chai": "^4.2.15",
+    "@types/mocha": "^8.2.2",
+    "@typescript-eslint/eslint-plugin": "^4.18.0",
+    "@typescript-eslint/parser": "^4.18.0",
+    "chai": "^4.3.4",
+    "eslint": "^7.22.0",
+    "immer": "^9.0.0",
+    "mocha": "^8.3.2",
+    "prettier": "^2.2.1",
+    "redux": "^4.0.5",
+    "redux-observable": "^1.2.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.42.1",
+    "rxjs": "^6.6.6",
+    "ts-node": "^9.1.1",
+    "tslib": "^2.1.0",
+    "typescript": "^4.2.3"
+  },
+  "scripts": {
+    "build": "rimraf dist types && rollup -c && tsc -p tsconfig.types.json",
+    "test": "set TS_NODE_COMPILER_OPTIONS={\"module\":\"commonjs\"} && mocha --require ts-node/register test/**/*.ts",
+    "lint": "eslint src/**",
+    "release": "npm run lint && npm run build && npm publish"
+  }
+}
