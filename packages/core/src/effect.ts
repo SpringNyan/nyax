@@ -6,11 +6,11 @@ export interface ModelEffects {
   [key: string]: ModelEffect | ModelEffects;
 }
 
-export type ConvertPayloadResultPairsFromModelEffects<TEffects> = {
+export type ConvertActionHelperTypeParamTuplesFromModelEffects<TEffects> = {
   [K in keyof TEffects]: TEffects[K] extends ModelEffect<
     infer TPayload,
     infer TResult
   >
     ? [TPayload, TResult]
-    : ConvertPayloadResultPairsFromModelEffects<TEffects[K]>;
+    : ConvertActionHelperTypeParamTuplesFromModelEffects<TEffects[K]>;
 };

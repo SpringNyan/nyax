@@ -1,9 +1,9 @@
 import { NyaxPromise } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import { ConvertPayloadResultPairsFromModelEffects } from "./effect";
+import { ConvertActionHelperTypeParamTuplesFromModelEffects } from "./effect";
 import { ExtractModelActionHelpers, Model } from "./model";
-import { ConvertPayloadResultPairsFromModelReducers } from "./reducer";
+import { ConvertActionHelperTypeParamTuplesFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
@@ -15,6 +15,8 @@ export interface Action<TPayload = unknown> {
   payload: TPayload;
 }
 
+export type Dispatch = (action: AnyAction) => void;
+
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   type: string;
   is(action: unknown): action is Action<TPayload>;
@@ -22,26 +24,22 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   dispatch(payload: TPayload): Promise<TResult>;
 }
 
-export type ConvertActionHelpersFromPayloadResultPairs<T> = {
+export type ConvertActionHelpersFromTypeParamTuples<T> = {
   [K in keyof T]: T[K] extends [any, any]
     ? ActionHelper<T[K][0], T[K][1]>
-    : ConvertActionHelpersFromPayloadResultPairs<T[K]>;
+    : ConvertActionHelpersFromTypeParamTuples<T[K]>;
 };
 
-export type ConvertActionHelpers<
-  TReducers,
-  TEffects
-> = TReducers extends infer TReducers
-  ? TEffects extends infer TEffects
-    ? ConvertActionHelpersFromPayloadResultPairs<
-        ConvertPayloadResultPairsFromModelReducers<TReducers> &
-          ConvertPayloadResultPairsFromModelEffects<TEffects>
+export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
+  ? TEffects extends any
+    ? ConvertActionHelpersFromTypeParamTuples<
+        ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers> &
+          ConvertActionHelperTypeParamTuplesFromModelEffects<TEffects>
       >
     : never
   : never;
 
-export class ActionHelperBaseImpl<TPayload>
-  implements Omit<ActionHelper<TPayload, never>, "dispatch"> {
+export class ActionHelperBaseImpl<TPayload> {
   constructor(public readonly type: string) {}
 
   public is(action: unknown): action is Action<TPayload> {

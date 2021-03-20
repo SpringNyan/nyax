@@ -23,9 +23,7 @@ export type ModelInnerDefaultArgs<
   TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
 > = ModelInnerDefaultArgsBase & TInnerDefaultArgs;
 
-export type ConvertRegisterArgs<
-  TDefaultArgs
-> = TDefaultArgs extends infer TDefaultArgs
+export type ConvertRegisterArgs<TDefaultArgs> = TDefaultArgs extends any
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<any>
         ? K
@@ -46,7 +44,7 @@ export type ConvertRegisterArgs<
     : never
   : never;
 
-export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
+export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends any
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
         ? T

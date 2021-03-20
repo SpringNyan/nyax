@@ -101,8 +101,7 @@ export interface Model<
   TEffects = {},
   TEpics = {}
   /* eslint-enable @typescript-eslint/ban-types */
->
-  extends ModelInstanceConstructor<
+> extends ModelInstanceConstructor<
       TDependencies,
       TDefaultArgs,
       TInitialState,
@@ -141,25 +140,25 @@ export type ExtractModelEpics<TModel extends Model> = ReturnType<
   InstanceType<TModel>["epics"]
 >;
 
-export type ExtractModelDependencies<TModel extends Model> = InstanceType<
-  TModel
->["dependencies"];
+export type ExtractModelDependencies<
+  TModel extends Model
+> = InstanceType<TModel>["dependencies"];
 
-export type ExtractModelArgs<TModel extends Model> = InstanceType<
-  TModel
->["args"];
+export type ExtractModelArgs<
+  TModel extends Model
+> = InstanceType<TModel>["args"];
 
-export type ExtractModelState<TModel extends Model> = InstanceType<
-  TModel
->["state"];
+export type ExtractModelState<
+  TModel extends Model
+> = InstanceType<TModel>["state"];
 
-export type ExtractModelGetters<TModel extends Model> = InstanceType<
-  TModel
->["getters"];
+export type ExtractModelGetters<
+  TModel extends Model
+> = InstanceType<TModel>["getters"];
 
-export type ExtractModelActionHelpers<TModel extends Model> = InstanceType<
-  TModel
->["actions"];
+export type ExtractModelActionHelpers<
+  TModel extends Model
+> = InstanceType<TModel>["actions"];
 
 export type MergeModelsDependencies<
   TModels extends Model[]
@@ -399,7 +398,8 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
 
       return Object.keys(subModels).reduce<Record<string, ModelBase>>(
         (obj, key) => {
-          const modelInstance = new subModels[key]() as ModelBase;
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          const modelInstance = new subModels[key]!() as ModelBase;
 
           defineGetter(
             modelInstance,
@@ -472,7 +472,7 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
     ): Record<string, ReturnType<ModelInstance[TPropertyKey]>> {
       const result: Record<string, any> = {};
       Object.keys(this.__nyax_subModelInstances).forEach((key) => {
-        result[key] = this.__nyax_subModelInstances[key][propertyKey]();
+        result[key] = this.__nyax_subModelInstances[key]?.[propertyKey]();
         if (propertyKey === "defaultArgs") {
           result[key][NYAX_DEFAULT_ARGS] = true;
         }

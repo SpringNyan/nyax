@@ -28,10 +28,10 @@ export interface ModelReducers {
   [key: string]: ModelReducer | ModelReducers;
 }
 
-export type ConvertPayloadResultPairsFromModelReducers<TReducers> = {
+export type ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers> = {
   [K in keyof TReducers]: TReducers[K] extends ModelReducer<infer TPayload>
     ? [TPayload, unknown]
-    : ConvertPayloadResultPairsFromModelReducers<TReducers[K]>;
+    : ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers[K]>;
 };
 
 export function createRootReducer(nyaxContext: NyaxContext): Reducer {
@@ -139,7 +139,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
     );
     const newState = produce(state, (draft) => {
       container.draftState = draft as ConvertState<ModelInitialState>;
-      reducer(action.payload);
+      reducer(action["payload"]);
       container.draftState = NYAX_NOTHING;
     });
 

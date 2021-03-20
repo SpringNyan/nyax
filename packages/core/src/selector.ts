@@ -8,7 +8,7 @@ export interface ModelSelectors {
   [key: string]: ModelSelector | ModelSelectors;
 }
 
-export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
+export type ConvertGetters<TSelectors> = TSelectors extends any
   ? {
       [K in keyof TSelectors]: TSelectors[K] extends ModelSelector<
         infer TResult
@@ -185,7 +185,7 @@ export function createSelector(...args: unknown[]): OutputSelector<unknown> {
     const lastDeps = cache.lastDeps ?? [];
     const currDeps: unknown[] = [];
     for (let i = 0; i < selectors.length; ++i) {
-      currDeps.push(selectors[i](lastDeps[i]));
+      currDeps.push(selectors[i]?.(lastDeps[i]));
       if (!shouldUpdate && !is(currDeps[i], lastDeps[i])) {
         shouldUpdate = true;
       }

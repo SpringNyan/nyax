@@ -73,7 +73,8 @@ export function mergeObjects<T>(
       if (fn) {
         fn(sourceItem as T, key, target, paths);
       } else {
-        target[key] = sourceItem;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        target[key] = sourceItem!;
       }
     }
 
