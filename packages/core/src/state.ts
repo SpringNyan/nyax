@@ -1,12 +1,7 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import {
-  ExtractModelArgs,
-  ExtractModelState,
-  Model,
-  ModelInstanceConstructor,
-} from "./model";
+import { ExtractModelState, Model, ModelInstanceConstructor } from "./model";
 import { is, isObject } from "./util";
 
 export interface ModelInitialState {
@@ -78,13 +73,9 @@ export function setSubState(
 }
 
 export function createState<TModel extends Model>(
-  container: ContainerImpl<TModel>,
-  args: ExtractModelArgs<TModel>
+  container: ContainerImpl<TModel>
 ): ExtractModelState<TModel> {
-  container.args = args;
   const state = container.modelInstance.initialState();
-  container.args = NYAX_NOTHING;
-
   return state as ExtractModelState<TModel>;
 }
 

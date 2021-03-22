@@ -3,14 +3,11 @@ import {
   batchUnregisterActionHelper,
   createActionHelpers,
 } from "./action";
-import { ConvertRegisterArgs, createArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
 import { ModelEffect } from "./effect";
 import {
   ExtractModelActionHelpers,
-  ExtractModelArgs,
-  ExtractModelDefaultArgs,
   ExtractModelEffects,
   ExtractModelEpics,
   ExtractModelGetters,
@@ -54,7 +51,7 @@ export interface Container<TModel extends Model = Model>
   isRegistered: boolean;
   canRegister: boolean;
 
-  register(args?: ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>): void;
+  register(): void;
   unregister(): void;
 }
 
@@ -75,7 +72,6 @@ export class ContainerImpl<TModel extends Model = Model>
   public readonly reducerByPath: Record<string, ModelReducer>;
   public readonly effectByPath: Record<string, ModelEffect>;
 
-  public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
   public draftState:
     | ExtractModelState<TModel>
     | typeof NYAX_NOTHING = NYAX_NOTHING;
@@ -104,12 +100,8 @@ export class ContainerImpl<TModel extends Model = Model>
 
     this.modelInstance = this._createModelInstance();
 
-    this.selectors = this.modelInstance.selectors() as ExtractModelSelectors<
-      TModel
-    >;
-    this.reducers = this.modelInstance.reducers() as ExtractModelReducers<
-      TModel
-    >;
+    this.selectors = this.modelInstance.selectors() as ExtractModelSelectors<TModel>;
+    this.reducers = this.modelInstance.reducers() as ExtractModelReducers<TModel>;
     this.effects = this.modelInstance.effects() as ExtractModelEffects<TModel>;
     this.epics = this.modelInstance.epics() as ExtractModelEpics<TModel>;
 
@@ -143,10 +135,7 @@ export class ContainerImpl<TModel extends Model = Model>
 
     if (this.canRegister) {
       if (this._initialStateCache === undefined) {
-        this._initialStateCache = createState(
-          this,
-          createArgs(this, undefined, true)
-        );
+        this._initialStateCache = createState(this);
       }
       return this._initialStateCache as ExtractModelState<TModel>;
     }
@@ -199,9 +188,7 @@ export class ContainerImpl<TModel extends Model = Model>
     return !this._nyaxContext.containerByNamespace.has(this.namespace);
   }
 
-  public register(
-    args?: ConvertRegisterArgs<ExtractModelDefaultArgs<TModel>>
-  ): void {
+  public register(): void {
     if (!this.canRegister) {
       throw new Error("Namespace is already bound");
     }
@@ -211,7 +198,6 @@ export class ContainerImpl<TModel extends Model = Model>
         {
           modelNamespace: this.modelNamespace,
           containerKey: this.containerKey,
-          args,
         },
       ])
     );

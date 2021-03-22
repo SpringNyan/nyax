@@ -8,7 +8,6 @@ import {
   ReloadActionPayload,
   UnregisterActionPayload,
 } from "./action";
-import { ConvertRegisterArgs, createArgs, ModelDefaultArgs } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { NyaxContext } from "./context";
 import {
@@ -49,14 +48,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       if (payload.state !== undefined) {
         state = payload.state;
       } else {
-        state = createState(
-          container,
-          createArgs(
-            container,
-            payload.args as ConvertRegisterArgs<ModelDefaultArgs> | undefined,
-            false
-          )
-        );
+        state = createState(container);
       }
 
       rootState = setSubState(

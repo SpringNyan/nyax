@@ -107,7 +107,6 @@ export function createActionHelpers<TModel extends Model>(
 export interface RegisterActionPayload {
   modelNamespace: string;
   containerKey?: string;
-  args?: unknown;
   state?: unknown;
 }
 

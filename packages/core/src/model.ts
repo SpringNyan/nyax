@@ -4,12 +4,6 @@ import {
   ConvertActionHelpers,
   RegisterActionPayload,
 } from "./action";
-import {
-  ConvertArgs,
-  ModelDefaultArgs,
-  ModelInnerDefaultArgs,
-  NYAX_DEFAULT_ARGS,
-} from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
 import { NyaxContext } from "./context";
@@ -32,7 +26,6 @@ import {
 export interface ModelInstance<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = {},
   TInitialState = {},
   TSelectors = {},
   TReducers = {},
@@ -40,7 +33,6 @@ export interface ModelInstance<
   TEpics = {}
   /* eslint-enable @typescript-eslint/ban-types */
 > {
-  defaultArgs(): TDefaultArgs;
   initialState(): TInitialState;
   selectors(): TSelectors;
   reducers(): TReducers;
@@ -48,7 +40,6 @@ export interface ModelInstance<
   epics(): TEpics;
 
   dependencies: TDependencies;
-  args: ConvertArgs<ReturnType<this["defaultArgs"]>>;
   state: ConvertState<ReturnType<this["initialState"]>>;
   getters: ConvertGetters<ReturnType<this["selectors"]>>;
   actions: ConvertActionHelpers<
@@ -69,7 +60,6 @@ export interface ModelInstance<
 export type ModelInstanceConstructor<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = {},
   TInitialState = {},
   TSelectors = {},
   TReducers = {},
@@ -78,7 +68,6 @@ export type ModelInstanceConstructor<
   /* eslint-enable @typescript-eslint/ban-types */
 > = new () => ModelInstance<
   TDependencies,
-  TDefaultArgs,
   TInitialState,
   TSelectors,
   TReducers,
@@ -94,7 +83,6 @@ export interface ModelOptions {
 export interface Model<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
-  TDefaultArgs = {},
   TInitialState = {},
   TSelectors = {},
   TReducers = {},
@@ -103,7 +91,6 @@ export interface Model<
   /* eslint-enable @typescript-eslint/ban-types */
 > extends ModelInstanceConstructor<
       TDependencies,
-      TDefaultArgs,
       TInitialState,
       TSelectors,
       TReducers,
@@ -115,10 +102,6 @@ export interface Model<
 export interface Models {
   [key: string]: Model | Models;
 }
-
-export type ExtractModelDefaultArgs<TModel extends Model> = ReturnType<
-  InstanceType<TModel>["defaultArgs"]
->;
 
 export type ExtractModelInitialState<TModel extends Model> = ReturnType<
   InstanceType<TModel>["initialState"]
@@ -143,10 +126,6 @@ export type ExtractModelEpics<TModel extends Model> = ReturnType<
 export type ExtractModelDependencies<
   TModel extends Model
 > = InstanceType<TModel>["dependencies"];
-
-export type ExtractModelArgs<
-  TModel extends Model
-> = InstanceType<TModel>["args"];
 
 export type ExtractModelState<
   TModel extends Model
@@ -177,34 +156,15 @@ export type MergeSubModelsDependencies<
 >;
 
 export type ModelPropertyKey =
-  | "defaultArgs"
   | "initialState"
   | "selectors"
   | "reducers"
   | "effects"
   | "epics";
 
-export type MergeModelsDefaultArgs<
-  TModels extends Model[]
-> = UnionToIntersection<
-  {
-    [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<TModels[K]>;
-  }[number]
->;
-
-export type MergeSubModelsDefaultArgs<
-  TSubModels extends Record<string, Model>
-> = Spread<
-  {
-    [K in keyof TSubModels]: ModelInnerDefaultArgs<
-      ExtractModelDefaultArgs<TSubModels[K]>
-    >;
-  }
->;
-
 export type MergeModelsProperty<
   TModels extends Model[],
-  TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
+  TPropertyKey extends ModelPropertyKey
 > = UnionToIntersection<
   {
     [K in Extract<keyof TModels, number>]: ReturnType<
@@ -215,7 +175,7 @@ export type MergeModelsProperty<
 
 export type MergeSubModelsProperty<
   TSubModels extends Record<string, Model>,
-  TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
+  TPropertyKey extends ModelPropertyKey
 > = Spread<
   {
     [K in keyof TSubModels]: ReturnType<
@@ -233,14 +193,12 @@ export class ModelBase<TDependencies = unknown>
       {},
       {},
       {},
-      {},
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
   public __nyax_nyaxContext!: NyaxContext;
   public __nyax_container!: Pick<
     ContainerImpl<any>,
-    | "args"
     | "draftState"
     | "state"
     | "getters"
@@ -249,9 +207,6 @@ export class ModelBase<TDependencies = unknown>
     | "containerKey"
   >;
 
-  public defaultArgs(): any {
-    return {};
-  }
   public initialState(): any {
     return {};
   }
@@ -270,13 +225,6 @@ export class ModelBase<TDependencies = unknown>
 
   public get dependencies(): any {
     return this.__nyax_nyaxContext.dependencies;
-  }
-  public get args(): any {
-    const args = this.__nyax_container.args;
-    if (args !== NYAX_NOTHING) {
-      return args;
-    }
-    throw new Error("Args is only available in `initialState()`");
   }
   public get state(): any {
     const draftState = this.__nyax_container.draftState;
@@ -317,7 +265,6 @@ export function mergeModels<TModels extends Model[] | [Model]>(
   ...models: TModels
 ): ModelInstanceConstructor<
   MergeModelsDependencies<TModels>,
-  MergeModelsDefaultArgs<TModels>,
   MergeModelsProperty<TModels, "initialState">,
   MergeModelsProperty<TModels, "selectors">,
   MergeModelsProperty<TModels, "reducers">,
@@ -339,10 +286,6 @@ export function mergeModels<TModels extends Model[] | [Model]>(
       );
       return modelInstance;
     });
-
-    public defaultArgs(): any {
-      return this._mergeProperty("defaultArgs");
-    }
 
     public initialState(): any {
       return this._mergeProperty("initialState");
@@ -384,7 +327,6 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
   subModels: TSubModels
 ): ModelInstanceConstructor<
   MergeSubModelsDependencies<TSubModels>,
-  MergeSubModelsDefaultArgs<TSubModels>,
   MergeSubModelsProperty<TSubModels, "initialState">,
   MergeSubModelsProperty<TSubModels, "selectors">,
   MergeSubModelsProperty<TSubModels, "reducers">,
@@ -408,10 +350,6 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
           );
 
           const container = {
-            get args(): any {
-              const args = self.__nyax_container.args;
-              return args !== NYAX_NOTHING ? args[key] : NYAX_NOTHING;
-            },
             get draftState(): any {
               const draftState = self.__nyax_container.draftState;
               return draftState !== NYAX_NOTHING
@@ -443,10 +381,6 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       );
     })();
 
-    public defaultArgs(): any {
-      return this._mergeSubProperty("defaultArgs");
-    }
-
     public initialState(): any {
       return this._mergeSubProperty("initialState");
     }
@@ -473,9 +407,6 @@ export function mergeSubModels<TSubModels extends Record<string, Model>>(
       const result: Record<string, any> = {};
       Object.keys(this.__nyax_subModelInstances).forEach((key) => {
         result[key] = this.__nyax_subModelInstances[key]?.[propertyKey]();
-        if (propertyKey === "defaultArgs") {
-          result[key][NYAX_DEFAULT_ARGS] = true;
-        }
       });
       return result;
     }
@@ -489,7 +420,6 @@ export function createModelBase<TDependencies>(): ModelInstanceConstructor<
   {},
   {},
   {},
-  {},
   {}
   /* eslint-enable @typescript-eslint/ban-types */
 > {
@@ -498,7 +428,6 @@ export function createModelBase<TDependencies>(): ModelInstanceConstructor<
 
 export function createModel<
   TDependencies,
-  TDefaultArgs extends ModelDefaultArgs,
   TInitialState extends ModelInitialState,
   TSelectors extends ModelSelectors,
   TReducers extends ModelReducers,
@@ -509,7 +438,6 @@ export function createModel<
 >(
   model: Model<
     TDependencies,
-    TDefaultArgs,
     TInitialState,
     TSelectors,
     TReducers,
@@ -519,7 +447,6 @@ export function createModel<
   options?: TOptions
 ): ModelInstanceConstructor<
   TDependencies,
-  TDefaultArgs,
   TInitialState,
   TSelectors,
   TReducers,
@@ -542,10 +469,6 @@ export function createModel<
       );
       return modelInstance;
     })();
-
-    public defaultArgs(): any {
-      return this.__nyax_modelInstance.defaultArgs();
-    }
 
     public initialState(): any {
       return this.__nyax_modelInstance.initialState();
@@ -574,7 +497,6 @@ export function createModel<
   }
   return Model as ModelInstanceConstructor<
     TDependencies,
-    TDefaultArgs,
     TInitialState,
     TSelectors,
     TReducers,
