@@ -1,7 +1,11 @@
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
-import { ExtractModelState, Model, ModelInstanceConstructor } from "./model";
+import {
+  ExtractModelState,
+  ModelInstanceConstructor,
+  StaticModel,
+} from "./model";
 import { is, isObject } from "./util";
 
 export interface ModelInitialState {
@@ -72,7 +76,7 @@ export function setSubState(
   }
 }
 
-export function createState<TModel extends Model>(
+export function createState<TModel extends StaticModel>(
   container: ContainerImpl<TModel>
 ): ExtractModelState<TModel> {
   const state = container.modelInstance.initialState();
@@ -81,7 +85,7 @@ export function createState<TModel extends Model>(
 
 export interface GetState {
   (): unknown | undefined;
-  <TModel extends Model>(
+  <TModel extends StaticModel>(
     modelOrModelNamespace: TModel | string
   ): TModel["isDynamic"] extends true
     ? Partial<Record<string, ExtractModelState<TModel>>> | undefined
@@ -93,7 +97,7 @@ export interface GetState {
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
-  return <TModel extends Model>(
+  return <TModel extends StaticModel>(
     modelOrModelNamespace?: TModel | string,
     containerKey?: string
   ):

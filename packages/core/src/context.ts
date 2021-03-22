@@ -1,20 +1,32 @@
 import { Reducer, Store } from "redux";
 import { ActionsObservable, Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
-import { AnyAction } from "./action";
+import { AnyAction, Dispatch } from "./action";
 import { NYAX_NOTHING } from "./common";
 import {
   ContainerImpl,
   createGetContainer,
   GetContainerInternal,
 } from "./container";
-import { Model } from "./model";
+import { StaticModel } from "./model";
 import { createRootReducer } from "./reducer";
 import { createGetState, GetState } from "./state";
 import { Nyax, NyaxOptions } from "./store";
 
 export interface NyaxContext {
   nyax: Nyax;
+
+  dispatch: Dispatch;
+
+  dispatchDeferredByAction: Map<
+    AnyAction,
+    {
+      resolve(value: unknown): void;
+      reject(error: unknown): void;
+    }
+  >;
+
+  // ok
 
   store: Store;
   options: NyaxOptions;
@@ -32,17 +44,10 @@ export interface NyaxContext {
 
   cachedRootState: unknown | typeof NYAX_NOTHING;
 
-  modelContextByModel: Map<Model, ModelContext>;
-  modelByModelNamespace: Map<string, Model>;
+  modelContextByModel: Map<StaticModel, ModelContext>;
+  modelByModelNamespace: Map<string, StaticModel>;
 
   containerByNamespace: Map<string, ContainerImpl>;
-  dispatchDeferredByAction: Map<
-    AnyAction,
-    {
-      resolve(value: unknown): void;
-      reject(error: unknown): void;
-    }
-  >;
 
   dependencies: unknown;
   onUnhandledEffectError: (

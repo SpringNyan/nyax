@@ -8,7 +8,7 @@ export {
   mergeModels,
   mergeSubModels,
 } from "./model";
-export type { Model, Models } from "./model";
+export type { Models, StaticModel as Model } from "./model";
 export { createSelector } from "./selector";
 export type { GetState } from "./state";
 export { createNyax } from "./store";

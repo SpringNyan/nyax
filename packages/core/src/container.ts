@@ -14,9 +14,9 @@ import {
   ExtractModelReducers,
   ExtractModelSelectors,
   ExtractModelState,
-  Model,
   ModelBase,
   ModelInstanceConstructor,
+  StaticModel,
 } from "./model";
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
@@ -36,14 +36,14 @@ export interface ContainerBase<
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ContainerCore<TModel extends Model = Model>
+export interface ContainerCore<TModel extends StaticModel = StaticModel>
   extends ContainerBase<
     ExtractModelState<TModel>,
     ExtractModelGetters<TModel>,
     ExtractModelActionHelpers<TModel>
   > {}
 
-export interface Container<TModel extends Model = Model>
+export interface Container<TModel extends StaticModel = StaticModel>
   extends ContainerCore<TModel> {
   modelNamespace: string;
   containerKey: string | undefined;
@@ -55,7 +55,7 @@ export interface Container<TModel extends Model = Model>
   unregister(): void;
 }
 
-export class ContainerImpl<TModel extends Model = Model>
+export class ContainerImpl<TModel extends StaticModel = StaticModel>
   implements Container<TModel> {
   public readonly modelContext: ModelContext;
 
@@ -244,7 +244,7 @@ export interface GetContainer {
 }
 
 export interface GetContainerInternal {
-  <TModel extends Model>(
+  <TModel extends StaticModel>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel>;
@@ -253,7 +253,7 @@ export interface GetContainerInternal {
 export function createGetContainer(
   nyaxContext: NyaxContext
 ): GetContainerInternal {
-  return <TModel extends Model>(
+  return <TModel extends StaticModel>(
     modelOrModelNamespace: TModel | string,
     containerKey?: string
   ): ContainerImpl<TModel> => {

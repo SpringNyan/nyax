@@ -1,7 +1,7 @@
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertActionHelperTypeParamTuplesFromModelEffects } from "./effect";
-import { ExtractModelActionHelpers, Model } from "./model";
+import { ExtractModelActionHelpers, ModelDefinitionConstructor } from "./model";
 import { ConvertActionHelperTypeParamTuplesFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
@@ -70,30 +70,10 @@ export class ActionHelperImpl<TPayload, TResult>
       });
     });
 
-    this._nyaxContext.store.dispatch(action);
+    this._nyaxContext.dispatch(action);
 
     return promise;
   }
-}
-
-export function createActionHelpers<TModel extends Model>(
-  nyaxContext: NyaxContext,
-  container: ContainerImpl<TModel>
-): ExtractModelActionHelpers<TModel> {
-  const actionHelpers: Record<string, unknown> = {};
-
-  const obj: Record<string, unknown> = {};
-  mergeObjects(obj, container.reducers);
-  mergeObjects(obj, container.effects);
-
-  mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
-    parent[key] = new ActionHelperImpl(
-      nyaxContext,
-      joinLastString(container.namespace, paths.join("."))
-    );
-  });
-
-  return actionHelpers as ExtractModelActionHelpers<TModel>;
 }
 
 export interface RegisterActionPayload {
@@ -122,3 +102,25 @@ export interface ReloadActionPayload {
 export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
   "@@nyax/reload"
 );
+
+// ok
+
+export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
+  nyaxContext: NyaxContext,
+  container: ContainerImpl<TModel>
+): ExtractModelActionHelpers<TModel> {
+  const actionHelpers: Record<string, unknown> = {};
+
+  const obj: Record<string, unknown> = {};
+  mergeObjects(obj, container.reducers);
+  mergeObjects(obj, container.effects);
+
+  mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
+    parent[key] = new ActionHelperImpl(
+      nyaxContext,
+      joinLastString(container.namespace, paths.join("."))
+    );
+  });
+
+  return actionHelpers as ExtractModelActionHelpers<TModel>;
+}

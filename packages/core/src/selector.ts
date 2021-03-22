@@ -1,5 +1,5 @@
 import { ContainerImpl } from "./container";
-import { ExtractModelGetters, Model } from "./model";
+import { ExtractModelGetters, StaticModel } from "./model";
 import { defineGetter, is, mergeObjects } from "./util";
 
 export type ModelSelector<TResult = unknown> = () => TResult;
@@ -204,7 +204,7 @@ export function createSelector(...args: unknown[]): OutputSelector<unknown> {
   return outputSelector;
 }
 
-export function createGetters<TModel extends Model>(
+export function createGetters<TModel extends StaticModel>(
   container: ContainerImpl<TModel>
 ): ExtractModelGetters<TModel> {
   const getters: Record<string, unknown> = {};
