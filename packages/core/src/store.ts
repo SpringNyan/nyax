@@ -8,11 +8,7 @@ import {
 import { createEpicMiddleware, Epic } from "redux-observable";
 import { Observable } from "rxjs";
 import { mergeMap, switchMap } from "rxjs/operators";
-import {
-  AnyAction,
-  batchRegisterActionHelper,
-  reloadActionHelper,
-} from "./action";
+import { AnyAction, registerActionHelper, reloadActionHelper } from "./action";
 import { Container, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import { createMiddleware } from "./middleware";
@@ -58,7 +54,7 @@ export function createNyax(options: NyaxOptions): Nyax {
     registerModels: (models) => {
       const registerActionPayloads = registerModels(nyaxContext, models);
       nyaxContext.store.dispatch(
-        batchRegisterActionHelper.create(registerActionPayloads)
+        registerActionHelper.create(registerActionPayloads)
       );
     },
     get getContainer() {

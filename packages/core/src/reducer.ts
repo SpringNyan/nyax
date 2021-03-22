@@ -1,11 +1,11 @@
 import produce from "immer";
 import { Reducer } from "redux";
 import {
-  batchRegisterActionHelper,
-  batchUnregisterActionHelper,
+  registerActionHelper,
   RegisterActionPayload,
   reloadActionHelper,
   ReloadActionPayload,
+  unregisterActionHelper,
   UnregisterActionPayload,
 } from "./action";
 import { NYAX_NOTHING } from "./common";
@@ -40,8 +40,8 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
   ): unknown {
     payloads.forEach((payload) => {
       const container = nyaxContext.getContainer(
-        payload.modelNamespace,
-        payload.containerKey
+        payload.namespace,
+        payload.key
       );
 
       let state: unknown;
@@ -55,7 +55,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
         rootState,
         state,
         container.modelContext.modelPath,
-        payload.containerKey
+        payload.key
       );
     });
 
@@ -68,15 +68,15 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
   ): unknown {
     payloads.forEach((payload) => {
       const container = nyaxContext.getContainer(
-        payload.modelNamespace,
-        payload.containerKey
+        payload.namespace,
+        payload.key
       );
 
       rootState = setSubState(
         rootState,
         NYAX_NOTHING,
         container.modelContext.modelPath,
-        payload.containerKey
+        payload.key
       );
     });
 
@@ -91,7 +91,7 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       nyaxContext.modelContextByModel.forEach((context, model) => {
         if (!model.isDynamic && !model.isLazy) {
           registerPayloads.push({
-            modelNamespace: context.modelNamespace,
+            namespace: context.modelNamespace,
           });
         }
       });
@@ -104,9 +104,9 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       rootState = {};
     }
 
-    if (batchRegisterActionHelper.is(action)) {
+    if (registerActionHelper.is(action)) {
       return batchRegister(rootState, action.payload);
-    } else if (batchUnregisterActionHelper.is(action)) {
+    } else if (unregisterActionHelper.is(action)) {
       return batchUnregister(rootState, action.payload);
     } else if (reloadActionHelper.is(action)) {
       return reload(rootState, action.payload);

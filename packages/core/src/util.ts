@@ -42,11 +42,11 @@ export function mergeObjects<T>(
   paths: string[] = []
 ): DeepRecord<T> {
   if (!isObject(target)) {
-    throw new Error("target is not an object");
+    throw new Error(`target is not an object`);
   }
 
   if (!isObject(source)) {
-    throw new Error("source is not an object");
+    throw new Error(`source is not an object`);
   }
 
   Object.keys(source).forEach((key) => {
@@ -56,25 +56,24 @@ export function mergeObjects<T>(
 
     paths.push(key);
 
-    const sourceItem = source[key];
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const sourceItem = source[key]!;
     if (isObject(sourceItem)) {
       if (target[key] === undefined) {
         target[key] = {};
       }
 
       const targetItem = target[key];
-      mergeObjects(
-        targetItem as Record<string, T>,
-        sourceItem as Record<string, T>,
-        fn,
-        paths
-      );
+      if (!isObject(targetItem)) {
+        throw new Error(`target["${key}"] is not an object`);
+      }
+
+      mergeObjects(targetItem, sourceItem, fn, paths);
     } else {
       if (fn) {
-        fn(sourceItem as T, key, target, paths);
+        fn(sourceItem, key, target, paths);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        target[key] = sourceItem!;
+        target[key] = sourceItem;
       }
     }
 

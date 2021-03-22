@@ -542,7 +542,7 @@ export function registerModels(
     registerModel(nyaxContext, modelNamespace, model);
     if (!model.isDynamic && !model.isLazy) {
       registerActionPayloads.push({
-        modelNamespace,
+        namespace: modelNamespace,
       });
     }
   });

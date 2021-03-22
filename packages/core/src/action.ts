@@ -1,4 +1,3 @@
-import { NyaxPromise } from "./common";
 import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertActionHelperTypeParamTuplesFromModelEffects } from "./effect";
@@ -64,17 +63,10 @@ export class ActionHelperImpl<TPayload, TResult>
   public dispatch(payload: TPayload): Promise<TResult> {
     const action = this.create(payload);
 
-    const promise = new NyaxPromise<TResult>((resolve, reject) => {
+    const promise = new Promise<TResult>((resolve, reject) => {
       this._nyaxContext.dispatchDeferredByAction.set(action, {
         resolve,
-        reject: (reason) => {
-          reject(reason);
-          Promise.resolve().then(() => {
-            if (!promise.hasRejectionHandler) {
-              this._nyaxContext.onUnhandledEffectError(reason, promise);
-            }
-          });
-        },
+        reject,
       });
     });
 
@@ -105,22 +97,22 @@ export function createActionHelpers<TModel extends Model>(
 }
 
 export interface RegisterActionPayload {
-  modelNamespace: string;
-  containerKey?: string;
+  namespace: string;
+  key?: string;
   state?: unknown;
 }
 
-export const batchRegisterActionHelper = new ActionHelperBaseImpl<
-  RegisterActionPayload[]
+export const registerActionHelper = new ActionHelperBaseImpl<
+  RegisterActionPayload | RegisterActionPayload[]
 >("@@nyax/register");
 
 export interface UnregisterActionPayload {
-  modelNamespace: string;
-  containerKey?: string;
+  namespace: string;
+  key?: string;
 }
 
-export const batchUnregisterActionHelper = new ActionHelperBaseImpl<
-  UnregisterActionPayload[]
+export const unregisterActionHelper = new ActionHelperBaseImpl<
+  UnregisterActionPayload | UnregisterActionPayload[]
 >("@@nyax/unregister");
 
 export interface ReloadActionPayload {

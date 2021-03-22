@@ -1,7 +1,7 @@
 import {
-  batchRegisterActionHelper,
-  batchUnregisterActionHelper,
   createActionHelpers,
+  registerActionHelper,
+  unregisterActionHelper,
 } from "./action";
 import { NYAX_NOTHING } from "./common";
 import { ModelContext, NyaxContext } from "./context";
@@ -194,10 +194,10 @@ export class ContainerImpl<TModel extends Model = Model>
     }
 
     this._nyaxContext.store.dispatch(
-      batchRegisterActionHelper.create([
+      registerActionHelper.create([
         {
-          modelNamespace: this.modelNamespace,
-          containerKey: this.containerKey,
+          namespace: this.modelNamespace,
+          key: this.containerKey,
         },
       ])
     );
@@ -206,10 +206,10 @@ export class ContainerImpl<TModel extends Model = Model>
   public unregister(): void {
     if (this.isRegistered) {
       this._nyaxContext.store.dispatch(
-        batchUnregisterActionHelper.create([
+        unregisterActionHelper.create([
           {
-            modelNamespace: this.modelNamespace,
-            containerKey: this.containerKey,
+            namespace: this.modelNamespace,
+            key: this.containerKey,
           },
         ])
       );

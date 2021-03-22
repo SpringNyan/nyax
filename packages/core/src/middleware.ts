@@ -2,11 +2,11 @@ import { Middleware } from "redux";
 import {
   Action,
   AnyAction,
-  batchRegisterActionHelper,
-  batchUnregisterActionHelper,
+  registerActionHelper,
   RegisterActionPayload,
   reloadActionHelper,
   ReloadActionPayload,
+  unregisterActionHelper,
   UnregisterActionPayload,
 } from "./action";
 import { NyaxContext } from "./context";
@@ -17,8 +17,8 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
   function batchRegister(payloads: RegisterActionPayload[]): void {
     payloads.forEach((payload) => {
       const container = nyaxContext.getContainer(
-        payload.modelNamespace,
-        payload.containerKey
+        payload.namespace,
+        payload.key
       );
       nyaxContext.containerByNamespace.set(container.namespace, container);
 
@@ -29,10 +29,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
   function batchUnregister(payloads: UnregisterActionPayload[]): void {
     payloads.forEach((payload) => {
-      const namespace = joinLastString(
-        payload.modelNamespace,
-        payload.containerKey
-      );
+      const namespace = joinLastString(payload.namespace, payload.key);
 
       const container = nyaxContext.containerByNamespace.get(namespace);
       nyaxContext.containerByNamespace.delete(namespace);
@@ -66,14 +63,14 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
         if (isObject(state)) {
           if (!model.isDynamic) {
             registerPayloads.push({
-              modelNamespace: context.modelNamespace,
+              namespace: context.modelNamespace,
             });
           } else {
             Object.keys(state).forEach((containerKey) => {
               if (isObject(state[containerKey])) {
                 registerPayloads.push({
-                  modelNamespace: context.modelNamespace,
-                  containerKey,
+                  namespace: context.modelNamespace,
+                  key: containerKey,
                 });
               }
             });
@@ -89,9 +86,9 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     const dispatchDeferred = nyaxContext.dispatchDeferredByAction.get(action);
     nyaxContext.dispatchDeferredByAction.delete(action);
 
-    if (batchRegisterActionHelper.is(action)) {
+    if (registerActionHelper.is(action)) {
       batchRegister(action.payload);
-    } else if (batchUnregisterActionHelper.is(action)) {
+    } else if (unregisterActionHelper.is(action)) {
       batchUnregister(action.payload);
     } else if (reloadActionHelper.is(action)) {
       reload(action.payload);
