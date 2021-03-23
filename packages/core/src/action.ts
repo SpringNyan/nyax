@@ -1,7 +1,10 @@
-import { ContainerImpl } from "./container";
 import { NyaxContext } from "./context";
 import { ConvertActionHelperTypeParamTuplesFromModelEffects } from "./effect";
-import { ExtractModelActionHelpers, ModelDefinitionConstructor } from "./model";
+import {
+  ExtractModelActionHelpers,
+  ModelDefinitionConstructor,
+  ModelInstanceImpl,
+} from "./model";
 import { ConvertActionHelperTypeParamTuplesFromModelReducers } from "./reducer";
 import { joinLastString, mergeObjects } from "./util";
 
@@ -107,18 +110,18 @@ export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
 
 export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
   nyaxContext: NyaxContext,
-  container: ContainerImpl<TModel>
+  modelInstance: ModelInstanceImpl<TModel>
 ): ExtractModelActionHelpers<TModel> {
   const actionHelpers: Record<string, unknown> = {};
 
   const obj: Record<string, unknown> = {};
-  mergeObjects(obj, container.reducers);
-  mergeObjects(obj, container.effects);
+  mergeObjects(obj, modelInstance.reducers);
+  mergeObjects(obj, modelInstance.effects);
 
   mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      joinLastString(container.namespace, paths.join("."))
+      joinLastString(modelInstance.namespace, paths.join("."))
     );
   });
 
