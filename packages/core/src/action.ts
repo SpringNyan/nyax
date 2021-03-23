@@ -106,8 +106,6 @@ export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
   "@@nyax/reload"
 );
 
-// ok
-
 export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
   nyaxContext: NyaxContext,
   modelInstance: ModelInstanceImpl<TModel>
@@ -121,9 +119,11 @@ export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
   mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      joinLastString(modelInstance.namespace, paths.join("."))
+      joinLastString(modelInstance.fullNamespace, paths.join("."))
     );
   });
 
   return actionHelpers as ExtractModelActionHelpers<TModel>;
 }
+
+// ok

@@ -11,6 +11,7 @@ import {
   convertNamespaceToPath,
   defineGetter,
   flattenObject,
+  joinLastString,
   mergeObjects,
   Spread,
   traverseObject,
@@ -180,6 +181,7 @@ export interface ModelInstance<
 
   namespace: string;
   key: string | undefined;
+  fullNamespace: string;
 
   isRegistered: boolean;
 
@@ -192,6 +194,7 @@ export class ModelInstanceImpl<
 > implements ModelInstance<TModel> {
   public readonly namespace: string;
   public readonly key: string | undefined;
+  public readonly fullNamespace: string;
 
   public readonly initialState: ExtractModelInitialState<TModel>;
   public readonly selectors: ExtractModelSelectors<TModel>;
@@ -220,6 +223,7 @@ export class ModelInstanceImpl<
   ) {
     this.namespace = modelDefinitionCtor.namespace;
     this.key = key;
+    this.fullNamespace = joinLastString(this.namespace, this.key);
 
     const modelDefinition = new modelDefinitionCtor();
     // TODO
