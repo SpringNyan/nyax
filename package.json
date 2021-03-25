@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "packages/core",
-    "packages/redux"
+    "packages/redux",
+    "packages/vuex"
   ]
 }
