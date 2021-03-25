@@ -12,6 +12,9 @@
   "main": "dist/nyax-vuex.js",
   "module": "dist/nyax-vuex.esm.js",
   "types": "types/index.d.ts",
+  "peerDependencies": {
+    "vuex": "^4.0.0"
+  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.0",
     "@types/chai": "^4.2.15",
