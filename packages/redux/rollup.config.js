@@ -14,5 +14,5 @@ export default {
     },
   ],
   plugins: [typescript()],
-  external: ["immer", "redux", "redux-observable", "rxjs", "rxjs/operators"],
+  external: [],
 };
