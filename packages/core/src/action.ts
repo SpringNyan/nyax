@@ -10,14 +10,13 @@ import { joinLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
   type: string;
+  payload?: unknown;
 }
 
 export interface Action<TPayload = unknown> {
   type: string;
   payload: TPayload;
 }
-
-export type Dispatch = (action: AnyAction) => void;
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   type: string;

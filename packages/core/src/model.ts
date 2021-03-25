@@ -7,6 +7,7 @@ import { ModelReducer, ModelReducers } from "./reducer";
 import { ConvertGetters, ModelSelectors } from "./selector";
 import { ConvertState, ModelInitialState } from "./state";
 import { Nyax } from "./store";
+import { ModelSubscriptions } from "./subscription";
 import {
   convertNamespaceToPath,
   defineGetter,
@@ -65,6 +66,23 @@ export type ModelDefinitionConstructor<
   TEffects,
   TSubscriptions
 >;
+
+export interface Model<
+  /* eslint-disable @typescript-eslint/ban-types */
+  TDependencies = unknown,
+  TInitialState extends ModelInitialState = {},
+  TSelectors extends ModelSelectors = {},
+  TReducers extends ModelReducers = {},
+  TEffects extends ModelEffects = {},
+  TSubscriptions extends ModelSubscriptions = {}
+  /* eslint-enable @typescript-eslint/ban-types */
+> {
+  initialState: TInitialState;
+  selectors: TSelectors;
+  reducers: TReducers;
+  effects: TEffects;
+  subscriptions: TSubscriptions;
+}
 
 export interface ModelOptions {
   autoRegister: boolean;
