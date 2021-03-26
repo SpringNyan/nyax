@@ -21,7 +21,7 @@ import {
 import { ModelReducer } from "./reducer";
 import { createGetters } from "./selector";
 import { createState, getSubState } from "./state";
-import { flattenObject, joinLastString } from "./util";
+import { concatLastString, flattenObject } from "./util";
 
 export interface ContainerBase<
   /* eslint-disable @typescript-eslint/ban-types */
@@ -96,7 +96,7 @@ export class ContainerImpl<TModel extends StaticModel = StaticModel>
     this.modelContext = modelContext;
 
     this.modelNamespace = this.modelContext.modelNamespace;
-    this.namespace = joinLastString(this.modelNamespace, this.containerKey);
+    this.namespace = concatLastString(this.modelNamespace, this.containerKey);
 
     this.modelInstance = this._createModelInstance();
 

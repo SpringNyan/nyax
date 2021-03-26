@@ -1,12 +1,12 @@
 import { NyaxContext } from "./context";
-import { ConvertActionHelperTypeParamTuplesFromModelEffects } from "./effect";
+import { ConvertActionHelperTypeParamsTuplesFromModelEffects } from "./effect";
 import {
   ExtractModelActionHelpers,
   ModelDefinition,
   ModelDefinitionConstructor,
 } from "./model";
-import { ConvertActionHelperTypeParamTuplesFromModelReducers } from "./reducer";
-import { joinLastString, mergeObjects } from "./util";
+import { ConvertActionHelperTypeParamsTuplesFromModelReducers } from "./reducer";
+import { concatLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
   type: string;
@@ -25,17 +25,17 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   dispatch(payload: TPayload): Promise<TResult>;
 }
 
-export type ConvertActionHelpersFromTypeParamTuples<T> = {
+export type ConvertActionHelpersFromTypeParamsTuples<T> = {
   [K in keyof T]: T[K] extends [any, any]
     ? ActionHelper<T[K][0], T[K][1]>
-    : ConvertActionHelpersFromTypeParamTuples<T[K]>;
+    : ConvertActionHelpersFromTypeParamsTuples<T[K]>;
 };
 
 export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
   ? TEffects extends any
-    ? ConvertActionHelpersFromTypeParamTuples<
-        ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers> &
-          ConvertActionHelperTypeParamTuplesFromModelEffects<TEffects>
+    ? ConvertActionHelpersFromTypeParamsTuples<
+        ConvertActionHelperTypeParamsTuplesFromModelReducers<TReducers> &
+          ConvertActionHelperTypeParamsTuplesFromModelEffects<TEffects>
       >
     : never
   : never;
@@ -72,7 +72,7 @@ export class ActionHelperImpl<TPayload, TResult>
       });
     });
 
-    this._nyaxContext.dispatch(action);
+    this._nyaxContext.store.dispatch(action);
 
     return promise;
   }
@@ -115,14 +115,14 @@ export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
   mergeObjects(obj, modelDefinition.reducers());
   mergeObjects(obj, modelDefinition.effects());
 
-  const fullNamespace = joinLastString(
+  const fullNamespace = concatLastString(
     modelDefinition.namespace,
     modelDefinition.key
   );
-  mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
+  mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      joinLastString(fullNamespace, paths.join("."))
+      concatLastString(fullNamespace, paths.join("."))
     );
   });
 

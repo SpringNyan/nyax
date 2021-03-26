@@ -8,10 +8,10 @@ import { ConvertGetters, ModelSelectors } from "./selector";
 import { ConvertState, ModelInitialState } from "./state";
 import { Nyax } from "./store";
 import {
+  concatLastString,
   convertNamespaceToPath,
   defineGetter,
   flattenObject,
-  joinLastString,
   mergeObjects,
   Spread,
   traverseObject,
@@ -223,7 +223,7 @@ export class ModelInstanceImpl<
   ) {
     this.namespace = modelDefinitionCtor.namespace;
     this.key = key;
-    this.fullNamespace = joinLastString(this.namespace, this.key);
+    this.fullNamespace = concatLastString(this.namespace, this.key);
 
     const modelDefinition = new modelDefinitionCtor();
     // TODO

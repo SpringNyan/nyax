@@ -9,7 +9,11 @@ export interface Store {
   getComputed(path: string): unknown;
 
   registerModel(modelDefinition: ModelDefinition): void;
-  unregisterModel(namespace: string, key: string | undefined): void;
+  unregisterModel(modelDefinition: ModelDefinition): void;
+
+  subscribeDispatchResult(
+    fn: (action: AnyAction, result: unknown, success: boolean) => void
+  ): () => void;
 }
 
 export interface NyaxOptions {
@@ -20,3 +24,5 @@ export interface NyaxOptions {
 export interface Nyax {
   store: Store;
 }
+
+// ok

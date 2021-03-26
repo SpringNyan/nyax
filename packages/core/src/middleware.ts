@@ -11,7 +11,7 @@ import {
 } from "./action";
 import { NyaxContext } from "./context";
 import { createEpic } from "./epic";
-import { isObject, joinLastString, splitLastString } from "./util";
+import { concatLastString, isObject, splitLastString } from "./util";
 
 export function createMiddleware(nyaxContext: NyaxContext): Middleware {
   function batchRegister(payloads: RegisterActionPayload[]): void {
@@ -29,7 +29,7 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
   function batchUnregister(payloads: UnregisterActionPayload[]): void {
     payloads.forEach((payload) => {
-      const namespace = joinLastString(payload.namespace, payload.key);
+      const namespace = concatLastString(payload.namespace, payload.key);
 
       const container = nyaxContext.containerByNamespace.get(namespace);
       nyaxContext.containerByNamespace.delete(namespace);

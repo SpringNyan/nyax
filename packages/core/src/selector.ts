@@ -1,5 +1,10 @@
-import { ExtractModelGetters, ModelBase } from "./model";
-import { defineGetter, mergeObjects } from "./util";
+import { NyaxContext } from "./context";
+import {
+  ExtractModelGetters,
+  ModelDefinition,
+  ModelDefinitionConstructor,
+} from "./model";
+import { concatLastString, defineGetter, mergeObjects } from "./util";
 
 export type ModelSelector<TResult = unknown> = () => TResult;
 
@@ -17,29 +22,28 @@ export type ConvertGetters<TSelectors> = TSelectors extends any
     }
   : never;
 
-// ok
-
-export function createGetters<TModel extends ModelConstructor>(
-  modelInstance: InstanceType<TModel> & ModelBase
+export function createGetters<TModel extends ModelDefinitionConstructor>(
+  nyaxContext: NyaxContext,
+  modelDefinition: ModelDefinition<TModel>
 ): ExtractModelGetters<TModel> {
   const getters: Record<string, unknown> = {};
-  const cacheByPath = new Map<string, SelectorCache>();
 
+  const fullNamespace = concatLastString(
+    modelDefinition.namespace,
+    modelDefinition.key
+  );
   mergeObjects(
     getters,
-    modelInstance.__nyax_selectors,
-    (selector, key, parent, paths) => {
-      const path = paths.join(".");
+    modelDefinition.selectors(),
+    (_item, key, parent, paths) => {
+      const fullPath = concatLastString(fullNamespace, paths.join("."));
       defineGetter(parent, key, () => {
-        let cache = cacheByPath.get(path);
-        if (!cache) {
-          cache = {};
-          cacheByPath.set(path, cache);
-        }
-        return (selector as OutputSelector<unknown>)(cache);
+        return nyaxContext.store.getComputed(fullPath);
       });
     }
   );
 
   return getters as ExtractModelGetters<TModel>;
 }
+
+// ok

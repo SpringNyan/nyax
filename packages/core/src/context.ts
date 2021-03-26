@@ -1,22 +1,8 @@
-import { Reducer, Store } from "redux";
-import { ActionsObservable, Epic, StateObservable } from "redux-observable";
-import { Observable, Subject } from "rxjs";
-import { AnyAction, Dispatch } from "./action";
-import { NYAX_NOTHING } from "./common";
-import {
-  ContainerImpl,
-  createGetContainer,
-  GetContainerInternal,
-} from "./container";
-import { StaticModel } from "./model";
-import { createRootReducer } from "./reducer";
-import { createGetState, GetState } from "./state";
-import { Nyax, NyaxOptions } from "./store";
+import { AnyAction } from "./action";
+import { Store } from "./store";
 
 export interface NyaxContext {
-  nyax: Nyax;
-
-  dispatch: Dispatch;
+  store: Store;
 
   dispatchDeferredByAction: Map<
     AnyAction,
@@ -25,118 +11,28 @@ export interface NyaxContext {
       reject(error: unknown): void;
     }
   >;
-
-  // ok
-
-  store: Store;
-  options: NyaxOptions;
-
-  rootAction$: ActionsObservable<AnyAction>;
-  rootState$: StateObservable<unknown>;
-
-  getContainer: GetContainerInternal;
-  getState: GetState;
-
-  rootReducer: Reducer;
-
-  addEpic$: Subject<Epic>;
-  switchEpic$: Subject<void>;
-
-  cachedRootState: unknown | typeof NYAX_NOTHING;
-
-  modelContextByModel: Map<StaticModel, ModelContext>;
-  modelByModelNamespace: Map<string, StaticModel>;
-
-  containerByNamespace: Map<string, ContainerImpl>;
-
-  dependencies: unknown;
-  onUnhandledEffectError: (
-    error: unknown,
-    promise: Promise<unknown> | undefined
-  ) => void;
-  onUnhandledEpicError: (
-    error: unknown,
-    caught: Observable<AnyAction>
-  ) => Observable<AnyAction>;
-
-  getRootState: () => unknown;
 }
 
-export interface ModelContext {
-  modelNamespace: string;
-  modelPath: string;
-
-  containerByContainerKey: Map<string | undefined, ContainerImpl>;
-}
-
-export function createNyaxContext(): NyaxContext {
+export function createNyaxContext(store: Store): NyaxContext {
   const nyaxContext: NyaxContext = {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    nyax: undefined!,
+    store,
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    store: undefined!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    options: undefined!,
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    rootAction$: undefined!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    rootState$: undefined!,
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    getContainer: undefined!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    getState: undefined!,
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    rootReducer: undefined!,
-
-    addEpic$: new Subject(),
-    switchEpic$: new Subject(),
-
-    cachedRootState: NYAX_NOTHING,
-
-    modelContextByModel: new Map(),
-    modelByModelNamespace: new Map(),
-
-    containerByNamespace: new Map(),
     dispatchDeferredByAction: new Map(),
-
-    get dependencies() {
-      return nyaxContext.options.dependencies;
-    },
-    onUnhandledEffectError: (error, promise) => {
-      if (nyaxContext.options.onUnhandledEffectError) {
-        return nyaxContext.options.onUnhandledEffectError(error, promise);
-      } else {
-        if (promise) {
-          promise.then(undefined, () => {
-            // noop
-          });
-        }
-        console.error(error);
-      }
-    },
-    onUnhandledEpicError: (error, caught) => {
-      if (nyaxContext.options.onUnhandledEpicError) {
-        return nyaxContext.options.onUnhandledEpicError(error, caught);
-      } else {
-        console.error(error);
-        return caught;
-      }
-    },
-
-    getRootState: () =>
-      nyaxContext.cachedRootState !== NYAX_NOTHING
-        ? nyaxContext.cachedRootState
-        : nyaxContext.store.getState(),
   };
 
-  nyaxContext.getContainer = createGetContainer(nyaxContext);
-  nyaxContext.getState = createGetState(nyaxContext);
-
-  nyaxContext.rootReducer = createRootReducer(nyaxContext);
+  store.subscribeDispatchResult((action, result, success) => {
+    const deferred = nyaxContext.dispatchDeferredByAction.get(action);
+    if (deferred) {
+      nyaxContext.dispatchDeferredByAction.delete(action);
+      if (success) {
+        deferred.resolve(result);
+      } else {
+        deferred.reject(result);
+      }
+    }
+  });
 
   return nyaxContext;
 }
+
+//  ok

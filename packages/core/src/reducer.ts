@@ -6,10 +6,10 @@ export interface ModelReducers {
   [key: string]: ModelReducer | ModelReducers;
 }
 
-export type ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers> = {
+export type ConvertActionHelperTypeParamsTuplesFromModelReducers<TReducers> = {
   [K in keyof TReducers]: TReducers[K] extends ModelReducer<infer TPayload>
     ? [TPayload, unknown]
-    : ConvertActionHelperTypeParamTuplesFromModelReducers<TReducers[K]>;
+    : ConvertActionHelperTypeParamsTuplesFromModelReducers<TReducers[K]>;
 };
 
 // ok

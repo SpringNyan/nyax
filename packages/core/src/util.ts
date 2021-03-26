@@ -108,11 +108,7 @@ export function flattenObject<T>(
   return result;
 }
 
-export function convertNamespaceToPath(namespace: string): string {
-  return namespace.replace(/\//g, ".");
-}
-
-export function joinLastString(
+export function concatLastString(
   str: string,
   lastStr: string | undefined,
   separator = "/"
