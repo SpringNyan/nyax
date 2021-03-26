@@ -1,14 +1,15 @@
 import { AnyAction } from "./action";
-import { Model } from "./model";
+import { ModelDefinition } from "./model";
 
 export interface Store {
-  getState: () => unknown;
-  dispatch: (action: AnyAction) => void;
-  subscribe: (fn: () => void) => () => void;
+  getState(): unknown;
+  dispatch(action: AnyAction): void;
+  subscribe(fn: () => void): () => void;
 
-  getComputed: (path: string) => unknown;
-  registerModel: (model: Model) => void;
-  unregisterModel: () => void;
+  getComputed(path: string): unknown;
+
+  registerModel(modelDefinition: ModelDefinition): void;
+  unregisterModel(namespace: string, key: string | undefined): void;
 }
 
 export interface NyaxOptions {

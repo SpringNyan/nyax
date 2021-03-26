@@ -13,3 +13,4 @@ export { createSelector } from "./selector";
 export type { GetState } from "./state";
 export { createNyax } from "./store";
 export type { Nyax, NyaxOptions, Store } from "./store";
+export { flattenObject, mergeObjects } from "./util";
