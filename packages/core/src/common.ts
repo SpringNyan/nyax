@@ -1,3 +1,3 @@
-export const NYAX_NOTHING: unique symbol = "__nyax_nothing__" as any;
+export const NYAX_NOTHING: unique symbol = "__NYAX_NOTHING__" as any;
 
-// ok
+// ok2

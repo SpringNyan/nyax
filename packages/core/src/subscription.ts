@@ -1,7 +1,7 @@
-export type ModelSubscription = () => void | (() => void);
+export type Subscription = () => void | (() => void);
 
-export interface ModelSubscriptions {
-  [key: string]: ModelSubscription | ModelSubscriptions;
+export interface Subscriptions {
+  [key: string]: Subscription | Subscriptions;
 }
 
-//   ok
+//   ok2

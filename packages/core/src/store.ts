@@ -1,18 +1,18 @@
 import { AnyAction } from "./action";
-import { ModelDefinition } from "./model";
+import { ModelDefinitionInstance } from "./model";
 
 export interface Store {
   getState(): unknown;
+  getComputed(path: string): unknown;
   dispatch(action: AnyAction): void;
   subscribe(fn: () => void): () => void;
 
-  getComputed(path: string): unknown;
+  registerModel(modelDefinitionInstance: ModelDefinitionInstance): void;
+  unregisterModel(modelDefinitionInstance: ModelDefinitionInstance): void;
 
-  registerModel(modelDefinition: ModelDefinition): void;
-  unregisterModel(modelDefinition: ModelDefinition): void;
-
+  subscribeDispatchAction(fn: (action: AnyAction) => void): () => void;
   subscribeDispatchResult(
-    fn: (action: AnyAction, result: unknown, success: boolean) => void
+    fn: (action: AnyAction, result: unknown, error: unknown) => void
   ): () => void;
 }
 

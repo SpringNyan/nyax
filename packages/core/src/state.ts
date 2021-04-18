@@ -1,9 +1,9 @@
-export interface ModelInitialState {
-  [key: string]: unknown | ModelInitialState;
+export interface InitialState {
+  [key: string]: unknown | InitialState;
 }
 
 export type ConvertState<TInitialState> = TInitialState extends any
   ? TInitialState
   : never;
 
-// ok
+// ok2

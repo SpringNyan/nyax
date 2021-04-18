@@ -1,7 +1,10 @@
 import { AnyAction } from "./action";
-import { Store } from "./store";
+import { Nyax, NyaxOptions, Store } from "./store";
 
 export interface NyaxContext {
+  nyax: Nyax;
+
+  dependencies: unknown;
   store: Store;
 
   dispatchDeferredByAction: Map<
@@ -13,9 +16,10 @@ export interface NyaxContext {
   >;
 }
 
-export function createNyaxContext(store: Store): NyaxContext {
+export function createNyaxContext(options: NyaxOptions): NyaxContext {
   const nyaxContext: NyaxContext = {
-    store,
+    dependencies: options.dependencies,
+    store: options.store,
 
     dispatchDeferredByAction: new Map(),
   };

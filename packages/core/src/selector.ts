@@ -1,40 +1,39 @@
 import { NyaxContext } from "./context";
 import {
-  ExtractModelGetters,
-  ModelDefinition,
+  ExtractModelDefinitionProperty,
   ModelDefinitionConstructor,
 } from "./model";
 import { concatLastString, defineGetter, mergeObjects } from "./util";
 
-export type ModelSelector<TResult = unknown> = () => TResult;
+export type Selector<TResult = unknown> = () => TResult;
 
-export interface ModelSelectors {
-  [key: string]: ModelSelector | ModelSelectors;
+export interface Selectors {
+  [key: string]: Selector | Selectors;
 }
 
 export type ConvertGetters<TSelectors> = TSelectors extends any
   ? {
-      [K in keyof TSelectors]: TSelectors[K] extends ModelSelector<
-        infer TResult
-      >
+      [K in keyof TSelectors]: TSelectors[K] extends Selector<infer TResult>
         ? TResult
         : ConvertGetters<TSelectors[K]>;
     }
   : never;
 
-export function createGetters<TModel extends ModelDefinitionConstructor>(
+export function createGetters<
+  TModelDefinition extends ModelDefinitionConstructor
+>(
   nyaxContext: NyaxContext,
-  modelDefinition: ModelDefinition<TModel>
-): ExtractModelGetters<TModel> {
+  modelDefinitionInstance: InstanceType<TModelDefinition>
+): ExtractModelDefinitionProperty<TModelDefinition, "getters"> {
   const getters: Record<string, unknown> = {};
 
   const fullNamespace = concatLastString(
-    modelDefinition.namespace,
-    modelDefinition.key
+    modelDefinitionInstance.namespace,
+    modelDefinitionInstance.key
   );
   mergeObjects(
     getters,
-    modelDefinition.selectors(),
+    modelDefinitionInstance.selectors,
     (_item, key, parent, paths) => {
       const fullPath = concatLastString(fullNamespace, paths.join("."));
       defineGetter(parent, key, () => {
@@ -43,7 +42,7 @@ export function createGetters<TModel extends ModelDefinitionConstructor>(
     }
   );
 
-  return getters as ExtractModelGetters<TModel>;
+  return getters as ExtractModelDefinitionProperty<TModelDefinition, "getters">;
 }
 
-// ok
+// ok2

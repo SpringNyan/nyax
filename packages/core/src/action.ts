@@ -1,11 +1,10 @@
 import { NyaxContext } from "./context";
-import { ConvertActionHelperTypeParamsTuplesFromModelEffects } from "./effect";
+import { ConvertActionHelperTypeParamsObjectFromEffects } from "./effect";
 import {
-  ExtractModelActionHelpers,
-  ModelDefinition,
+  ExtractModelDefinitionProperty,
   ModelDefinitionConstructor,
 } from "./model";
-import { ConvertActionHelperTypeParamsTuplesFromModelReducers } from "./reducer";
+import { ConvertActionHelperTypeParamsObjectFromReducers } from "./reducer";
 import { concatLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
@@ -25,17 +24,17 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   dispatch(payload: TPayload): Promise<TResult>;
 }
 
-export type ConvertActionHelpersFromTypeParamsTuples<T> = {
+export type ConvertActionHelpersFromTypeParamsObject<T> = {
   [K in keyof T]: T[K] extends [any, any]
     ? ActionHelper<T[K][0], T[K][1]>
-    : ConvertActionHelpersFromTypeParamsTuples<T[K]>;
+    : ConvertActionHelpersFromTypeParamsObject<T[K]>;
 };
 
 export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
   ? TEffects extends any
-    ? ConvertActionHelpersFromTypeParamsTuples<
-        ConvertActionHelperTypeParamsTuplesFromModelReducers<TReducers> &
-          ConvertActionHelperTypeParamsTuplesFromModelEffects<TEffects>
+    ? ConvertActionHelpersFromTypeParamsObject<
+        ConvertActionHelperTypeParamsObjectFromReducers<TReducers> &
+          ConvertActionHelperTypeParamsObjectFromEffects<TEffects>
       >
     : never
   : never;
@@ -85,7 +84,7 @@ export interface RegisterActionPayload {
 }
 
 export const registerActionHelper = new ActionHelperBaseImpl<
-  RegisterActionPayload | RegisterActionPayload[]
+  RegisterActionPayload[]
 >("@@nyax/register");
 
 export interface UnregisterActionPayload {
@@ -94,7 +93,7 @@ export interface UnregisterActionPayload {
 }
 
 export const unregisterActionHelper = new ActionHelperBaseImpl<
-  UnregisterActionPayload | UnregisterActionPayload[]
+  UnregisterActionPayload[]
 >("@@nyax/unregister");
 
 export interface ReloadActionPayload {
@@ -105,19 +104,21 @@ export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
   "@@nyax/reload"
 );
 
-export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
+export function createActionHelpers<
+  TModelDefinition extends ModelDefinitionConstructor
+>(
   nyaxContext: NyaxContext,
-  modelDefinition: ModelDefinition<TModel>
-): ExtractModelActionHelpers<TModel> {
+  modelDefinitionInstance: InstanceType<TModelDefinition>
+): ExtractModelDefinitionProperty<TModelDefinition, "actions"> {
   const actionHelpers: Record<string, unknown> = {};
 
   const obj: Record<string, unknown> = {};
-  mergeObjects(obj, modelDefinition.reducers());
-  mergeObjects(obj, modelDefinition.effects());
+  mergeObjects(obj, modelDefinitionInstance.reducers);
+  mergeObjects(obj, modelDefinitionInstance.effects);
 
   const fullNamespace = concatLastString(
-    modelDefinition.namespace,
-    modelDefinition.key
+    modelDefinitionInstance.namespace,
+    modelDefinitionInstance.key
   );
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
@@ -126,7 +127,10 @@ export function createActionHelpers<TModel extends ModelDefinitionConstructor>(
     );
   });
 
-  return actionHelpers as ExtractModelActionHelpers<TModel>;
+  return actionHelpers as ExtractModelDefinitionProperty<
+    TModelDefinition,
+    "actions"
+  >;
 }
 
-// ok
+// ok2
