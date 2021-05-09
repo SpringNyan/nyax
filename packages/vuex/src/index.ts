@@ -1,16 +1,39 @@
-import { flattenObject, Store } from "@nyax/core";
+import {
+  concatLastString,
+  ModelDefinitionInstance,
+  splitLastString,
+  Store,
+} from "@nyax/core";
 import { createStore as vuexCreateStore } from "vuex";
 
 export function createStore(): Store {
+  const modelDefinitionInstanceByFullNamespace = new Map<
+    string,
+    ModelDefinitionInstance<any, any, any, any, any, any>
+  >();
+
   const vuexStore = vuexCreateStore({});
 
   return {
     getState() {
       return vuexStore.state;
     },
+    getComputed(path) {
+      return vuexStore.getters[path];
+    },
     dispatch(action) {
-      vuexStore.commit(action.type, action.payload);
-      vuexStore.dispatch(action.type, action.payload);
+      const [fullNamespace, actionName] = splitLastString(action.type);
+      const modelDefinitionInstance = modelDefinitionInstanceByFullNamespace.get(
+        fullNamespace
+      );
+
+      if (modelDefinitionInstance?.reducers?.[actionName]) {
+        vuexStore.commit(action.type, action.payload);
+      }
+
+      if (modelDefinitionInstance?.effects?.[actionName]) {
+        vuexStore.dispatch(action.type, action.payload);
+      }
     },
     subscribe(fn) {
       const unsubscribe = vuexStore.subscribe(fn);
@@ -21,17 +44,29 @@ export function createStore(): Store {
       };
     },
 
-    getComputed(path) {
-      return vuexStore.getters[path];
-    },
-    registerModel(modelDefinition) {
-      const initialState = modelDefinition.initialState();
+    registerModel(modelDefinitionInstance) {
+      const fullNamespace = concatLastString(
+        modelDefinitionInstance.namespace,
+        modelDefinitionInstance.key
+      );
 
-      const flattenedReducers = flattenObject(modelDefinition.reducers());
-
-      const flattenedSelectors = flattenObject(modelDefinition.selectors());
-      const flattenedEffects = flattenObject(modelDefinition.effects());
+      if (modelDefinitionInstanceByFullNamespace.has(fullNamespace)) {
+        throw new Error("model is already registered.");
+      }
+      modelDefinitionInstanceByFullNamespace.set(
+        fullNamespace,
+        modelDefinitionInstance
+      );
     },
-    unregisterModel(modelLocator) {},
+    unregisterModel(modelDefinitionInstance) {
+      const fullNamespace = concatLastString(
+        modelDefinitionInstance.namespace,
+        modelDefinitionInstance.key
+      );
+      modelDefinitionInstanceByFullNamespace.delete(fullNamespace);
+    },
+
+    subscribeDispatchAction: (fn) => {},
+    subscribeDispatchResult: (fn) => {},
   };
 }

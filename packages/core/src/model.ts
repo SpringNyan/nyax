@@ -2,7 +2,6 @@ import {
   ConvertActionHelpers,
   createActionHelpers,
   registerActionHelper,
-  RegisterActionPayload,
   unregisterActionHelper,
 } from "./action";
 import { NyaxContext } from "./context";
@@ -14,10 +13,8 @@ import { Nyax } from "./store";
 import { Subscriptions } from "./subscription";
 import {
   defineGetter,
-  flattenObject,
   mergeObjects,
   Spread,
-  traverseObject,
   UnionToIntersection,
 } from "./util";
 
@@ -516,52 +513,4 @@ export function createModelDefinition<
     public static namespace = namespace;
     public static dynamic = (dynamic ?? false) as TDynamic;
   };
-}
-
-export function registerModel<TModel extends StaticModel>(
-  nyaxContext: NyaxContext,
-  modelNamespace: string,
-  model: TModel
-): void {
-  if (nyaxContext.modelContextByModel.has(model)) {
-    throw new Error("Model is already registered");
-  }
-
-  if (nyaxContext.modelByModelNamespace.has(modelNamespace)) {
-    throw new Error("Model namespace is already bound");
-  }
-
-  nyaxContext.modelContextByModel.set(model, {
-    modelNamespace,
-    modelPath: convertNamespaceToPath(modelNamespace),
-
-    containerByContainerKey: new Map(),
-  });
-
-  nyaxContext.modelByModelNamespace.set(modelNamespace, model);
-}
-
-export function registerModels(
-  nyaxContext: NyaxContext,
-  models: Models
-): RegisterActionPayload[] {
-  const registerActionPayloads: RegisterActionPayload[] = [];
-
-  traverseObject(models, (item, key, parent, paths) => {
-    const modelNamespace = paths.join("/");
-    const model = item as Exclude<typeof item, Models>;
-
-    registerModel(nyaxContext, modelNamespace, model);
-    if (!model.isDynamic && !model.isLazy) {
-      registerActionPayloads.push({
-        namespace: modelNamespace,
-      });
-    }
-  });
-
-  return registerActionPayloads;
-}
-
-export function flattenModels(models: Models): Record<string, StaticModel> {
-  return flattenObject(models, "/") as Record<string, StaticModel>;
 }
