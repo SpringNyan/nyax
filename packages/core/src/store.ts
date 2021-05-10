@@ -1,5 +1,6 @@
 import { AnyAction } from "./action";
-import { GetModel, ModelDefinitionInstance } from "./model";
+import { createNyaxContext } from "./context";
+import { createGetModel, GetModel, ModelDefinitionInstance } from "./model";
 
 export interface Store {
   getState(): unknown;
@@ -23,6 +24,16 @@ export interface NyaxOptions {
 export interface Nyax {
   store: Store;
   getModel: GetModel;
+}
+
+export function createNyax(options: NyaxOptions): Nyax {
+  const nyaxContext = createNyaxContext(options);
+  nyaxContext.nyax = {
+    store: nyaxContext.store,
+    getModel: createGetModel(nyaxContext),
+  };
+
+  return nyaxContext.nyax;
 }
 
 // ok3

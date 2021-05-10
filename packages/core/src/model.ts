@@ -451,7 +451,7 @@ export class ModelImpl<
   }
 
   public get isRegistered(): boolean {
-    return this._getState() != null;
+    return this._getState() !== undefined;
   }
 
   public get state(): ExtractModelDefinitionProperty<
@@ -459,7 +459,9 @@ export class ModelImpl<
     "state"
   > {
     const state = this._getState();
-    return state != null ? state : this._modelDefinitionInstance.initialState;
+    return state !== undefined
+      ? state
+      : this._modelDefinitionInstance.initialState;
   }
 
   public get getters(): ExtractModelDefinitionProperty<
@@ -509,7 +511,7 @@ export class ModelImpl<
     | undefined {
     let state = this._nyaxContext.store.getState();
     state = (state as Record<string, unknown> | undefined)?.[this.namespace];
-    if (this.key != null) {
+    if (this.key !== undefined) {
       state = (state as Record<string, unknown> | undefined)?.[this.key];
     }
     return state as
@@ -546,6 +548,49 @@ export interface GetModel {
   >
     ? never
     : Model<TModelDefinition>;
+}
+
+export function createGetModel(nyaxContext: NyaxContext): GetModel {
+  return <TModelDefinition extends ModelDefinition>(
+    modelDefinitionOrNamespace: TModelDefinition | string,
+    key?: string
+  ): Model<TModelDefinition> => {
+    const namespace =
+      typeof modelDefinitionOrNamespace === "string"
+        ? modelDefinitionOrNamespace
+        : modelDefinitionOrNamespace.namespace;
+
+    let modelContext = nyaxContext.modelContextByNamespace.get(namespace);
+    if (!modelContext) {
+      if (typeof modelDefinitionOrNamespace !== "string") {
+        modelContext = {
+          modelDefinition: modelDefinitionOrNamespace,
+          modelByKey: new Map(),
+        };
+        nyaxContext.modelContextByNamespace.set(namespace, modelContext);
+      } else {
+        throw new Error("Model definition is not found.");
+      }
+    }
+
+    const modelDefinition = modelContext.modelDefinition;
+
+    if (key === undefined && modelDefinition.dynamic) {
+      throw new Error("Key is required for dynamic model.");
+    }
+
+    if (key !== undefined && !modelDefinition.dynamic) {
+      throw new Error("Key is not available for static model.");
+    }
+
+    let model = modelContext.modelByKey.get(key);
+    if (!model) {
+      model = new ModelImpl(nyaxContext, modelDefinition, key);
+      modelContext.modelByKey.set(key, model);
+    }
+
+    return model as Model<TModelDefinition>;
+  };
 }
 
 // ok3
