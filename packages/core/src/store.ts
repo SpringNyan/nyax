@@ -1,5 +1,5 @@
 import { AnyAction } from "./action";
-import { ModelDefinitionInstance } from "./model";
+import { GetModel, ModelDefinitionInstance } from "./model";
 
 export interface Store {
   getState(): unknown;
@@ -10,7 +10,6 @@ export interface Store {
   registerModel(modelDefinitionInstance: ModelDefinitionInstance): void;
   unregisterModel(modelDefinitionInstance: ModelDefinitionInstance): void;
 
-  subscribeDispatchAction(fn: (action: AnyAction) => void): () => void;
   subscribeDispatchResult(
     fn: (action: AnyAction, result: unknown, error: unknown) => void
   ): () => void;
@@ -23,6 +22,7 @@ export interface NyaxOptions {
 
 export interface Nyax {
   store: Store;
+  getModel: GetModel;
 }
 
-// ok
+// ok3

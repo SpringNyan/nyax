@@ -1,5 +1,7 @@
 import {
   concatLastString,
+  flattenObject,
+  mergeObjects,
   ModelDefinitionInstance,
   splitLastString,
   Store,
@@ -7,7 +9,7 @@ import {
 import { createStore as vuexCreateStore } from "vuex";
 
 export function createStore(): Store {
-  const modelDefinitionInstanceByFullNamespace = new Map<
+  const modelDefinitionInstanceByPath = new Map<
     string,
     ModelDefinitionInstance<any, any, any, any, any, any>
   >();
@@ -22,10 +24,8 @@ export function createStore(): Store {
       return vuexStore.getters[path];
     },
     dispatch(action) {
-      const [fullNamespace, actionName] = splitLastString(action.type);
-      const modelDefinitionInstance = modelDefinitionInstanceByFullNamespace.get(
-        fullNamespace
-      );
+      const [path, actionName] = splitLastString(action.type);
+      const modelDefinitionInstance = modelDefinitionInstanceByPath.get(path);
 
       if (modelDefinitionInstance?.reducers?.[actionName]) {
         vuexStore.commit(action.type, action.payload);
@@ -36,34 +36,64 @@ export function createStore(): Store {
       }
     },
     subscribe(fn) {
-      const unsubscribe = vuexStore.subscribe(fn);
-      const unsubscribeAction = vuexStore.subscribeAction(fn);
-      return () => {
-        unsubscribe();
-        unsubscribeAction();
-      };
+      return vuexStore.subscribe(fn);
     },
 
     registerModel(modelDefinitionInstance) {
-      const fullNamespace = concatLastString(
+      const path = concatLastString(
         modelDefinitionInstance.namespace,
         modelDefinitionInstance.key
       );
 
-      if (modelDefinitionInstanceByFullNamespace.has(fullNamespace)) {
+      if (modelDefinitionInstanceByPath.has(path)) {
         throw new Error("model is already registered.");
       }
-      modelDefinitionInstanceByFullNamespace.set(
-        fullNamespace,
-        modelDefinitionInstance
+      modelDefinitionInstanceByPath.set(path, modelDefinitionInstance);
+
+      const state = () =>
+        mergeObjects<any>({}, modelDefinitionInstance.initialState);
+
+      const getters = mergeObjects<any>(
+        {},
+        flattenObject(modelDefinitionInstance.selectors),
+        (item, key, parent) => {
+          parent[key] = () => item();
+        }
       );
+
+      const mutations = mergeObjects<any>(
+        {},
+        flattenObject(modelDefinitionInstance.reducers),
+        (item, key, parent) => {
+          parent[key] = (_state: unknown, payload: unknown) => item(payload);
+        }
+      );
+
+      const actions = mergeObjects<any>(
+        {},
+        flattenObject(modelDefinitionInstance.effects),
+        (item, key, parent) => {
+          parent[key] = (_context: unknown, payload: unknown) => item(payload);
+        }
+      );
+
+      vuexStore.registerModule(path.split("/"), {
+        namespaced: true,
+        state,
+        mutations,
+        actions,
+        getters,
+      });
     },
     unregisterModel(modelDefinitionInstance) {
-      const fullNamespace = concatLastString(
+      const path = concatLastString(
         modelDefinitionInstance.namespace,
         modelDefinitionInstance.key
       );
-      modelDefinitionInstanceByFullNamespace.delete(fullNamespace);
+
+      vuexStore.unregisterModule(path.split("/"));
+
+      modelDefinitionInstanceByPath.delete(path);
     },
 
     subscribeDispatchAction: (fn) => {},

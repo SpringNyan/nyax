@@ -116,14 +116,14 @@ export function createActionHelpers<
   mergeObjects(obj, modelDefinitionInstance.reducers);
   mergeObjects(obj, modelDefinitionInstance.effects);
 
-  const fullNamespace = concatLastString(
+  const modelPath = concatLastString(
     modelDefinitionInstance.namespace,
     modelDefinitionInstance.key
   );
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      concatLastString(fullNamespace, paths.join("."))
+      concatLastString(modelPath, paths.join("."))
     );
   });
 
@@ -133,4 +133,4 @@ export function createActionHelpers<
   >;
 }
 
-// ok2
+// ok3

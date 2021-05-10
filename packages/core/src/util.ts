@@ -146,4 +146,4 @@ export function defineGetter<TObject, TKey extends keyof TObject>(
   });
 }
 
-//  ok2
+ //  ok3

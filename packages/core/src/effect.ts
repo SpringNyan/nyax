@@ -15,4 +15,4 @@ export type ConvertActionHelperTypeParamsObjectFromEffects<TEffects> = {
     : ConvertActionHelperTypeParamsObjectFromEffects<TEffects[K]>;
 };
 
-// ok2
+// ok3

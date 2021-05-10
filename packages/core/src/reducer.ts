@@ -10,4 +10,4 @@ export type ConvertActionHelperTypeParamsObjectFromReducers<TReducers> = {
     : ConvertActionHelperTypeParamsObjectFromReducers<TReducers[K]>;
 };
 
-// ok2
+// ok3

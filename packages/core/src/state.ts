@@ -6,4 +6,4 @@ export type ConvertState<TInitialState> = TInitialState extends any
   ? TInitialState
   : never;
 
-// ok2
+// ok3

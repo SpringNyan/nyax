@@ -27,7 +27,7 @@ export function createGetters<
 ): ExtractModelDefinitionProperty<TModelDefinition, "getters"> {
   const getters: Record<string, unknown> = {};
 
-  const fullNamespace = concatLastString(
+  const modelPath = concatLastString(
     modelDefinitionInstance.namespace,
     modelDefinitionInstance.key
   );
@@ -35,14 +35,12 @@ export function createGetters<
     getters,
     modelDefinitionInstance.selectors,
     (_item, key, parent, paths) => {
-      const fullPath = concatLastString(fullNamespace, paths.join("."));
-      defineGetter(parent, key, () => {
-        return nyaxContext.store.getComputed(fullPath);
-      });
+      const fullPath = concatLastString(modelPath, paths.join("."));
+      defineGetter(parent, key, () => nyaxContext.store.getComputed(fullPath));
     }
   );
 
   return getters as ExtractModelDefinitionProperty<TModelDefinition, "getters">;
 }
 
-// ok2
+// ok3
