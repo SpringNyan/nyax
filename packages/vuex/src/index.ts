@@ -9,10 +9,11 @@ import {
 import { createStore as vuexCreateStore } from "vuex";
 
 export function createStore(): Store {
-  const modelDefinitionInstanceByPath = new Map<
+  const modelDefinitionInstanceByModelPath = new Map<
     string,
     ModelDefinitionInstance<any, any, any, any, any, any>
   >();
+  const subscriptionDisposablesByModelPath = new Map<string, (() => void)[]>();
 
   const vuexStore = vuexCreateStore({});
 
@@ -24,8 +25,10 @@ export function createStore(): Store {
       return vuexStore.getters[path];
     },
     dispatch(action) {
-      const [path, actionName] = splitLastString(action.type);
-      const modelDefinitionInstance = modelDefinitionInstanceByPath.get(path);
+      const [modelPath, actionName] = splitLastString(action.type);
+      const modelDefinitionInstance = modelDefinitionInstanceByModelPath.get(
+        modelPath
+      );
 
       if (modelDefinitionInstance?.reducers?.[actionName]) {
         vuexStore.commit(action.type, action.payload);
@@ -40,44 +43,58 @@ export function createStore(): Store {
     },
 
     registerModel(modelDefinitionInstance) {
-      const path = concatLastString(
+      const modelPath = concatLastString(
         modelDefinitionInstance.namespace,
         modelDefinitionInstance.key
       );
 
-      if (modelDefinitionInstanceByPath.has(path)) {
-        throw new Error("model is already registered.");
+      if (modelDefinitionInstanceByModelPath.has(modelPath)) {
+        throw new Error("Model is already registered.");
       }
-      modelDefinitionInstanceByPath.set(path, modelDefinitionInstance);
+      modelDefinitionInstanceByModelPath.set(
+        modelPath,
+        modelDefinitionInstance
+      );
 
       const state = () =>
-        mergeObjects<any>({}, modelDefinitionInstance.initialState);
+        mergeObjects({}, modelDefinitionInstance.initialState);
 
-      const getters = mergeObjects<any>(
+      const getters = mergeObjects(
         {},
-        flattenObject(modelDefinitionInstance.selectors),
+        flattenObject<any>(modelDefinitionInstance.selectors),
         (item, key, parent) => {
           parent[key] = () => item();
         }
       );
 
-      const mutations = mergeObjects<any>(
+      const mutations = mergeObjects(
         {},
-        flattenObject(modelDefinitionInstance.reducers),
+        flattenObject<any>(modelDefinitionInstance.reducers),
         (item, key, parent) => {
           parent[key] = (_state: unknown, payload: unknown) => item(payload);
         }
       );
 
-      const actions = mergeObjects<any>(
+      const actions = mergeObjects(
         {},
-        flattenObject(modelDefinitionInstance.effects),
+        flattenObject<any>(modelDefinitionInstance.effects),
         (item, key, parent) => {
           parent[key] = (_context: unknown, payload: unknown) => item(payload);
         }
       );
 
-      vuexStore.registerModule(path.split("/"), {
+      const subscriptions = Object.values(
+        flattenObject<any>(modelDefinitionInstance.subscriptions)
+      );
+      const subscriptionDisposables = subscriptions
+        .map((subscription) => subscription())
+        .filter(Boolean);
+      subscriptionDisposablesByModelPath.set(
+        modelPath,
+        subscriptionDisposables
+      );
+
+      vuexStore.registerModule(modelPath.split("/"), {
         namespaced: true,
         state,
         mutations,
@@ -86,17 +103,27 @@ export function createStore(): Store {
       });
     },
     unregisterModel(modelDefinitionInstance) {
-      const path = concatLastString(
+      const modelPath = concatLastString(
         modelDefinitionInstance.namespace,
         modelDefinitionInstance.key
       );
 
-      vuexStore.unregisterModule(path.split("/"));
+      vuexStore.unregisterModule(modelPath.split("/"));
 
-      modelDefinitionInstanceByPath.delete(path);
+      const subscriptionDisposables = subscriptionDisposablesByModelPath.get(
+        modelPath
+      );
+      subscriptionDisposables?.forEach((disposable) => disposable());
+      subscriptionDisposablesByModelPath.delete(modelPath);
+
+      modelDefinitionInstanceByModelPath.delete(modelPath);
     },
 
-    subscribeDispatchAction: (fn) => {},
-    subscribeDispatchResult: (fn) => {},
+    subscribeDispatchAction: (fn) => {
+      throw new Error("NotImplemented");
+    },
+    subscribeDispatchResult: (fn) => {
+      throw new Error("NotImplemented");
+    },
   };
 }

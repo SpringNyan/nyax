@@ -11,6 +11,7 @@ export interface Store {
   registerModel(modelDefinitionInstance: ModelDefinitionInstance): void;
   unregisterModel(modelDefinitionInstance: ModelDefinitionInstance): void;
 
+  subscribeDispatchAction(fn: (action: AnyAction) => void): () => void;
   subscribeDispatchResult(
     fn: (action: AnyAction, result: unknown, error: unknown) => void
   ): () => void;

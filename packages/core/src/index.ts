@@ -1,4 +1,5 @@
 export type { Action, ActionHelper, AnyAction } from "./action";
+export type { Effect } from "./effect";
 export type {
   createModelDefinitionBase,
   defineModelDefinition,
@@ -7,7 +8,10 @@ export type {
   ModelDefinition,
   ModelDefinitionInstance,
 } from "./model";
+export type { Reducer } from "./reducer";
+export type { Selector } from "./selector";
 export type { Nyax, NyaxOptions, Store } from "./store";
+export type { Subscription } from "./subscription";
 export {
   concatLastString,
   flattenObject,
