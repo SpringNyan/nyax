@@ -2,6 +2,13 @@ import { AnyAction } from "./action";
 import { createNyaxContext } from "./context";
 import { createGetModel, GetModel, ModelDefinitionInstance } from "./model";
 
+export type DispatchActionSubscriber = (action: AnyAction) => void;
+export type DispatchResultSubscriber = (
+  action: AnyAction,
+  result: unknown,
+  error: unknown
+) => void;
+
 export interface Store {
   getState(): unknown;
   getComputed(path: string): unknown;
@@ -11,10 +18,8 @@ export interface Store {
   registerModel(modelDefinitionInstance: ModelDefinitionInstance): void;
   unregisterModel(modelDefinitionInstance: ModelDefinitionInstance): void;
 
-  subscribeDispatchAction(fn: (action: AnyAction) => void): () => void;
-  subscribeDispatchResult(
-    fn: (action: AnyAction, result: unknown, error: unknown) => void
-  ): () => void;
+  subscribeDispatchAction(fn: DispatchActionSubscriber): () => void;
+  subscribeDispatchResult(fn: DispatchResultSubscriber): () => void;
 }
 
 export interface NyaxOptions {

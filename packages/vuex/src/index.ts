@@ -1,21 +1,73 @@
 import {
   concatLastString,
+  DispatchActionSubscriber,
+  DispatchResultSubscriber,
   flattenObject,
   mergeObjects,
   ModelDefinitionInstance,
   splitLastString,
   Store,
 } from "@nyax/core";
-import { createStore as vuexCreateStore } from "vuex";
+import {
+  createStore as vuexCreateStore,
+  Plugin as VuexPlugin,
+  Store as VuexStore,
+} from "vuex";
 
-export function createStore(): Store {
+export function createStore(options: {
+  createVuexStore?: (params: {
+    plugin: VuexPlugin<unknown>;
+  }) => VuexStore<unknown>;
+  onUnhandledError?: (error: unknown) => void;
+}): Store {
   const modelDefinitionInstanceByModelPath = new Map<
     string,
     ModelDefinitionInstance<any, any, any, any, any, any>
   >();
   const subscriptionDisposablesByModelPath = new Map<string, (() => void)[]>();
 
-  const vuexStore = vuexCreateStore({});
+  const dispatchActionSubscribers: DispatchActionSubscriber[] = [];
+  const dispatchResultSubscribers: DispatchResultSubscriber[] = [];
+
+  const onUnhandledError =
+    options.onUnhandledError ??
+    ((error) => {
+      console.error(error);
+    });
+
+  const vuexPlugin: VuexPlugin<unknown> = (store) => {
+    store.subscribe((mutation) => {
+      dispatchActionSubscribers.forEach((fn) => {
+        try {
+          fn(mutation);
+        } catch (error) {
+          onUnhandledError(error);
+        }
+      });
+    });
+
+    store.subscribeAction((action) => {
+      dispatchActionSubscribers.forEach((fn) => {
+        try {
+          fn(action);
+        } catch (error) {
+          onUnhandledError(error);
+        }
+      });
+    });
+  };
+
+  const createVuexStore =
+    options.createVuexStore ??
+    (({ plugin }) => {
+      return vuexCreateStore({
+        plugins: [plugin],
+      });
+    });
+
+  const vuexStore = createVuexStore({
+    plugin: vuexPlugin,
+  });
 
   return {
     getState() {

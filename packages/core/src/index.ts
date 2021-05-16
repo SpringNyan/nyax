@@ -10,7 +10,13 @@ export type {
 } from "./model";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
-export type { Nyax, NyaxOptions, Store } from "./store";
+export type {
+  DispatchActionSubscriber,
+  DispatchResultSubscriber,
+  Nyax,
+  NyaxOptions,
+  Store,
+} from "./store";
 export type { Subscription } from "./subscription";
 export {
   concatLastString,
