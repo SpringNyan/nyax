@@ -1,4 +1,6 @@
-export type Reducer<TPayload = unknown> = (payload: TPayload) => void;
+export type Reducer<TPayload = unknown> = {
+  bivarianceHack(payload: TPayload): void;
+}["bivarianceHack"];
 
 export interface Reducers {
   [key: string]: Reducer | Reducers;

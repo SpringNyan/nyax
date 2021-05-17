@@ -6,7 +6,7 @@ export type DispatchActionSubscriber = (action: AnyAction) => void;
 export type DispatchResultSubscriber = (
   action: AnyAction,
   result: unknown,
-  error: unknown
+  error?: unknown
 ) => void;
 
 export interface Store {

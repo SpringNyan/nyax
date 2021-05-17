@@ -30,6 +30,10 @@ export function isObject(obj: unknown): obj is Record<string, unknown> {
   return obj != null && typeof obj === "object" && !Array.isArray(obj);
 }
 
+export function last<T>(arr: T[]): T | undefined {
+  return arr[arr.length - 1];
+}
+
 export function mergeObjects<T>(
   target: DeepRecord<T>,
   source: DeepRecord<T>,
@@ -146,4 +150,4 @@ export function defineGetter<TObject, TKey extends keyof TObject>(
   });
 }
 
- //  ok3
+//  ok3
