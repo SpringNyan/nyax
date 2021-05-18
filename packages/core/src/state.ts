@@ -5,5 +5,3 @@ export interface InitialState {
 export type ConvertState<TInitialState> = TInitialState extends any
   ? TInitialState
   : never;
-
-// ok3

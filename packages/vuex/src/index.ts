@@ -138,10 +138,10 @@ export function createStore(options: {
       return vuexStore.subscribe(fn);
     },
 
-    registerModel(modelDefinitionInstance) {
+    registerModel(modelDefinition) {
       const modelPath = concatLastString(
-        modelDefinitionInstance.namespace,
-        modelDefinitionInstance.key
+        modelDefinition.namespace,
+        modelDefinition.key
       );
 
       if (modelContextByModelPath.has(modelPath)) {
@@ -149,22 +149,21 @@ export function createStore(options: {
       }
       const modelContext: ModelContext = {
         flattenedReducerKeySet: new Set(
-          Object.keys(flattenObject(modelDefinitionInstance.reducers))
+          Object.keys(flattenObject(modelDefinition.reducers))
         ),
         flattenedEffectKeySet: new Set(
-          Object.keys(flattenObject(modelDefinitionInstance.effects))
+          Object.keys(flattenObject(modelDefinition.effects))
         ),
 
         subscriptionDisposables: [],
       };
       modelContextByModelPath.set(modelPath, modelContext);
 
-      const state = () =>
-        mergeObjects({}, modelDefinitionInstance.initialState);
+      const state = () => mergeObjects({}, modelDefinition.initialState);
 
       const getters = mergeObjects(
         {},
-        flattenObject<any>(modelDefinitionInstance.selectors),
+        flattenObject<any>(modelDefinition.selectors),
         (item, key, parent) => {
           parent[key] = () => item();
         }
@@ -172,7 +171,7 @@ export function createStore(options: {
 
       const mutations = mergeObjects(
         {},
-        flattenObject<any>(modelDefinitionInstance.reducers),
+        flattenObject<any>(modelDefinition.reducers),
         (item, key, parent) => {
           parent[key] = (_state: unknown, payload: unknown) => item(payload);
         }
@@ -180,14 +179,14 @@ export function createStore(options: {
 
       const actions = mergeObjects(
         {},
-        flattenObject<any>(modelDefinitionInstance.effects),
+        flattenObject<any>(modelDefinition.effects),
         (item, key, parent) => {
           parent[key] = (_context: unknown, payload: unknown) => item(payload);
         }
       );
 
       const subscriptions = Object.values(
-        flattenObject<any>(modelDefinitionInstance.subscriptions)
+        flattenObject<any>(modelDefinition.subscriptions)
       );
       const subscriptionDisposables = subscriptions
         .map((subscription) => subscription())
@@ -202,10 +201,10 @@ export function createStore(options: {
         getters,
       });
     },
-    unregisterModel(modelDefinitionInstance) {
+    unregisterModel(modelDefinition) {
       const modelPath = concatLastString(
-        modelDefinitionInstance.namespace,
-        modelDefinitionInstance.key
+        modelDefinition.namespace,
+        modelDefinition.key
       );
 
       const modelContext = modelContextByModelPath.get(modelPath);

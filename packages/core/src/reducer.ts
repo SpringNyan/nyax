@@ -11,5 +11,3 @@ export type ConvertActionHelperTypeParamsObjectFromReducers<TReducers> = {
     ? [TPayload, unknown]
     : ConvertActionHelperTypeParamsObjectFromReducers<TReducers[K]>;
 };
-
-// ok3

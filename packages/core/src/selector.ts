@@ -20,27 +20,30 @@ export type ConvertGetters<TSelectors> = TSelectors extends any
   : never;
 
 export function createGetters<
-  TModelDefinition extends ModelDefinitionConstructor
+  TModelDefinitionConstructor extends ModelDefinitionConstructor
 >(
   nyaxContext: NyaxContext,
-  modelDefinitionInstance: InstanceType<TModelDefinition>
-): ExtractModelDefinitionProperty<TModelDefinition, "getters"> {
+  modelDefinition: InstanceType<TModelDefinitionConstructor>
+): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "getters"> {
   const getters: Record<string, unknown> = {};
 
   const modelPath = concatLastString(
-    modelDefinitionInstance.namespace,
-    modelDefinitionInstance.key
+    modelDefinition.namespace,
+    modelDefinition.key
   );
   mergeObjects(
     getters,
-    modelDefinitionInstance.selectors,
+    modelDefinition.selectors,
     (_item, key, parent, paths) => {
-      const fullPath = concatLastString(modelPath, paths.join("."));
-      defineGetter(parent, key, () => nyaxContext.store.getComputed(fullPath));
+      const getterPath = concatLastString(modelPath, paths.join("."));
+      defineGetter(parent, key, () =>
+        nyaxContext.store.getComputed(getterPath)
+      );
     }
   );
 
-  return getters as ExtractModelDefinitionProperty<TModelDefinition, "getters">;
+  return getters as ExtractModelDefinitionProperty<
+    TModelDefinitionConstructor,
+    "getters"
+  >;
 }
-
-// ok3

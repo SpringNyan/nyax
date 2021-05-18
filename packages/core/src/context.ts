@@ -1,5 +1,5 @@
 import { AnyAction } from "./action";
-import { Model, ModelDefinition } from "./model";
+import { Model, ModelDefinitionClass } from "./model";
 import { Nyax, NyaxOptions, Store } from "./store";
 
 export interface NyaxContext {
@@ -21,7 +21,7 @@ export interface NyaxContext {
 }
 
 export interface ModelContext {
-  modelDefinition: ModelDefinition;
+  modelDefinitionClass: ModelDefinitionClass;
   modelByKey: Map<string | undefined, Model>;
 }
 
@@ -53,5 +53,3 @@ export function createNyaxContext(options: NyaxOptions): NyaxContext {
 
   return nyaxContext;
 }
-
-//  ok3

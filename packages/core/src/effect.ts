@@ -14,5 +14,3 @@ export type ConvertActionHelperTypeParamsObjectFromEffects<TEffects> = {
     ? [TPayload, TResult]
     : ConvertActionHelperTypeParamsObjectFromEffects<TEffects[K]>;
 };
-
-// ok3

@@ -1,6 +1,6 @@
 import { AnyAction } from "./action";
 import { createNyaxContext } from "./context";
-import { createGetModel, GetModel, ModelDefinitionInstance } from "./model";
+import { createGetModel, GetModel, ModelDefinition } from "./model";
 
 export type DispatchActionSubscriber = (action: AnyAction) => void;
 export type DispatchResultSubscriber = (
@@ -15,8 +15,8 @@ export interface Store {
   dispatch(action: AnyAction): void;
   subscribe(fn: () => void): () => void;
 
-  registerModel(modelDefinitionInstance: ModelDefinitionInstance): void;
-  unregisterModel(modelDefinitionInstance: ModelDefinitionInstance): void;
+  registerModel(modelDefinition: ModelDefinition): void;
+  unregisterModel(modelDefinition: ModelDefinition): void;
 
   subscribeDispatchAction(fn: DispatchActionSubscriber): () => void;
   subscribeDispatchResult(fn: DispatchResultSubscriber): () => void;
@@ -41,5 +41,3 @@ export function createNyax(options: NyaxOptions): Nyax {
 
   return nyaxContext.nyax;
 }
-
-// ok3

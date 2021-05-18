@@ -24,6 +24,10 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   dispatch(payload: TPayload): Promise<TResult>;
 }
 
+export interface ActionHelpers {
+  [key: string]: ActionHelper | ActionHelpers;
+}
+
 export type ConvertActionHelpersFromTypeParamsObject<T> = {
   [K in keyof T]: T[K] extends [any, any]
     ? ActionHelper<T[K][0], T[K][1]>
@@ -105,20 +109,20 @@ export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
 );
 
 export function createActionHelpers<
-  TModelDefinition extends ModelDefinitionConstructor
+  TModelDefinitionConstructor extends ModelDefinitionConstructor
 >(
   nyaxContext: NyaxContext,
-  modelDefinitionInstance: InstanceType<TModelDefinition>
-): ExtractModelDefinitionProperty<TModelDefinition, "actions"> {
+  modelDefinition: InstanceType<TModelDefinitionConstructor>
+): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "actions"> {
   const actionHelpers: Record<string, unknown> = {};
 
   const obj: Record<string, unknown> = {};
-  mergeObjects(obj, modelDefinitionInstance.reducers);
-  mergeObjects(obj, modelDefinitionInstance.effects);
+  mergeObjects(obj, modelDefinition.reducers);
+  mergeObjects(obj, modelDefinition.effects);
 
   const modelPath = concatLastString(
-    modelDefinitionInstance.namespace,
-    modelDefinitionInstance.key
+    modelDefinition.namespace,
+    modelDefinition.key
   );
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
@@ -128,9 +132,7 @@ export function createActionHelpers<
   });
 
   return actionHelpers as ExtractModelDefinitionProperty<
-    TModelDefinition,
+    TModelDefinitionConstructor,
     "actions"
   >;
 }
-
-// ok3
