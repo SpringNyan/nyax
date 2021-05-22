@@ -46,11 +46,11 @@ export function mergeObjects<T>(
   paths: string[] = []
 ): DeepRecord<T> {
   if (!isObject(target)) {
-    throw new Error(`target is not an object`);
+    throw new Error("`target` is not an object.");
   }
 
   if (!isObject(source)) {
-    throw new Error(`source is not an object`);
+    throw new Error("`source` is not an object.");
   }
 
   Object.keys(source).forEach((key) => {
@@ -69,7 +69,7 @@ export function mergeObjects<T>(
 
       const targetItem = target[key];
       if (!isObject(targetItem)) {
-        throw new Error(`target["${key}"] is not an object`);
+        throw new Error('`target["${key}"]` is not an object.');
       }
 
       mergeObjects(targetItem, sourceItem, fn, paths);

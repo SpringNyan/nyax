@@ -450,15 +450,15 @@ export class ModelImpl<
   public readonly namespace: string;
 
   private get _modelDefinition() {
-    return this._nyax.store.getModelDefinition(
-      this._nyax,
+    return this._nyaxContext.nyax.store.getModelDefinition(
+      this._nyaxContext.nyax,
       this.namespace,
       this.key
     ) as InstanceType<TModelDefinitionClass>;
   }
 
   constructor(
-    private readonly _nyax: Nyax,
+    private readonly _nyaxContext: NyaxContext,
     public readonly modelDefinitionClass: TModelDefinitionClass,
     public readonly key: string | undefined
   ) {
@@ -466,7 +466,7 @@ export class ModelImpl<
   }
 
   public get isRegistered(): boolean {
-    let state = this._nyax.store.getState() as any;
+    let state = this._nyaxContext.nyax.store.getState() as any;
     state = state?.[this.namespace];
     if (this.key !== undefined) {
       state = state?.[this.key];
@@ -500,7 +500,7 @@ export class ModelImpl<
       throw new Error("Model is already registered.");
     }
 
-    this._nyax.store.dispatch(
+    this._nyaxContext.nyax.store.dispatch(
       registerActionHelper.create([
         {
           namespace: this.namespace,
@@ -511,18 +511,20 @@ export class ModelImpl<
   }
 
   public unregister(): void {
-    if (!this.isRegistered) {
-      return;
+    if (this.isRegistered) {
+      this._nyaxContext.nyax.store.dispatch(
+        unregisterActionHelper.create([
+          {
+            namespace: this.namespace,
+            key: this.key,
+          },
+        ])
+      );
     }
 
-    this._nyax.store.dispatch(
-      unregisterActionHelper.create([
-        {
-          namespace: this.namespace,
-          key: this.key,
-        },
-      ])
-    );
+    this._nyaxContext.modelContextByNamespace
+      .get(this.namespace)
+      ?.modelByKey.delete(this.key);
   }
 }
 
@@ -577,7 +579,7 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
 
     let model = modelContext.modelByKey.get(key);
     if (!model) {
-      model = new ModelImpl(nyaxContext.nyax, modelDefinitionClass, key);
+      model = new ModelImpl(nyaxContext, modelDefinitionClass, key);
       modelContext.modelByKey.set(key, model);
     }
 
@@ -635,8 +637,15 @@ function resolveModelContext(
       };
       nyaxContext.modelContextByNamespace.set(namespace, modelContext);
     } else {
-      throw new Error("Model definition is not found.");
+      throw new Error("Model definition class is not registered.");
     }
+  }
+
+  if (
+    typeof modelDefinitionClassOrNamespace !== "string" &&
+    modelContext.modelDefinitionClass !== modelDefinitionClassOrNamespace
+  ) {
+    throw new Error("Model definition class is not matched.");
   }
 
   return modelContext;
