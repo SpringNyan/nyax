@@ -454,22 +454,16 @@ export interface Model<
 export class ModelImpl<
   TModelDefinitionClass extends ModelDefinitionClass = ModelDefinitionClass
 > implements Model<TModelDefinitionClass> {
-  public readonly modelDefinitionClass: TModelDefinitionClass;
-
   public readonly namespace: string;
-  public readonly key: string | undefined;
 
   private readonly _modelDefinition: InstanceType<TModelDefinitionClass>;
 
   constructor(
     private readonly _nyaxContext: NyaxContext,
-    modelDefinitionClass: TModelDefinitionClass,
-    key: string | undefined
+    public readonly modelDefinitionClass: TModelDefinitionClass,
+    public readonly key: string | undefined
   ) {
-    this.modelDefinitionClass = modelDefinitionClass;
-
     this.namespace = modelDefinitionClass.namespace;
-    this.key = key;
 
     const modelDefinitionBase = new modelDefinitionClass() as ModelDefinitionBase;
     modelDefinitionBase.__nyax_nyaxContext = this._nyaxContext;
@@ -480,7 +474,12 @@ export class ModelImpl<
   }
 
   public get isRegistered(): boolean {
-    return this._getState() !== undefined;
+    let state = this._nyaxContext.store.getState() as any;
+    state = state?.[this.namespace];
+    if (this.key !== undefined) {
+      state = state?.[this.key];
+    }
+    return state !== undefined;
   }
 
   public get state(): ExtractModelDefinitionProperty<
@@ -533,19 +532,6 @@ export class ModelImpl<
       ])
     );
   }
-
-  private _getState():
-    | ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
-    | undefined {
-    let state = this._nyaxContext.store.getState();
-    state = (state as Record<string, unknown> | undefined)?.[this.namespace];
-    if (this.key !== undefined) {
-      state = (state as Record<string, unknown> | undefined)?.[this.key];
-    }
-    return state as
-      | ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
-      | undefined;
-  }
 }
 
 export interface GetModel {
@@ -583,24 +569,10 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
     key?: string
   ): Model<TModelDefinitionClass> => {
-    const namespace =
-      typeof modelDefinitionClassOrNamespace === "string"
-        ? modelDefinitionClassOrNamespace
-        : modelDefinitionClassOrNamespace.namespace;
-
-    let modelContext = nyaxContext.modelContextByNamespace.get(namespace);
-    if (!modelContext) {
-      if (typeof modelDefinitionClassOrNamespace !== "string") {
-        modelContext = {
-          modelDefinitionClass: modelDefinitionClassOrNamespace,
-          modelByKey: new Map(),
-        };
-        nyaxContext.modelContextByNamespace.set(namespace, modelContext);
-      } else {
-        throw new Error("Model definition is not found.");
-      }
-    }
-
+    const modelContext = resolveModelContext(
+      nyaxContext,
+      modelDefinitionClassOrNamespace
+    );
     const modelDefinitionClass = modelContext.modelDefinitionClass;
 
     if (key === undefined && modelDefinitionClass.dynamic) {
@@ -619,4 +591,61 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
 
     return model as Model<TModelDefinitionClass>;
   };
+}
+
+export type RegisterModelDefinitionClasses = (
+  modelDefinitionClasses: ModelDefinitionClass[]
+) => void;
+
+export function createRegisterModelDefinitionClasses(
+  nyaxContext: NyaxContext
+): RegisterModelDefinitionClasses {
+  return (modelDefinitionClasses) => {
+    const toRegisterNamespaces: string[] = [];
+
+    modelDefinitionClasses.forEach((modelDefinitionClass) => {
+      nyaxContext.store.registerModelDefinitionClass(modelDefinitionClass);
+      resolveModelContext(nyaxContext, modelDefinitionClass);
+
+      if (!modelDefinitionClass.dynamic) {
+        const model = nyaxContext.nyax.getModel(modelDefinitionClass);
+        if (!model.isRegistered) {
+          toRegisterNamespaces.push(model.namespace);
+        }
+      }
+    });
+
+    if (toRegisterNamespaces.length > 0) {
+      nyaxContext.store.dispatch(
+        registerActionHelper.create(
+          toRegisterNamespaces.map((namespace) => ({ namespace }))
+        )
+      );
+    }
+  };
+}
+
+function resolveModelContext(
+  nyaxContext: NyaxContext,
+  modelDefinitionClassOrNamespace: ModelDefinitionClass | string
+) {
+  const namespace =
+    typeof modelDefinitionClassOrNamespace === "string"
+      ? modelDefinitionClassOrNamespace
+      : modelDefinitionClassOrNamespace.namespace;
+
+  let modelContext = nyaxContext.modelContextByNamespace.get(namespace);
+  if (!modelContext) {
+    if (typeof modelDefinitionClassOrNamespace !== "string") {
+      modelContext = {
+        modelDefinitionClass: modelDefinitionClassOrNamespace,
+        modelByKey: new Map(),
+      };
+      nyaxContext.modelContextByNamespace.set(namespace, modelContext);
+    } else {
+      throw new Error("Model definition is not found.");
+    }
+  }
+
+  return modelContext;
 }

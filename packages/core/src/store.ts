@@ -2,9 +2,11 @@ import { AnyAction } from "./action";
 import { createNyaxContext } from "./context";
 import {
   createGetModel,
+  createRegisterModelDefinitionClasses,
   GetModel,
   ModelDefinition,
   ModelDefinitionClass,
+  RegisterModelDefinitionClasses,
 } from "./model";
 
 export type DispatchActionSubscriber = (action: AnyAction) => void;
@@ -23,12 +25,13 @@ export interface Store {
   getModelComputed(
     namespace: string,
     key: string | undefined,
-    path: string
+    getterPath: string
   ): unknown;
   dispatchModelAction(
     namespace: string,
     key: string | undefined,
-    path: string
+    actionType: string,
+    payload: unknown
   ): Promise<unknown>;
 
   registerModelDefinitionClass(
@@ -50,6 +53,7 @@ export interface NyaxOptions {
 export interface Nyax {
   store: Store;
   getModel: GetModel;
+  registerModelDefinitionClasses: RegisterModelDefinitionClasses;
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -57,6 +61,9 @@ export function createNyax(options: NyaxOptions): Nyax {
   nyaxContext.nyax = {
     store: nyaxContext.store,
     getModel: createGetModel(nyaxContext),
+    registerModelDefinitionClasses: createRegisterModelDefinitionClasses(
+      nyaxContext
+    ),
   };
 
   return nyaxContext.nyax;

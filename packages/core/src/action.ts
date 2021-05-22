@@ -44,7 +44,15 @@ export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
   : never;
 
 export class ActionHelperBaseImpl<TPayload> {
-  constructor(public readonly type: string) {}
+  public readonly type: string;
+
+  constructor(
+    public readonly namespace: string,
+    public readonly key: string | undefined,
+    public readonly actionType: string
+  ) {
+    this.type = concatLastString(concatLastString(namespace, key), actionType);
+  }
 
   public is(action: unknown): action is Action<TPayload> {
     return (action as Action<TPayload> | undefined)?.type === this.type;
@@ -61,23 +69,22 @@ export class ActionHelperBaseImpl<TPayload> {
 export class ActionHelperImpl<TPayload, TResult>
   extends ActionHelperBaseImpl<TPayload>
   implements ActionHelper<TPayload, TResult> {
-  constructor(private readonly _nyaxContext: NyaxContext, type: string) {
-    super(type);
+  constructor(
+    private readonly _nyaxContext: NyaxContext,
+    namespace: string,
+    key: string | undefined,
+    actionType: string
+  ) {
+    super(namespace, key, actionType);
   }
 
   public dispatch(payload: TPayload): Promise<TResult> {
-    const action = this.create(payload);
-
-    const promise = new Promise<TResult>((resolve, reject) => {
-      this._nyaxContext.dispatchDeferredByAction.set(action, {
-        resolve,
-        reject,
-      });
-    });
-
-    this._nyaxContext.store.dispatch(action);
-
-    return promise;
+    return this._nyaxContext.store.dispatchModelAction(
+      this.namespace,
+      this.key,
+      this.actionType,
+      payload
+    ) as Promise<TResult>;
   }
 }
 
@@ -89,7 +96,7 @@ export interface RegisterActionPayload {
 
 export const registerActionHelper = new ActionHelperBaseImpl<
   RegisterActionPayload[]
->("@@nyax/register");
+>("@@nyax", undefined, "register");
 
 export interface UnregisterActionPayload {
   namespace: string;
@@ -98,14 +105,16 @@ export interface UnregisterActionPayload {
 
 export const unregisterActionHelper = new ActionHelperBaseImpl<
   UnregisterActionPayload[]
->("@@nyax/unregister");
+>("@@nyax", undefined, "unregister");
 
 export interface ReloadActionPayload {
   state?: unknown;
 }
 
 export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
-  "@@nyax/reload"
+  "@@nyax",
+  undefined,
+  "reload"
 );
 
 export function createActionHelpers<
@@ -120,14 +129,12 @@ export function createActionHelpers<
   mergeObjects(obj, modelDefinition.reducers);
   mergeObjects(obj, modelDefinition.effects);
 
-  const modelPath = concatLastString(
-    modelDefinition.namespace,
-    modelDefinition.key
-  );
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      concatLastString(modelPath, paths.join("."))
+      modelDefinition.namespace,
+      modelDefinition.key,
+      paths.join(".")
     );
   });
 

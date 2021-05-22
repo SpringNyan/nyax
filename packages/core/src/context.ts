@@ -1,4 +1,3 @@
-import { AnyAction } from "./action";
 import { Model, ModelDefinitionClass } from "./model";
 import { Nyax, NyaxOptions, Store } from "./store";
 
@@ -10,14 +9,6 @@ export interface NyaxContext {
   store: Store;
 
   modelContextByNamespace: Map<string, ModelContext>;
-
-  dispatchDeferredByAction: Map<
-    AnyAction,
-    {
-      resolve(value: unknown): void;
-      reject(error: unknown): void;
-    }
-  >;
 }
 
 export interface ModelContext {
@@ -35,21 +26,7 @@ export function createNyaxContext(options: NyaxOptions): NyaxContext {
     store: options.store,
 
     modelContextByNamespace: new Map(),
-
-    dispatchDeferredByAction: new Map(),
   };
-
-  nyaxContext.store.subscribeDispatchResult((action, result, error) => {
-    const deferred = nyaxContext.dispatchDeferredByAction.get(action);
-    if (deferred) {
-      nyaxContext.dispatchDeferredByAction.delete(action);
-      if (error !== undefined) {
-        deferred.reject(error);
-      } else {
-        deferred.resolve(result);
-      }
-    }
-  });
 
   return nyaxContext;
 }

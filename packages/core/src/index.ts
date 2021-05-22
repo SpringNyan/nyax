@@ -6,6 +6,7 @@ export type {
   Model,
   ModelDefinition,
   ModelDefinitionClass,
+  RegisterModelDefinitionClasses,
 } from "./model";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";

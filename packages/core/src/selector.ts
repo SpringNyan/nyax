@@ -31,12 +31,12 @@ export function createGetters<
     getters,
     modelDefinition.selectors,
     (_item, key, parent, paths) => {
-      const path = paths.join(".");
+      const getterPath = paths.join(".");
       defineGetter(parent, key, () =>
         nyaxContext.store.getModelComputed(
           modelDefinition.namespace,
           modelDefinition.key,
-          path
+          getterPath
         )
       );
     }
