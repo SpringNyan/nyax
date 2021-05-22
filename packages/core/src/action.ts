@@ -1,10 +1,10 @@
-import { NyaxContext } from "./context";
 import { ConvertActionHelperTypeParamsObjectFromEffects } from "./effect";
 import {
   ExtractModelDefinitionProperty,
   ModelDefinitionConstructor,
 } from "./model";
 import { ConvertActionHelperTypeParamsObjectFromReducers } from "./reducer";
+import { Nyax } from "./store";
 import { concatLastString, mergeObjects } from "./util";
 
 export interface AnyAction {
@@ -70,7 +70,7 @@ export class ActionHelperImpl<TPayload, TResult>
   extends ActionHelperBaseImpl<TPayload>
   implements ActionHelper<TPayload, TResult> {
   constructor(
-    private readonly _nyaxContext: NyaxContext,
+    private readonly _nyax: Nyax,
     namespace: string,
     key: string | undefined,
     actionType: string
@@ -79,7 +79,7 @@ export class ActionHelperImpl<TPayload, TResult>
   }
 
   public dispatch(payload: TPayload): Promise<TResult> {
-    return this._nyaxContext.store.dispatchModelAction(
+    return this._nyax.store.dispatchModelAction(
       this.namespace,
       this.key,
       this.actionType,
@@ -120,7 +120,7 @@ export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
 export function createActionHelpers<
   TModelDefinitionConstructor extends ModelDefinitionConstructor
 >(
-  nyaxContext: NyaxContext,
+  nyax: Nyax,
   modelDefinition: InstanceType<TModelDefinitionConstructor>
 ): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "actions"> {
   const actionHelpers: Record<string, unknown> = {};
@@ -131,7 +131,7 @@ export function createActionHelpers<
 
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
-      nyaxContext,
+      nyax,
       modelDefinition.namespace,
       modelDefinition.key,
       paths.join(".")

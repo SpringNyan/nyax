@@ -1,8 +1,8 @@
-import { NyaxContext } from "./context";
 import {
   ExtractModelDefinitionProperty,
   ModelDefinitionConstructor,
 } from "./model";
+import { Nyax } from "./store";
 import { defineGetter, mergeObjects } from "./util";
 
 export type Selector<TResult = unknown> = () => TResult;
@@ -22,7 +22,7 @@ export type ConvertGetters<TSelectors> = TSelectors extends any
 export function createGetters<
   TModelDefinitionConstructor extends ModelDefinitionConstructor
 >(
-  nyaxContext: NyaxContext,
+  nyax: Nyax,
   modelDefinition: InstanceType<TModelDefinitionConstructor>
 ): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "getters"> {
   const getters: Record<string, unknown> = {};
@@ -33,7 +33,7 @@ export function createGetters<
     (_item, key, parent, paths) => {
       const getterPath = paths.join(".");
       defineGetter(parent, key, () =>
-        nyaxContext.store.getModelComputed(
+        nyax.store.getModelComputed(
           modelDefinition.namespace,
           modelDefinition.key,
           getterPath

@@ -156,7 +156,7 @@ export class ModelDefinitionBase<TDependencies = unknown>
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
-  public __nyax_nyaxContext!: NyaxContext;
+  public __nyax_nyax!: Nyax;
 
   public __nyax_modelNamespace!: string;
   public __nyax_modelKey!: string | undefined;
@@ -172,13 +172,13 @@ export class ModelDefinitionBase<TDependencies = unknown>
   public subscriptions: any = {};
 
   public get dependencies(): any {
-    return this.__nyax_nyaxContext.dependencies;
+    return this.__nyax_nyax.dependencies;
   }
   public get state(): any {
     let state = this.__nyax_modelState;
     if (state === NYAX_NOTHING) {
       defineGetter(this, "__nyax_modelState", () =>
-        this.__nyax_nyaxContext.store.getModelState(this.namespace, this.key)
+        this.__nyax_nyax.store.getModelState(this.namespace, this.key)
       );
       state = this.__nyax_modelState;
     }
@@ -187,7 +187,7 @@ export class ModelDefinitionBase<TDependencies = unknown>
   public get getters(): any {
     let getters = this.__nyax_modelGetters;
     if (getters === NYAX_NOTHING) {
-      this.__nyax_modelGetters = createGetters(this.__nyax_nyaxContext, this);
+      this.__nyax_modelGetters = createGetters(this.__nyax_nyax, this);
       getters = this.__nyax_modelGetters;
     }
     return getters;
@@ -195,10 +195,7 @@ export class ModelDefinitionBase<TDependencies = unknown>
   public get actions(): any {
     let actions = this.__nyax_modelActions;
     if (actions === NYAX_NOTHING) {
-      this.__nyax_modelActions = createActionHelpers(
-        this.__nyax_nyaxContext,
-        this
-      );
+      this.__nyax_modelActions = createActionHelpers(this.__nyax_nyax, this);
       actions = this.__nyax_modelActions;
     }
     return actions;
@@ -212,10 +209,10 @@ export class ModelDefinitionBase<TDependencies = unknown>
   }
 
   public get getModel(): any {
-    return this.__nyax_nyaxContext.nyax.getModel;
+    return this.__nyax_nyax.getModel;
   }
   public get nyax(): any {
-    return this.__nyax_nyaxContext.nyax;
+    return this.__nyax_nyax;
   }
 }
 
@@ -237,11 +234,7 @@ export function mergeModelDefinitionClasses<
     private readonly __nyax_modelDefinitions = modelDefinitionClasses.map(
       (modelDefinitionClass) => {
         const modelDefinition = new modelDefinitionClass() as ModelDefinitionBase;
-        defineGetter(
-          modelDefinition,
-          "__nyax_nyaxContext",
-          () => this.__nyax_nyaxContext
-        );
+        defineGetter(modelDefinition, "__nyax_nyax", () => this.__nyax_nyax);
 
         defineGetter(
           modelDefinition,
@@ -328,8 +321,8 @@ export function mergeSubModelDefinitionClasses<
 
           defineGetter(
             subModelDefinition,
-            "__nyax_nyaxContext",
-            () => this.__nyax_nyaxContext
+            "__nyax_nyax",
+            () => this.__nyax_nyax
           );
 
           defineGetter(
@@ -456,25 +449,24 @@ export class ModelImpl<
 > implements Model<TModelDefinitionClass> {
   public readonly namespace: string;
 
-  private readonly _modelDefinition: InstanceType<TModelDefinitionClass>;
+  private get _modelDefinition() {
+    return this._nyax.store.getModelDefinition(
+      this._nyax,
+      this.namespace,
+      this.key
+    ) as InstanceType<TModelDefinitionClass>;
+  }
 
   constructor(
-    private readonly _nyaxContext: NyaxContext,
+    private readonly _nyax: Nyax,
     public readonly modelDefinitionClass: TModelDefinitionClass,
     public readonly key: string | undefined
   ) {
     this.namespace = modelDefinitionClass.namespace;
-
-    const modelDefinitionBase = new modelDefinitionClass() as ModelDefinitionBase;
-    modelDefinitionBase.__nyax_nyaxContext = this._nyaxContext;
-    modelDefinitionBase.__nyax_modelNamespace = this.namespace;
-    modelDefinitionBase.__nyax_modelKey = this.key;
-
-    this._modelDefinition = modelDefinitionBase as InstanceType<TModelDefinitionClass>;
   }
 
   public get isRegistered(): boolean {
-    let state = this._nyaxContext.store.getState() as any;
+    let state = this._nyax.store.getState() as any;
     state = state?.[this.namespace];
     if (this.key !== undefined) {
       state = state?.[this.key];
@@ -508,7 +500,7 @@ export class ModelImpl<
       throw new Error("Model is already registered.");
     }
 
-    this._nyaxContext.store.dispatch(
+    this._nyax.store.dispatch(
       registerActionHelper.create([
         {
           namespace: this.namespace,
@@ -523,7 +515,7 @@ export class ModelImpl<
       return;
     }
 
-    this._nyaxContext.store.dispatch(
+    this._nyax.store.dispatch(
       unregisterActionHelper.create([
         {
           namespace: this.namespace,
@@ -585,7 +577,7 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
 
     let model = modelContext.modelByKey.get(key);
     if (!model) {
-      model = new ModelImpl(nyaxContext, modelDefinitionClass, key);
+      model = new ModelImpl(nyaxContext.nyax, modelDefinitionClass, key);
       modelContext.modelByKey.set(key, model);
     }
 
@@ -604,7 +596,7 @@ export function createRegisterModelDefinitionClasses(
     const toRegisterNamespaces: string[] = [];
 
     modelDefinitionClasses.forEach((modelDefinitionClass) => {
-      nyaxContext.store.registerModelDefinitionClass(modelDefinitionClass);
+      nyaxContext.nyax.store.registerModelDefinitionClass(modelDefinitionClass);
       resolveModelContext(nyaxContext, modelDefinitionClass);
 
       if (!modelDefinitionClass.dynamic) {
@@ -616,7 +608,7 @@ export function createRegisterModelDefinitionClasses(
     });
 
     if (toRegisterNamespaces.length > 0) {
-      nyaxContext.store.dispatch(
+      nyaxContext.nyax.store.dispatch(
         registerActionHelper.create(
           toRegisterNamespaces.map((namespace) => ({ namespace }))
         )
