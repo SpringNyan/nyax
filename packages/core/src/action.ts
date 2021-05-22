@@ -88,33 +88,39 @@ export class ActionHelperImpl<TPayload, TResult>
   }
 }
 
-export interface RegisterActionPayload {
+export const registerActionType = "@@nyax/register";
+export type RegisterActionPayload = RegisterActionPayloadItem[];
+export interface RegisterActionPayloadItem {
   namespace: string;
   key?: string;
   state?: unknown;
 }
+export const registerActionHelper = new ActionHelperBaseImpl<RegisterActionPayload>(
+  "",
+  undefined,
+  registerActionType
+);
 
-export const registerActionHelper = new ActionHelperBaseImpl<
-  RegisterActionPayload[]
->("@@nyax", undefined, "register");
-
-export interface UnregisterActionPayload {
+export const unregisterActionType = "@@nyax/unregister";
+export type UnregisterActionPayload = UnregisterActionPayloadItem[];
+export interface UnregisterActionPayloadItem {
   namespace: string;
   key?: string;
 }
+export const unregisterActionHelper = new ActionHelperBaseImpl<UnregisterActionPayload>(
+  "",
+  undefined,
+  unregisterActionType
+);
 
-export const unregisterActionHelper = new ActionHelperBaseImpl<
-  UnregisterActionPayload[]
->("@@nyax", undefined, "unregister");
-
+export const reloadActionType = "@@nyax/reload";
 export interface ReloadActionPayload {
   state?: unknown;
 }
-
 export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
-  "@@nyax",
+  "",
   undefined,
-  "reload"
+  reloadActionType
 );
 
 export function createActionHelpers<

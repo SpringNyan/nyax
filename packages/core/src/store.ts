@@ -8,6 +8,8 @@ import {
   RegisterModelDefinitionClasses,
 } from "./model";
 
+export type DispatchActionSubscriber = (action: AnyAction) => void;
+
 export interface Store {
   getState(): unknown;
   dispatch(action: AnyAction): void;
@@ -25,6 +27,8 @@ export interface Store {
     actionType: string,
     payload: unknown
   ): Promise<unknown>;
+
+  subscribeDispatchAction(fn: DispatchActionSubscriber): () => void;
 }
 
 export interface CreateStoreOptions {

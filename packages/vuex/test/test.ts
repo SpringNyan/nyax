@@ -5,7 +5,7 @@ import {
   Store,
 } from "@nyax/core";
 import { expect } from "chai";
-import { createStore } from "../src/index";
+import { createNyaxCreateStore } from "../src/index";
 
 function waitTime(timeout: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, timeout));
@@ -85,12 +85,11 @@ describe("@nyax/vuex", () => {
       }
     );
 
-    const store = createStore({});
     const nyax = createNyax({
       dependencies,
-      store,
+      createStore: createNyaxCreateStore({}),
     });
-    const { getModel } = nyax;
+    const { store, getModel } = nyax;
 
     const foo = getModel(FooModelDefinition);
     expect(foo.namespace).eq("foo");

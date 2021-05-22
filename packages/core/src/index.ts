@@ -1,4 +1,16 @@
-export type { Action, ActionHelper, AnyAction } from "./action";
+export {
+  registerActionType,
+  reloadActionType,
+  unregisterActionType,
+} from "./action";
+export type {
+  Action,
+  ActionHelper,
+  AnyAction,
+  RegisterActionPayload,
+  ReloadActionPayload,
+  UnregisterActionPayload,
+} from "./action";
 export type { Effect } from "./effect";
 export { createModelDefinitionBaseClass, defineModelDefinition } from "./model";
 export type {
@@ -14,6 +26,7 @@ export { createNyax } from "./store";
 export type {
   CreateStore,
   CreateStoreOptions,
+  DispatchActionSubscriber,
   Nyax,
   NyaxOptions,
   Store,

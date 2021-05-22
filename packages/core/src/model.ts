@@ -84,7 +84,7 @@ export interface ModelDefinitionClass<
     TSubscriptions
   > {
   namespace: string;
-  dynamic: TDynamic;
+  isDynamic: TDynamic;
 }
 
 export type ModelDefinitionPropertyKey =
@@ -410,7 +410,7 @@ export function defineModelDefinition<
     TEffects,
     TSubscriptions
   >,
-  dynamic?: TDynamic
+  isDynamic?: TDynamic
 ): ModelDefinitionClass<
   TDependencies,
   TInitialState,
@@ -422,7 +422,7 @@ export function defineModelDefinition<
 > {
   return class extends modelDefinitionClass {
     public static namespace = namespace;
-    public static dynamic = (dynamic ?? false) as TDynamic;
+    public static isDynamic = (isDynamic ?? false) as TDynamic;
   };
 }
 
@@ -571,11 +571,11 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     );
     const modelDefinitionClass = modelContext.modelDefinitionClass;
 
-    if (key === undefined && modelDefinitionClass.dynamic) {
+    if (key === undefined && modelDefinitionClass.isDynamic) {
       throw new Error("Key is required for dynamic model.");
     }
 
-    if (key !== undefined && !modelDefinitionClass.dynamic) {
+    if (key !== undefined && !modelDefinitionClass.isDynamic) {
       throw new Error("Key is not available for static model.");
     }
 
@@ -603,7 +603,7 @@ export function createRegisterModelDefinitionClasses(
       // initialize context
       nyaxContext.getModelContext(modelDefinitionClass);
 
-      if (!modelDefinitionClass.dynamic) {
+      if (!modelDefinitionClass.isDynamic) {
         const model = nyaxContext.nyax.getModel(modelDefinitionClass);
         if (!model.isRegistered) {
           toRegisterNamespaces.push(model.namespace);

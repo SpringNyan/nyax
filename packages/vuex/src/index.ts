@@ -3,14 +3,21 @@ import {
   concatLastString,
   CreateStore,
   flattenObject,
+  isObject,
   mergeObjects,
   ModelDefinition,
+  RegisterActionPayload,
+  registerActionType,
+  reloadActionType,
   splitLastString,
+  UnregisterActionPayload,
+  unregisterActionType,
 } from "@nyax/core";
 import { computed, ComputedRef, reactive } from "vue";
 import { createStore as vuexCreateStore, Store as VuexStore } from "vuex";
 
 interface ModelContext {
+  modelDefinition: ModelDefinition;
   isRegistered: boolean;
 
   subscriptionDisposables: (() => void)[];
@@ -19,7 +26,11 @@ interface ModelContext {
   flattenedEffectKeySet: Set<string>;
 
   reactiveState: unknown;
-  computedRefByPath: Record<string, ComputedRef>;
+  computedRefByGetterPath: Record<string, ComputedRef>;
+}
+
+function isAction(action: unknown): action is AnyAction {
+  return isObject(action) && !!action["type"];
 }
 
 export function createNyaxCreateStore(options: {
@@ -42,10 +53,11 @@ export function createNyaxCreateStore(options: {
         modelDefinition = getModelDefinition(namespace, key);
       }
       if (!modelDefinition) {
-        throw new Error("Model definition is not registered.");
+        return null;
       }
 
       modelContext = {
+        modelDefinition,
         isRegistered: false,
 
         subscriptionDisposables: [],
@@ -58,7 +70,7 @@ export function createNyaxCreateStore(options: {
         ),
 
         reactiveState: reactive(mergeObjects({}, modelDefinition.initialState)),
-        computedRefByPath: mergeObjects(
+        computedRefByGetterPath: mergeObjects(
           {},
           flattenObject<any>(modelDefinition.selectors),
           (item, key, parent) => {
@@ -78,7 +90,95 @@ export function createNyaxCreateStore(options: {
   return ({ getModelDefinition, deleteModelDefinition }) => {
     const vuexStore = createVuexStore();
 
-    const dispatch = (action: AnyAction) => {
+    const _commit = vuexStore.commit;
+    vuexStore.commit = function (...args: [any, any?]) {
+      const type = isAction(args[0]) ? args[0].type : args[0];
+      const payload = isAction(args[0]) ? args[0].payload : args[1];
+
+      switch (type) {
+        case registerActionType: {
+          (payload as RegisterActionPayload).forEach((item) => {
+            const modelPath = concatLastString(item.namespace, item.key);
+            const modelContext = getModelContext(getModelDefinition, modelPath);
+            if (!modelContext) {
+              throw new Error("Model definition is not found.");
+            }
+
+            const modelDefinition = modelContext.modelDefinition;
+
+            const state = () => mergeObjects({}, modelDefinition.initialState);
+
+            const getters = mergeObjects(
+              {},
+              flattenObject<any>(modelDefinition.selectors),
+              (item, key, parent) => {
+                parent[key] = () => item();
+              }
+            );
+
+            const mutations = mergeObjects(
+              {},
+              flattenObject<any>(modelDefinition.reducers),
+              (item, key, parent) => {
+                parent[key] = (_state: unknown, payload: unknown) =>
+                  item(payload);
+              }
+            );
+
+            const actions = mergeObjects(
+              {},
+              flattenObject<any>(modelDefinition.effects),
+              (item, key, parent) => {
+                parent[key] = (_context: unknown, payload: unknown) =>
+                  item(payload);
+              }
+            );
+
+            const subscriptions = Object.values(
+              flattenObject<any>(modelDefinition.subscriptions)
+            );
+            const subscriptionDisposables = subscriptions
+              .map((subscription) => subscription())
+              .filter(Boolean);
+            modelContext.subscriptionDisposables = subscriptionDisposables;
+
+            vuexStore.registerModule(modelPath.split("/"), {
+              namespaced: true,
+              state,
+              mutations,
+              actions,
+              getters,
+            });
+
+            modelContext.isRegistered = true;
+          });
+          break;
+        }
+        case unregisterActionType: {
+          (payload as UnregisterActionPayload).forEach((item) => {
+            const modelPath = concatLastString(item.namespace, item.key);
+            const modelContext = getModelContext(getModelDefinition, modelPath);
+
+            modelContext?.subscriptionDisposables.forEach((disposable) =>
+              disposable()
+            );
+            vuexStore.unregisterModule(modelPath.split("/"));
+
+            modelContextByModelPath.delete(modelPath);
+            deleteModelDefinition(item.namespace, item.key);
+          });
+          break;
+        }
+        case reloadActionType: {
+          throw new Error("TODO");
+          break;
+        }
+      }
+
+      return _commit.apply(vuexStore, args);
+    }.bind(vuexStore);
+
+    const dispatchAction = (action: AnyAction) => {
       const [modelPath, actionType] = splitLastString(action.type);
       const modelContext = getModelContext(getModelDefinition, modelPath);
 
@@ -98,7 +198,7 @@ export function createNyaxCreateStore(options: {
         return vuexStore.state;
       },
       dispatch(action) {
-        dispatch(action);
+        dispatchAction(action);
       },
       subscribe(fn) {
         return vuexStore.subscribe(fn);
@@ -117,22 +217,27 @@ export function createNyaxCreateStore(options: {
           return getModelContext(
             getModelDefinition,
             concatLastString(namespace, key)
-          ).reactiveState;
+          )?.reactiveState;
         }
       },
       getModelComputed(namespace, key, getterPath) {
         const modelPath = concatLastString(namespace, key);
         const path = concatLastString(modelPath, getterPath);
         const modelContext = getModelContext(getModelDefinition, modelPath);
-        return modelContext.isRegistered
+
+        return modelContext?.isRegistered
           ? vuexStore.getters[path]
-          : modelContext.computedRefByPath[path]?.value;
+          : modelContext?.computedRefByGetterPath[getterPath]?.value;
       },
       dispatchModelAction(namespace, key, actionType, payload) {
-        return dispatch({
+        return dispatchAction({
           type: concatLastString(concatLastString(namespace, key), actionType),
           payload,
         });
+      },
+
+      subscribeDispatchAction: (fn) => {
+        return vuexStore.subscribe(fn);
       },
     };
   };
