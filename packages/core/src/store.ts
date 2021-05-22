@@ -1,6 +1,11 @@
 import { AnyAction } from "./action";
 import { createNyaxContext } from "./context";
-import { createGetModel, GetModel, ModelDefinition } from "./model";
+import {
+  createGetModel,
+  GetModel,
+  ModelDefinition,
+  ModelDefinitionClass,
+} from "./model";
 
 export type DispatchActionSubscriber = (action: AnyAction) => void;
 export type DispatchResultSubscriber = (
@@ -11,9 +16,24 @@ export type DispatchResultSubscriber = (
 
 export interface Store {
   getState(): unknown;
-  getComputed(path: string): unknown;
   dispatch(action: AnyAction): void;
   subscribe(fn: () => void): () => void;
+
+  getModelState(namespace: string, key: string | undefined): unknown;
+  getModelComputed(
+    namespace: string,
+    key: string | undefined,
+    path: string
+  ): unknown;
+  dispatchModelAction(
+    namespace: string,
+    key: string | undefined,
+    path: string
+  ): Promise<unknown>;
+
+  registerModelDefinitionClass(
+    modelDefinitionClass: ModelDefinitionClass
+  ): void;
 
   registerModel(modelDefinition: ModelDefinition): void;
   unregisterModel(modelDefinition: ModelDefinition): void;

@@ -3,7 +3,7 @@ import {
   ExtractModelDefinitionProperty,
   ModelDefinitionConstructor,
 } from "./model";
-import { concatLastString, defineGetter, mergeObjects } from "./util";
+import { defineGetter, mergeObjects } from "./util";
 
 export type Selector<TResult = unknown> = () => TResult;
 
@@ -27,17 +27,17 @@ export function createGetters<
 ): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "getters"> {
   const getters: Record<string, unknown> = {};
 
-  const modelPath = concatLastString(
-    modelDefinition.namespace,
-    modelDefinition.key
-  );
   mergeObjects(
     getters,
     modelDefinition.selectors,
     (_item, key, parent, paths) => {
-      const getterPath = concatLastString(modelPath, paths.join("."));
+      const path = paths.join(".");
       defineGetter(parent, key, () =>
-        nyaxContext.store.getComputed(getterPath)
+        nyaxContext.store.getModelComputed(
+          modelDefinition.namespace,
+          modelDefinition.key,
+          path
+        )
       );
     }
   );

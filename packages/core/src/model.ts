@@ -4,6 +4,7 @@ import {
   registerActionHelper,
   unregisterActionHelper,
 } from "./action";
+import { NYAX_NOTHING } from "./common";
 import { NyaxContext } from "./context";
 import { Effects } from "./effect";
 import { Reducers } from "./reducer";
@@ -156,7 +157,13 @@ export class ModelDefinitionBase<TDependencies = unknown>
       /* eslint-enable @typescript-eslint/ban-types */
     > {
   public __nyax_nyaxContext!: NyaxContext;
-  public __nyax_model!: Model;
+
+  public __nyax_modelNamespace!: string;
+  public __nyax_modelKey!: string | undefined;
+
+  public __nyax_modelState: any = NYAX_NOTHING;
+  public __nyax_modelGetters: any = NYAX_NOTHING;
+  public __nyax_modelActions: any = NYAX_NOTHING;
 
   public initialState: any = {};
   public selectors: any = {};
@@ -168,20 +175,40 @@ export class ModelDefinitionBase<TDependencies = unknown>
     return this.__nyax_nyaxContext.dependencies;
   }
   public get state(): any {
-    return this.__nyax_model.state;
+    let state = this.__nyax_modelState;
+    if (state === NYAX_NOTHING) {
+      defineGetter(this, "__nyax_modelState", () =>
+        this.__nyax_nyaxContext.store.getModelState(this.namespace, this.key)
+      );
+      state = this.__nyax_modelState;
+    }
+    return state;
   }
   public get getters(): any {
-    return this.__nyax_model.getters;
+    let getters = this.__nyax_modelGetters;
+    if (getters === NYAX_NOTHING) {
+      this.__nyax_modelGetters = createGetters(this.__nyax_nyaxContext, this);
+      getters = this.__nyax_modelGetters;
+    }
+    return getters;
   }
   public get actions(): any {
-    return this.__nyax_model.actions;
+    let actions = this.__nyax_modelActions;
+    if (actions === NYAX_NOTHING) {
+      this.__nyax_modelActions = createActionHelpers(
+        this.__nyax_nyaxContext,
+        this
+      );
+      actions = this.__nyax_modelActions;
+    }
+    return actions;
   }
 
   public get namespace(): any {
-    return this.__nyax_model.namespace;
+    return this.__nyax_modelNamespace;
   }
   public get key(): any {
-    return this.__nyax_model.key;
+    return this.__nyax_modelKey;
   }
 
   public get getModel(): any {
@@ -215,7 +242,34 @@ export function mergeModelDefinitionClasses<
           "__nyax_nyaxContext",
           () => this.__nyax_nyaxContext
         );
-        defineGetter(modelDefinition, "__nyax_model", () => this.__nyax_model);
+
+        defineGetter(
+          modelDefinition,
+          "__nyax_modelNamespace",
+          () => this.__nyax_modelNamespace
+        );
+        defineGetter(
+          modelDefinition,
+          "__nyax_modelKey",
+          () => this.__nyax_modelKey
+        );
+
+        defineGetter(
+          modelDefinition,
+          "__nyax_modelState",
+          () => this.__nyax_modelState
+        );
+        defineGetter(
+          modelDefinition,
+          "__nyax_modelGetters",
+          () => this.__nyax_modelGetters
+        );
+        defineGetter(
+          modelDefinition,
+          "__nyax_modelActions",
+          () => this.__nyax_modelActions
+        );
+
         return modelDefinition;
       }
     );
@@ -266,9 +320,6 @@ export function mergeSubModelDefinitionClasses<
 > {
   return class extends ModelDefinitionBase {
     private readonly __nyax_subModelDefinitions = (() => {
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
-      const self = this;
-
       const subModelDefinitions: Record<string, ModelDefinitionBase> = {};
       Object.keys(subModelDefinitionClasses).forEach((key) => {
         const subModelDefinitionClass = subModelDefinitionClasses[key];
@@ -278,49 +329,35 @@ export function mergeSubModelDefinitionClasses<
           defineGetter(
             subModelDefinition,
             "__nyax_nyaxContext",
-            () => self.__nyax_nyaxContext
+            () => this.__nyax_nyaxContext
           );
 
-          const subModel: Model = {
-            get state(): any {
-              return (self.__nyax_model.state as
-                | Record<string, unknown>
-                | undefined)?.[key];
-            },
-            get getters(): any {
-              return (self.__nyax_model.getters as
-                | Record<string, unknown>
-                | undefined)?.[key];
-            },
-            get actions(): any {
-              return (self.__nyax_model.actions as
-                | Record<string, unknown>
-                | undefined)?.[key];
-            },
+          defineGetter(
+            subModelDefinition,
+            "__nyax_modelNamespace",
+            () => this.__nyax_modelNamespace
+          );
+          defineGetter(
+            subModelDefinition,
+            "__nyax_modelKey",
+            () => this.__nyax_modelKey
+          );
 
-            get modelDefinitionClass(): any {
-              return subModelDefinitionClass;
-            },
-
-            get namespace(): any {
-              return self.__nyax_model.namespace;
-            },
-            get key(): any {
-              return self.__nyax_model.key;
-            },
-
-            get isRegistered(): any {
-              return self.__nyax_model.isRegistered;
-            },
-
-            register() {
-              throw new Error("NotSupported");
-            },
-            unregister() {
-              throw new Error("NotSupported");
-            },
-          };
-          defineGetter(subModelDefinition, "__nyax_model", () => subModel);
+          defineGetter(
+            subModelDefinition,
+            "__nyax_modelState",
+            () => this.__nyax_modelState?.[key]
+          );
+          defineGetter(
+            subModelDefinition,
+            "__nyax_modelGetters",
+            () => this.__nyax_modelGetters?.[key]
+          );
+          defineGetter(
+            subModelDefinition,
+            "__nyax_modelActions",
+            () => this.__nyax_modelActions?.[key]
+          );
 
           subModelDefinitions[key] = subModelDefinition;
         }
@@ -424,15 +461,6 @@ export class ModelImpl<
 
   private readonly _modelDefinition: InstanceType<TModelDefinitionClass>;
 
-  private readonly _getters: ExtractModelDefinitionProperty<
-    TModelDefinitionClass,
-    "getters"
-  >;
-  private readonly _actions: ExtractModelDefinitionProperty<
-    TModelDefinitionClass,
-    "actions"
-  >;
-
   constructor(
     private readonly _nyaxContext: NyaxContext,
     modelDefinitionClass: TModelDefinitionClass,
@@ -445,15 +473,10 @@ export class ModelImpl<
 
     const modelDefinitionBase = new modelDefinitionClass() as ModelDefinitionBase;
     modelDefinitionBase.__nyax_nyaxContext = this._nyaxContext;
-    modelDefinitionBase.__nyax_model = this;
+    modelDefinitionBase.__nyax_modelNamespace = this.namespace;
+    modelDefinitionBase.__nyax_modelKey = this.key;
 
     this._modelDefinition = modelDefinitionBase as InstanceType<TModelDefinitionClass>;
-
-    this._getters = createGetters(this._nyaxContext, this._modelDefinition);
-    this._actions = createActionHelpers(
-      this._nyaxContext,
-      this._modelDefinition
-    );
   }
 
   public get isRegistered(): boolean {
@@ -464,22 +487,21 @@ export class ModelImpl<
     TModelDefinitionClass,
     "state"
   > {
-    const state = this._getState();
-    return state !== undefined ? state : this._modelDefinition.initialState;
+    return this._modelDefinition.state;
   }
 
   public get getters(): ExtractModelDefinitionProperty<
     TModelDefinitionClass,
     "getters"
   > {
-    return this._getters;
+    return this._modelDefinition.getters;
   }
 
   public get actions(): ExtractModelDefinitionProperty<
     TModelDefinitionClass,
     "actions"
   > {
-    return this._actions;
+    return this._modelDefinition.actions;
   }
 
   public register(): void {
