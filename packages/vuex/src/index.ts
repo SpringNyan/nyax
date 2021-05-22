@@ -120,8 +120,8 @@ export function createNyaxCreateStore(options: {
               {},
               flattenObject<any>(modelDefinition.reducers),
               (item, key, parent) => {
-                parent[key] = (_state: unknown, payload: unknown) =>
-                  item(payload);
+                parent[key] = (_state: unknown, action: AnyAction) =>
+                  item(action.payload);
               }
             );
 
@@ -129,8 +129,8 @@ export function createNyaxCreateStore(options: {
               {},
               flattenObject<any>(modelDefinition.effects),
               (item, key, parent) => {
-                parent[key] = (_context: unknown, payload: unknown) =>
-                  item(payload);
+                parent[key] = (_context: unknown, action: AnyAction) =>
+                  item(action.payload);
               }
             );
 
@@ -182,15 +182,19 @@ export function createNyaxCreateStore(options: {
       const [modelPath, actionType] = splitLastString(action.type);
       const modelContext = getModelContext(getModelDefinition, modelPath);
 
-      if (modelContext?.flattenedReducerKeySet?.has(actionType)) {
+      if (modelContext) {
+        if (modelContext.flattenedReducerKeySet?.has(actionType)) {
+          vuexStore.commit(action);
+        }
+
+        if (modelContext.flattenedEffectKeySet?.has(actionType)) {
+          return vuexStore.dispatch(action);
+        }
+      } else {
         vuexStore.commit(action);
       }
 
-      if (modelContext?.flattenedEffectKeySet?.has(actionType)) {
-        return vuexStore.dispatch(action);
-      } else {
-        return Promise.resolve();
-      }
+      return Promise.resolve();
     };
 
     return {

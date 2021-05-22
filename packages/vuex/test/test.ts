@@ -2,7 +2,6 @@ import {
   createModelDefinitionBaseClass,
   createNyax,
   defineModelDefinition,
-  Store,
 } from "@nyax/core";
 import { expect } from "chai";
 import { createNyaxCreateStore } from "../src/index";
@@ -13,10 +12,9 @@ function waitTime(timeout: number): Promise<void> {
 
 interface Dependencies {
   packageName: string;
-  store: Store;
 }
 
-const dependencies: Omit<Dependencies, "store"> = {
+const dependencies = {
   packageName: "@nyax/vuex",
 };
 
@@ -73,13 +71,11 @@ describe("@nyax/vuex", () => {
 
         public subscriptions = {
           nameChange: () => {
-            return this.dependencies.store.subscribeDispatchAction(
-              async (action) => {
-                if (this.actions.setName.is(action)) {
-                  await this.actions.increaseNameChangeTimes.dispatch({});
-                }
+            return this.nyax.store.subscribeDispatchAction(async (action) => {
+              if (this.actions.setName.is(action)) {
+                await this.actions.increaseNameChangeTimes.dispatch({});
               }
-            );
+            });
           },
         };
       }
@@ -108,17 +104,17 @@ describe("@nyax/vuex", () => {
     expect(foo.state.age).eq(17);
     expect(foo.state.email).eq("nyan@example.com");
     expect(foo.getters.nameAge).eq("nyan_17");
-    expect(foo.getters.nameAgeCalcTimes).eq(1);
+    expect(foo.getters.nameAgeCalcTimes).eq(2);
 
     foo.actions.setName.dispatch("wwww");
     expect(foo.state.name).eq("wwww");
     expect(foo.getters.nameAge).eq("wwww_17");
-    expect(foo.getters.nameAgeCalcTimes).eq(2);
+    expect(foo.getters.nameAgeCalcTimes).eq(3);
 
     foo.actions.setEmail.dispatch("wwww@example.com");
     expect(foo.state.email).eq("wwww@example.com");
     expect(foo.getters.nameAge).eq("wwww_17");
-    expect(foo.getters.nameAgeCalcTimes).eq(2);
+    expect(foo.getters.nameAgeCalcTimes).eq(3);
 
     foo.actions.setNameAfter10ms.dispatch("nyan10");
     expect(foo.state.name).eq("wwww");
