@@ -11,7 +11,13 @@ export type {
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
 export { createNyax } from "./store";
-export type { Nyax, NyaxOptions, Store } from "./store";
+export type {
+  CreateStore,
+  CreateStoreOptions,
+  Nyax,
+  NyaxOptions,
+  Store,
+} from "./store";
 export type { Subscription } from "./subscription";
 export {
   concatLastString,

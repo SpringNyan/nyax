@@ -450,11 +450,14 @@ export class ModelImpl<
   public readonly namespace: string;
 
   private get _modelDefinition() {
-    return this._nyaxContext.nyax.store.getModelDefinition(
-      this._nyaxContext.nyax,
+    const modelDefinition = this._nyaxContext.getModelDefinition(
       this.namespace,
       this.key
-    ) as InstanceType<TModelDefinitionClass>;
+    );
+    if (!modelDefinition) {
+      throw new Error("Model definition is not registered.");
+    }
+    return modelDefinition as InstanceType<TModelDefinitionClass>;
   }
 
   constructor(
@@ -563,8 +566,7 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
     key?: string
   ): Model<TModelDefinitionClass> => {
-    const modelContext = resolveModelContext(
-      nyaxContext,
+    const modelContext = nyaxContext.getModelContext(
       modelDefinitionClassOrNamespace
     );
     const modelDefinitionClass = modelContext.modelDefinitionClass;
@@ -598,8 +600,8 @@ export function createRegisterModelDefinitionClasses(
     const toRegisterNamespaces: string[] = [];
 
     modelDefinitionClasses.forEach((modelDefinitionClass) => {
-      nyaxContext.nyax.store.registerModelDefinitionClass(modelDefinitionClass);
-      resolveModelContext(nyaxContext, modelDefinitionClass);
+      // initialize context
+      nyaxContext.getModelContext(modelDefinitionClass);
 
       if (!modelDefinitionClass.dynamic) {
         const model = nyaxContext.nyax.getModel(modelDefinitionClass);
@@ -617,36 +619,4 @@ export function createRegisterModelDefinitionClasses(
       );
     }
   };
-}
-
-function resolveModelContext(
-  nyaxContext: NyaxContext,
-  modelDefinitionClassOrNamespace: ModelDefinitionClass | string
-) {
-  const namespace =
-    typeof modelDefinitionClassOrNamespace === "string"
-      ? modelDefinitionClassOrNamespace
-      : modelDefinitionClassOrNamespace.namespace;
-
-  let modelContext = nyaxContext.modelContextByNamespace.get(namespace);
-  if (!modelContext) {
-    if (typeof modelDefinitionClassOrNamespace !== "string") {
-      modelContext = {
-        modelDefinitionClass: modelDefinitionClassOrNamespace,
-        modelByKey: new Map(),
-      };
-      nyaxContext.modelContextByNamespace.set(namespace, modelContext);
-    } else {
-      throw new Error("Model definition class is not registered.");
-    }
-  }
-
-  if (
-    typeof modelDefinitionClassOrNamespace !== "string" &&
-    modelContext.modelDefinitionClass !== modelDefinitionClassOrNamespace
-  ) {
-    throw new Error("Model definition class is not matched.");
-  }
-
-  return modelContext;
 }

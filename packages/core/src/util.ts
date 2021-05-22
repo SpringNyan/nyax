@@ -96,7 +96,7 @@ export function traverseObject<T>(
     paths: readonly string[]
   ) => void
 ): void {
-  mergeObjects(obj, obj, fn);
+  mergeObjects({}, obj, fn);
 }
 
 export function flattenObject<T>(

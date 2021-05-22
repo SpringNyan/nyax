@@ -5,7 +5,6 @@ import {
   createRegisterModelDefinitionClasses,
   GetModel,
   ModelDefinition,
-  ModelDefinitionClass,
   RegisterModelDefinitionClasses,
 } from "./model";
 
@@ -26,20 +25,21 @@ export interface Store {
     actionType: string,
     payload: unknown
   ): Promise<unknown>;
+}
 
-  registerModelDefinitionClass(
-    modelDefinitionClass: ModelDefinitionClass
-  ): void;
+export interface CreateStoreOptions {
   getModelDefinition(
-    nyax: Nyax,
     namespace: string,
     key: string | undefined
-  ): ModelDefinition;
+  ): ModelDefinition | null;
+  deleteModelDefinition(namespace: string, key: string | undefined): void;
 }
+
+export type CreateStore = (options: CreateStoreOptions) => Store;
 
 export interface NyaxOptions {
   dependencies: unknown;
-  store: Store;
+  createStore: CreateStore;
 }
 
 export interface Nyax {
@@ -53,7 +53,10 @@ export function createNyax(options: NyaxOptions): Nyax {
   const nyaxContext = createNyaxContext(options);
   nyaxContext.nyax = {
     dependencies: options.dependencies,
-    store: options.store,
+    store: options.createStore({
+      getModelDefinition: nyaxContext.getModelDefinition,
+      deleteModelDefinition: nyaxContext.deleteModelDefinition,
+    }),
     getModel: createGetModel(nyaxContext),
     registerModelDefinitionClasses: createRegisterModelDefinitionClasses(
       nyaxContext
