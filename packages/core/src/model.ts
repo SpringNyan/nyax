@@ -590,13 +590,13 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
 }
 
 export type RegisterModelDefinitionClasses = (
-  modelDefinitionClasses: ModelDefinitionClass[]
+  ...modelDefinitionClasses: ModelDefinitionClass[]
 ) => void;
 
 export function createRegisterModelDefinitionClasses(
   nyaxContext: NyaxContext
 ): RegisterModelDefinitionClasses {
-  return (modelDefinitionClasses) => {
+  return (...modelDefinitionClasses) => {
     const toRegisterNamespaces: string[] = [];
 
     modelDefinitionClasses.forEach((modelDefinitionClass) => {

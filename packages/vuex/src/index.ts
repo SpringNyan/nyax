@@ -1,4 +1,5 @@
 import {
+  ActionSubscriber,
   AnyAction,
   concatLastString,
   CreateStore,
@@ -36,58 +37,54 @@ function isAction(action: unknown): action is AnyAction {
 export function createNyaxCreateStore(options: {
   createVuexStore?: () => VuexStore<unknown>;
 }): CreateStore {
-  const modelContextByModelPath = new Map<string, ModelContext>();
+  return ({ getModelDefinition, deleteModelDefinition }) => {
+    const modelContextByModelPath = new Map<string, ModelContext>();
 
-  function getModelContext(
-    getModelDefinition: (
-      namespace: string,
-      key: string | undefined
-    ) => ModelDefinition | null,
-    modelPath: string
-  ) {
-    let modelContext = modelContextByModelPath.get(modelPath);
-    if (!modelContext) {
-      let modelDefinition = getModelDefinition(modelPath, undefined);
-      if (!modelDefinition) {
-        const [namespace, key] = splitLastString(modelPath);
-        modelDefinition = getModelDefinition(namespace, key);
+    function getModelContext(modelPath: string) {
+      let modelContext = modelContextByModelPath.get(modelPath);
+      if (!modelContext) {
+        let modelDefinition = getModelDefinition(modelPath, undefined);
+        if (!modelDefinition) {
+          const [namespace, key] = splitLastString(modelPath);
+          modelDefinition = getModelDefinition(namespace, key);
+        }
+        if (!modelDefinition) {
+          return null;
+        }
+
+        modelContext = {
+          modelDefinition,
+          isRegistered: false,
+
+          subscriptionDisposables: [],
+
+          flattenedReducerKeySet: new Set(
+            Object.keys(flattenObject(modelDefinition.reducers))
+          ),
+          flattenedEffectKeySet: new Set(
+            Object.keys(flattenObject(modelDefinition.effects))
+          ),
+
+          reactiveState: reactive(
+            mergeObjects({}, modelDefinition.initialState)
+          ),
+          computedRefByGetterPath: mergeObjects(
+            {},
+            flattenObject<any>(modelDefinition.selectors),
+            (item, key, parent) => {
+              parent[key] = computed(() => item());
+            }
+          ),
+        };
+        modelContextByModelPath.set(modelPath, modelContext);
       }
-      if (!modelDefinition) {
-        return null;
-      }
 
-      modelContext = {
-        modelDefinition,
-        isRegistered: false,
-
-        subscriptionDisposables: [],
-
-        flattenedReducerKeySet: new Set(
-          Object.keys(flattenObject(modelDefinition.reducers))
-        ),
-        flattenedEffectKeySet: new Set(
-          Object.keys(flattenObject(modelDefinition.effects))
-        ),
-
-        reactiveState: reactive(mergeObjects({}, modelDefinition.initialState)),
-        computedRefByGetterPath: mergeObjects(
-          {},
-          flattenObject<any>(modelDefinition.selectors),
-          (item, key, parent) => {
-            parent[key] = computed(() => item());
-          }
-        ),
-      };
-      modelContextByModelPath.set(modelPath, modelContext);
+      return modelContext;
     }
 
-    return modelContext;
-  }
+    const createVuexStore =
+      options.createVuexStore ?? (() => vuexCreateStore({}));
 
-  const createVuexStore =
-    options.createVuexStore ?? (() => vuexCreateStore({}));
-
-  return ({ getModelDefinition, deleteModelDefinition }) => {
     const vuexStore = createVuexStore();
 
     const _commit = vuexStore.commit;
@@ -99,7 +96,7 @@ export function createNyaxCreateStore(options: {
         case registerActionType: {
           (payload as RegisterActionPayload).forEach((item) => {
             const modelPath = concatLastString(item.namespace, item.key);
-            const modelContext = getModelContext(getModelDefinition, modelPath);
+            const modelContext = getModelContext(modelPath);
             if (!modelContext) {
               throw new Error("Model definition is not found.");
             }
@@ -157,7 +154,7 @@ export function createNyaxCreateStore(options: {
         case unregisterActionType: {
           (payload as UnregisterActionPayload).forEach((item) => {
             const modelPath = concatLastString(item.namespace, item.key);
-            const modelContext = getModelContext(getModelDefinition, modelPath);
+            const modelContext = getModelContext(modelPath);
 
             modelContext?.subscriptionDisposables.forEach((disposable) =>
               disposable()
@@ -178,16 +175,30 @@ export function createNyaxCreateStore(options: {
       return _commit.apply(vuexStore, args);
     }.bind(vuexStore);
 
+    vuexStore.registerModule("@@nyax", {
+      mutations: {
+        [registerActionType]: () => {
+          // noop
+        },
+        [unregisterActionType]: () => {
+          // noop
+        },
+        [reloadActionType]: () => {
+          // noop
+        },
+      },
+    });
+
     const dispatchAction = (action: AnyAction) => {
       const [modelPath, actionType] = splitLastString(action.type);
-      const modelContext = getModelContext(getModelDefinition, modelPath);
+      const modelContext = getModelContext(modelPath);
 
       if (modelContext) {
-        if (modelContext.flattenedReducerKeySet?.has(actionType)) {
+        if (modelContext.flattenedReducerKeySet.has(actionType)) {
           vuexStore.commit(action);
         }
 
-        if (modelContext.flattenedEffectKeySet?.has(actionType)) {
+        if (modelContext.flattenedEffectKeySet.has(actionType)) {
           return vuexStore.dispatch(action);
         }
       } else {
@@ -196,6 +207,28 @@ export function createNyaxCreateStore(options: {
 
       return Promise.resolve();
     };
+
+    let actionSubscribers: ActionSubscriber[] = [];
+    vuexStore.subscribe((action) => {
+      const [modelPath, actionType] = splitLastString(action.type);
+      const modelContext = getModelContext(modelPath);
+      if (modelContext?.flattenedReducerKeySet.has(actionType)) {
+        actionSubscribers.forEach((fn) => fn(action));
+      }
+    });
+    vuexStore.subscribeAction({
+      before: (action) => {
+        const [modelPath, actionType] = splitLastString(action.type);
+        const modelContext = getModelContext(modelPath);
+
+        if (
+          modelContext?.flattenedEffectKeySet.has(actionType) &&
+          !modelContext?.flattenedReducerKeySet.has(actionType)
+        ) {
+          actionSubscribers.forEach((fn) => fn(action));
+        }
+      },
+    });
 
     return {
       getState() {
@@ -218,16 +251,14 @@ export function createNyaxCreateStore(options: {
         if (state !== undefined) {
           return state;
         } else {
-          return getModelContext(
-            getModelDefinition,
-            concatLastString(namespace, key)
-          )?.reactiveState;
+          return getModelContext(concatLastString(namespace, key))
+            ?.reactiveState;
         }
       },
       getModelComputed(namespace, key, getterPath) {
         const modelPath = concatLastString(namespace, key);
         const path = concatLastString(modelPath, getterPath);
-        const modelContext = getModelContext(getModelDefinition, modelPath);
+        const modelContext = getModelContext(modelPath);
 
         return modelContext?.isRegistered
           ? vuexStore.getters[path]
@@ -240,8 +271,13 @@ export function createNyaxCreateStore(options: {
         });
       },
 
-      subscribeDispatchAction: (fn) => {
-        return vuexStore.subscribe(fn);
+      subscribeAction: (fn) => {
+        actionSubscribers = [...actionSubscribers, fn];
+        return () => {
+          actionSubscribers = actionSubscribers.filter(
+            (subscriber) => subscriber !== fn
+          );
+        };
       },
     };
   };

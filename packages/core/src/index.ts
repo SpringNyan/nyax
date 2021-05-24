@@ -12,7 +12,12 @@ export type {
   UnregisterActionPayload,
 } from "./action";
 export type { Effect } from "./effect";
-export { createModelDefinitionBaseClass, defineModelDefinition } from "./model";
+export {
+  createModelDefinitionBaseClass,
+  defineModelDefinition,
+  mergeModelDefinitionClasses,
+  mergeSubModelDefinitionClasses,
+} from "./model";
 export type {
   GetModel,
   Model,
@@ -24,9 +29,9 @@ export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
 export { createNyax } from "./store";
 export type {
+  ActionSubscriber,
   CreateStore,
   CreateStoreOptions,
-  DispatchActionSubscriber,
   Nyax,
   NyaxOptions,
   Store,
