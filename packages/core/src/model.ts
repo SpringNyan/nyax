@@ -469,12 +469,10 @@ export class ModelImpl<
   }
 
   public get isRegistered(): boolean {
-    let state = this._nyaxContext.nyax.store.getState() as any;
-    state = state?.[this.namespace];
-    if (this.key !== undefined) {
-      state = state?.[this.key];
-    }
-    return state !== undefined;
+    return (
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this._nyaxContext.nyax.getState(this.namespace, this.key!) !== undefined
+    );
   }
 
   public get state(): ExtractModelDefinitionProperty<

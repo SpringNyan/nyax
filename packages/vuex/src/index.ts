@@ -170,6 +170,26 @@ export function createNyaxCreateStore(options: {
           throw new Error("TODO");
           break;
         }
+        default:
+          {
+            const [modelPath, actionType] = splitLastString(type);
+            const modelContext = getModelContext(modelPath);
+
+            if (
+              modelContext &&
+              !modelContext.isRegistered &&
+              (modelContext.flattenedReducerKeySet.has(actionType) ||
+                modelContext.flattenedEffectKeySet.has(actionType))
+            ) {
+              vuexStore.commit(registerActionType, [
+                {
+                  namespace: modelContext.modelDefinition.namespace,
+                  key: modelContext.modelDefinition.key,
+                },
+              ]);
+            }
+          }
+          break;
       }
 
       return _commit.apply(vuexStore, args);
@@ -210,11 +230,7 @@ export function createNyaxCreateStore(options: {
 
     let actionSubscribers: ActionSubscriber[] = [];
     vuexStore.subscribe((action) => {
-      const [modelPath, actionType] = splitLastString(action.type);
-      const modelContext = getModelContext(modelPath);
-      if (modelContext?.flattenedReducerKeySet.has(actionType)) {
-        actionSubscribers.forEach((fn) => fn(action));
-      }
+      actionSubscribers.forEach((fn) => fn(action));
     });
     vuexStore.subscribeAction({
       before: (action) => {

@@ -7,6 +7,7 @@ import {
   ModelDefinition,
   RegisterModelDefinitionClasses,
 } from "./model";
+import { createGetState, GetState } from "./state";
 
 export type ActionSubscriber = (action: AnyAction) => void;
 
@@ -49,6 +50,7 @@ export interface NyaxOptions {
 export interface Nyax {
   dependencies: unknown;
   store: Store;
+  getState: GetState;
   getModel: GetModel;
   registerModelDefinitionClasses: RegisterModelDefinitionClasses;
 }
@@ -61,6 +63,7 @@ export function createNyax(options: NyaxOptions): Nyax {
       getModelDefinition: nyaxContext.getModelDefinition,
       deleteModelDefinition: nyaxContext.deleteModelDefinition,
     }),
+    getState: createGetState(nyaxContext),
     getModel: createGetModel(nyaxContext),
     registerModelDefinitionClasses: createRegisterModelDefinitionClasses(
       nyaxContext

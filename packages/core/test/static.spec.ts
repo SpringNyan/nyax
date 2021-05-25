@@ -19,10 +19,26 @@ export function test(options: {
         dependencies,
         createStore: options.createStore,
       });
-      const { store, getModel, registerModelDefinitionClasses } = nyax;
+      const {
+        store,
+        getState,
+        getModel,
+        registerModelDefinitionClasses,
+      } = nyax;
 
       expect(() => getModel("app")).throw();
+
+      expect(getState()).eq(store.getState());
+
+      expect(getState(AppModelDefinition)).eq(undefined);
+      expect(getModel(AppModelDefinition).state).not.eq(undefined);
+
       registerModelDefinitionClasses(AppModelDefinition);
+
+      expect(getState()).eq(store.getState());
+      expect(getState(AppModelDefinition)).eq(
+        getModel(AppModelDefinition).state
+      );
 
       const appModel = getModel(AppModelDefinition);
       const userModel = getModel(UserModelDefinition);
@@ -46,8 +62,15 @@ export function test(options: {
       expect(userModel.state.email).eq("nyan@example.com");
       expect(userModel.getters.summary).eq("name: nyan; age: 17");
 
+      expect(getState(UserModelDefinition)).eq(undefined);
+      expect(getModel(UserModelDefinition).state).not.eq(undefined);
+
       userModel.register();
       expect(userModel.isRegistered).eq(true);
+
+      expect(getState(UserModelDefinition)).eq(
+        getModel(UserModelDefinition).state
+      );
 
       expect(userModel.state.name).eq("nyan");
       expect(userModel.state.age).eq(17);
@@ -105,6 +128,19 @@ export function test(options: {
 
       expect(userModel.state.nameChangeTimes).eq(3);
       expect(appModel.state.userAgeChangeTimes).eq(2);
+
+      userModel.unregister();
+
+      expect(getState(UserModelDefinition)).eq(undefined);
+      expect(getModel(UserModelDefinition).state).not.eq(undefined);
+
+      expect(userModel.state.name).eq("nyan");
+      expect(userModel.state.age).eq(17);
+      expect(userModel.state.email).eq("nyan@example.com");
+      expect(userModel.getters.summary).eq("name: nyan; age: 17");
+
+      userModel.actions.setEmail.dispatch("meow@example.com");
+      expect(userModel.state.email).eq("meow@example.com");
     });
   });
 }

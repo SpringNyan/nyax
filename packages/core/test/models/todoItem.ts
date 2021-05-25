@@ -47,5 +47,6 @@ export const TodoItemModelDefinition = defineModelDefinition(
         await this.actions.setIsDone.dispatch(payload.isDone);
       },
     };
-  }
+  },
+  true
 );
