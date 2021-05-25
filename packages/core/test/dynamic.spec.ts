@@ -38,7 +38,7 @@ export function test(options: {
       expect(todoListModel.state.ids).deep.eq([]);
       expect(todoListModel.getters.items).deep.eq([]);
 
-      todoListModel.actions.add.dispatch({
+      await todoListModel.actions.add.dispatch({
         title: "TODO 1",
         description: "nyan",
       });

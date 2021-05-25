@@ -103,7 +103,7 @@ export function createNyaxCreateStore(options: {
           {},
           flattenObject<any>(modelDefinition.selectors),
           (item, key, parent) => {
-            parent[key] = () => item();
+            parent[concatLastString(modelPath, key)] = () => item();
           }
         );
 
@@ -111,8 +111,10 @@ export function createNyaxCreateStore(options: {
           {},
           flattenObject<any>(modelDefinition.reducers),
           (item, key, parent) => {
-            parent[key] = (_state: unknown, action: AnyAction) =>
-              item(action.payload);
+            parent[concatLastString(modelPath, key)] = (
+              _state: unknown,
+              action: AnyAction
+            ) => item(action.payload);
           }
         );
 
@@ -120,8 +122,10 @@ export function createNyaxCreateStore(options: {
           {},
           flattenObject<any>(modelDefinition.effects),
           (item, key, parent) => {
-            parent[key] = (_context: unknown, action: AnyAction) =>
-              item(action.payload);
+            parent[concatLastString(modelPath, key)] = (
+              _context: unknown,
+              action: AnyAction
+            ) => item(action.payload);
           }
         );
 
@@ -133,8 +137,16 @@ export function createNyaxCreateStore(options: {
           .filter(Boolean);
         modelContext.subscriptionDisposables = subscriptionDisposables;
 
-        vuexStore.registerModule(modelPath.split("/"), {
-          namespaced: true,
+        const modulePaths = modelPath.split("/");
+        if (
+          modulePaths[0] &&
+          modulePaths[1] &&
+          !vuexStore.hasModule(modulePaths[0])
+        ) {
+          vuexStore.registerModule(modulePaths[0], {});
+        }
+
+        vuexStore.registerModule(modulePaths, {
           state,
           mutations,
           actions,

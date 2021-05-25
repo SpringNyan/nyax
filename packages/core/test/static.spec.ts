@@ -79,7 +79,7 @@ export function test(options: {
 
       expect(appModel.state.initializeTimes).eq(0);
 
-      appModel.actions.initialize.dispatch({
+      await appModel.actions.initialize.dispatch({
         errorMessage: "Orz",
       });
       expect(appModel.state.isInitialized).eq(false);
@@ -89,7 +89,7 @@ export function test(options: {
 
       expect(appModel.state.initializeTimes).eq(1);
 
-      appModel.actions.initialize.dispatch({});
+      await appModel.actions.initialize.dispatch({});
       expect(appModel.state.isInitialized).eq(true);
       expect(appModel.state.errorMessage).eq(null);
       expect(appModel.state.initializedTimestamp).not.eq(null);
