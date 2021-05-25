@@ -87,83 +87,114 @@ export function createNyaxCreateStore(options: {
 
     const vuexStore = createVuexStore();
 
+    function registerModels(payload: RegisterActionPayload) {
+      payload.forEach((item) => {
+        const modelPath = concatLastString(item.namespace, item.key);
+        const modelContext = getModelContext(modelPath);
+        if (!modelContext) {
+          throw new Error("Model definition is not found.");
+        }
+
+        const modelDefinition = modelContext.modelDefinition;
+
+        const state = () => mergeObjects({}, modelDefinition.initialState);
+
+        const getters = mergeObjects(
+          {},
+          flattenObject<any>(modelDefinition.selectors),
+          (item, key, parent) => {
+            parent[key] = () => item();
+          }
+        );
+
+        const mutations = mergeObjects(
+          {},
+          flattenObject<any>(modelDefinition.reducers),
+          (item, key, parent) => {
+            parent[key] = (_state: unknown, action: AnyAction) =>
+              item(action.payload);
+          }
+        );
+
+        const actions = mergeObjects(
+          {},
+          flattenObject<any>(modelDefinition.effects),
+          (item, key, parent) => {
+            parent[key] = (_context: unknown, action: AnyAction) =>
+              item(action.payload);
+          }
+        );
+
+        const subscriptions = Object.values(
+          flattenObject<any>(modelDefinition.subscriptions)
+        );
+        const subscriptionDisposables = subscriptions
+          .map((subscription) => subscription())
+          .filter(Boolean);
+        modelContext.subscriptionDisposables = subscriptionDisposables;
+
+        vuexStore.registerModule(modelPath.split("/"), {
+          namespaced: true,
+          state,
+          mutations,
+          actions,
+          getters,
+        });
+
+        modelContext.isRegistered = true;
+      });
+    }
+
+    function unregisterModels(payload: UnregisterActionPayload) {
+      payload.forEach((item) => {
+        const modelPath = concatLastString(item.namespace, item.key);
+        const modelContext = getModelContext(modelPath);
+
+        modelContext?.subscriptionDisposables.forEach((disposable) =>
+          disposable()
+        );
+        vuexStore.unregisterModule(modelPath.split("/"));
+
+        modelContextByModelPath.delete(modelPath);
+        deleteModelDefinition(item.namespace, item.key);
+      });
+    }
+
+    function autoRegisterModel(
+      modelContext: ModelContext | null,
+      actionType: string
+    ) {
+      if (
+        modelContext &&
+        !modelContext.isRegistered &&
+        (modelContext.flattenedReducerKeySet.has(actionType) ||
+          modelContext.flattenedEffectKeySet.has(actionType))
+      ) {
+        vuexStore.commit(registerActionType, [
+          {
+            namespace: modelContext.modelDefinition.namespace,
+            key: modelContext.modelDefinition.key,
+          },
+        ]);
+      }
+    }
+
     const _commit = vuexStore.commit;
     vuexStore.commit = function (...args: [any, any?]) {
       const type = isAction(args[0]) ? args[0].type : args[0];
       const payload = isAction(args[0]) ? args[0].payload : args[1];
 
+      const [modelPath, actionType] = splitLastString(type);
+      const modelContext = getModelContext(modelPath);
+      autoRegisterModel(modelContext, actionType);
+
       switch (type) {
         case registerActionType: {
-          (payload as RegisterActionPayload).forEach((item) => {
-            const modelPath = concatLastString(item.namespace, item.key);
-            const modelContext = getModelContext(modelPath);
-            if (!modelContext) {
-              throw new Error("Model definition is not found.");
-            }
-
-            const modelDefinition = modelContext.modelDefinition;
-
-            const state = () => mergeObjects({}, modelDefinition.initialState);
-
-            const getters = mergeObjects(
-              {},
-              flattenObject<any>(modelDefinition.selectors),
-              (item, key, parent) => {
-                parent[key] = () => item();
-              }
-            );
-
-            const mutations = mergeObjects(
-              {},
-              flattenObject<any>(modelDefinition.reducers),
-              (item, key, parent) => {
-                parent[key] = (_state: unknown, action: AnyAction) =>
-                  item(action.payload);
-              }
-            );
-
-            const actions = mergeObjects(
-              {},
-              flattenObject<any>(modelDefinition.effects),
-              (item, key, parent) => {
-                parent[key] = (_context: unknown, action: AnyAction) =>
-                  item(action.payload);
-              }
-            );
-
-            const subscriptions = Object.values(
-              flattenObject<any>(modelDefinition.subscriptions)
-            );
-            const subscriptionDisposables = subscriptions
-              .map((subscription) => subscription())
-              .filter(Boolean);
-            modelContext.subscriptionDisposables = subscriptionDisposables;
-
-            vuexStore.registerModule(modelPath.split("/"), {
-              namespaced: true,
-              state,
-              mutations,
-              actions,
-              getters,
-            });
-
-            modelContext.isRegistered = true;
-          });
+          registerModels(payload);
           break;
         }
         case unregisterActionType: {
-          (payload as UnregisterActionPayload).forEach((item) => {
-            const modelPath = concatLastString(item.namespace, item.key);
-            const modelContext = getModelContext(modelPath);
-
-            modelContext?.subscriptionDisposables.forEach((disposable) =>
-              disposable()
-            );
-            vuexStore.unregisterModule(modelPath.split("/"));
-
-            modelContextByModelPath.delete(modelPath);
-            deleteModelDefinition(item.namespace, item.key);
-          });
+          unregisterModels(payload);
           break;
         }
         case reloadActionType: {
@@ -171,28 +202,21 @@ export function createNyaxCreateStore(options: {
           break;
         }
         default:
-          {
-            const [modelPath, actionType] = splitLastString(type);
-            const modelContext = getModelContext(modelPath);
-
-            if (
-              modelContext &&
-              !modelContext.isRegistered &&
-              (modelContext.flattenedReducerKeySet.has(actionType) ||
-                modelContext.flattenedEffectKeySet.has(actionType))
-            ) {
-              vuexStore.commit(registerActionType, [
-                {
-                  namespace: modelContext.modelDefinition.namespace,
-                  key: modelContext.modelDefinition.key,
-                },
-              ]);
-            }
-          }
           break;
       }
 
       return _commit.apply(vuexStore, args);
+    }.bind(vuexStore);
+
+    const _dispatch = vuexStore.dispatch;
+    vuexStore.dispatch = function (...args: [any, any?, any?]) {
+      const type = isAction(args[0]) ? args[0].type : args[0];
+
+      const [modelPath, actionType] = splitLastString(type);
+      const modelContext = getModelContext(modelPath);
+      autoRegisterModel(modelContext, actionType);
+
+      return _dispatch.apply(vuexStore, args);
     }.bind(vuexStore);
 
     vuexStore.registerModule("@@nyax", {
