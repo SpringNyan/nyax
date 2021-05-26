@@ -141,6 +141,15 @@ export function test(options: {
 
       userModel.actions.setEmail.dispatch("meow@example.com");
       expect(userModel.state.email).eq("meow@example.com");
+
+      appModel.unregister();
+      expect(appModel.state.userAgeChangeTimes).eq(0);
+      userModel.actions.setAge.dispatch(998);
+      expect(appModel.state.userAgeChangeTimes).eq(0);
+      appModel.register();
+      expect(appModel.state.userAgeChangeTimes).eq(0);
+      userModel.actions.setAge.dispatch(666);
+      expect(appModel.state.userAgeChangeTimes).eq(1);
     });
   });
 }
