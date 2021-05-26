@@ -87,25 +87,13 @@ export function mergeObjects<T>(
   return target;
 }
 
-export function traverseObject<T>(
-  obj: DeepRecord<T>,
-  fn: (
-    item: T,
-    key: string,
-    parent: DeepRecord<T>,
-    paths: readonly string[]
-  ) => void
-): void {
-  mergeObjects({}, obj, fn);
-}
-
 export function flattenObject<T>(
   obj: DeepRecord<T>,
   separator = "."
 ): Record<string, T> {
   const result: Record<string, T> = {};
 
-  traverseObject(obj, (item, key, parent, paths) => {
+  mergeObjects({}, obj, (item, key, parent, paths) => {
     result[paths.join(separator)] = item;
   });
 

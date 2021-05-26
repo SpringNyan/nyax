@@ -79,7 +79,7 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
     modelDefinitionClassOrNamespace?: ModelDefinitionClass | string,
     key?: string
   ): unknown => {
-    let state = nyaxContext.nyax.store.getState();
+    let state = nyaxContext.nyax.store.getState() as any;
 
     if (modelDefinitionClassOrNamespace === undefined) {
       return state;
@@ -90,12 +90,10 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
     );
     const modelDefinitionClass = modelContext.modelDefinitionClass;
 
-    state = (state as Record<string, unknown> | undefined)?.[
-      modelDefinitionClass.namespace
-    ];
+    state = state?.[modelDefinitionClass.namespace];
     if (modelDefinitionClass.isDynamic) {
       if (key !== undefined) {
-        state = (state as Record<string, unknown> | undefined)?.[key];
+        state = state?.[key];
       }
     } else {
       if (key !== undefined) {

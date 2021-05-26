@@ -1,4 +1,5 @@
 import {
+  Action,
   ActionSubscriber,
   AnyAction,
   concatLastString,
@@ -130,13 +131,14 @@ export function createNyaxCreateStore(options: {
           }
         );
 
-        const subscriptions = Object.values(
-          flattenObject<any>(modelDefinition.subscriptions)
+        mergeObjects(
+          {},
+          flattenObject<any>(modelDefinition.subscriptions),
+          (item) => {
+            const disposable = item();
+            modelContext.subscriptionDisposables.push(disposable);
+          }
         );
-        const subscriptionDisposables = subscriptions
-          .map((subscription) => subscription())
-          .filter(Boolean);
-        modelContext.subscriptionDisposables = subscriptionDisposables;
 
         const modulePaths = modelPath.split("/");
         if (
@@ -166,7 +168,11 @@ export function createNyaxCreateStore(options: {
         modelContext?.subscriptionDisposables.forEach((disposable) =>
           disposable()
         );
-        vuexStore.unregisterModule(modelPath.split("/"));
+
+        const modulePaths = modelPath.split("/");
+        if (vuexStore.hasModule(modulePaths)) {
+          vuexStore.unregisterModule(modulePaths);
+        }
 
         modelContextByModelPath.delete(modelPath);
         deleteModelDefinition(item.namespace, item.key);
@@ -174,7 +180,40 @@ export function createNyaxCreateStore(options: {
     }
 
     function reloadModels(payload: ReloadActionPayload) {
-      // todo
+      const modelContexts = Array.from(modelContextByModelPath.values());
+
+      unregisterModels(
+        modelContexts.map((e) => ({
+          namespace: e.modelDefinition.namespace,
+          key: e.modelDefinition.key,
+        }))
+      );
+
+      const registerActionPayload: RegisterActionPayload = [];
+      if (payload.state === undefined) {
+        modelContexts
+          .filter((e) => e.modelDefinition.key === undefined)
+          .forEach((e) => {
+            registerActionPayload.push({
+              namespace: e.modelDefinition.namespace,
+            });
+          });
+      } else {
+        mergeObjects(
+          {},
+          payload.state as any,
+          (_item, _key, _parent, paths) => {
+            const [namespace, key] = paths;
+            if (namespace && getModelDefinition(namespace, key)) {
+              registerActionPayload.push({
+                namespace,
+                key,
+              });
+            }
+          }
+        );
+      }
+      registerModels(registerActionPayload);
     }
 
     function autoRegisterModel(
@@ -187,12 +226,15 @@ export function createNyaxCreateStore(options: {
         (modelContext.flattenedReducerKeySet.has(actionType) ||
           modelContext.flattenedEffectKeySet.has(actionType))
       ) {
-        vuexStore.commit(registerActionType, [
-          {
-            namespace: modelContext.modelDefinition.namespace,
-            key: modelContext.modelDefinition.key,
-          },
-        ]);
+        vuexStore.commit({
+          type: registerActionType,
+          payload: [
+            {
+              namespace: modelContext.modelDefinition.namespace,
+              key: modelContext.modelDefinition.key,
+            },
+          ],
+        });
       }
     }
 
@@ -238,13 +280,21 @@ export function createNyaxCreateStore(options: {
 
     vuexStore.registerModule("@@nyax", {
       mutations: {
-        [registerActionType]: (state: any, payload: RegisterActionPayload) => {
-          payload.forEach((item) => {
-            if (item.state !== undefined && state) {
-              if (item.key !== undefined && state[item.namespace]) {
-                state[item.namespace][item.key] = item.state;
-              } else {
-                state[item.namespace] = item.state;
+        [registerActionType]: (
+          rootState: any,
+          action: Action<RegisterActionPayload>
+        ) => {
+          action.payload.forEach((item) => {
+            if (item.state !== undefined) {
+              const nextState = mergeObjects({}, item.state as any);
+              if (rootState) {
+                if (item.key === undefined) {
+                  rootState[item.namespace] = nextState;
+                } else {
+                  if (rootState[item.namespace]) {
+                    rootState[item.namespace][item.key] = nextState;
+                  }
+                }
               }
             }
           });
@@ -252,9 +302,14 @@ export function createNyaxCreateStore(options: {
         [unregisterActionType]: () => {
           // noop
         },
-        [reloadActionType]: (_state: any, payload: ReloadActionPayload) => {
-          if (payload.state !== undefined) {
-            vuexStore.replaceState(payload.state);
+        [reloadActionType]: (
+          _rootState: any,
+          action: Action<ReloadActionPayload>
+        ) => {
+          if (action.payload.state !== undefined) {
+            vuexStore.replaceState(
+              mergeObjects({}, action.payload.state as any)
+            );
           }
         },
       },
