@@ -9,6 +9,7 @@ import {
   ModelDefinition,
   RegisterActionPayload,
   registerActionType,
+  ReloadActionPayload,
   reloadActionType,
   splitLastString,
   UnregisterActionPayload,
@@ -172,6 +173,10 @@ export function createNyaxCreateStore(options: {
       });
     }
 
+    function reloadModels(payload: ReloadActionPayload) {
+      // todo
+    }
+
     function autoRegisterModel(
       modelContext: ModelContext | null,
       actionType: string
@@ -210,7 +215,7 @@ export function createNyaxCreateStore(options: {
           break;
         }
         case reloadActionType: {
-          throw new Error("TODO");
+          reloadModels(payload);
           break;
         }
         default:
@@ -233,14 +238,24 @@ export function createNyaxCreateStore(options: {
 
     vuexStore.registerModule("@@nyax", {
       mutations: {
-        [registerActionType]: () => {
-          // noop
+        [registerActionType]: (state: any, payload: RegisterActionPayload) => {
+          payload.forEach((item) => {
+            if (item.state !== undefined && state) {
+              if (item.key !== undefined && state[item.namespace]) {
+                state[item.namespace][item.key] = item.state;
+              } else {
+                state[item.namespace] = item.state;
+              }
+            }
+          });
         },
         [unregisterActionType]: () => {
           // noop
         },
-        [reloadActionType]: () => {
-          // noop
+        [reloadActionType]: (_state: any, payload: ReloadActionPayload) => {
+          if (payload.state !== undefined) {
+            vuexStore.replaceState(payload.state);
+          }
         },
       },
     });
