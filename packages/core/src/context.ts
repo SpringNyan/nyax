@@ -1,9 +1,12 @@
+import { createActionHelpers } from "./action";
 import {
   Model,
   ModelDefinition,
   ModelDefinitionBase,
   ModelDefinitionClass,
+  ModelDefinitionConstructor,
 } from "./model";
+import { createGetters } from "./selector";
 import { Nyax, NyaxOptions } from "./store";
 
 export interface NyaxContext {
@@ -78,10 +81,36 @@ export function createNyaxContext(options: NyaxOptions): NyaxContext {
         | ModelDefinitionBase
         | undefined;
       if (!modelDefinition) {
-        modelDefinition = new modelContext.modelDefinitionClass() as ModelDefinitionBase;
-        modelDefinition.__nyax_nyax = nyaxContext.nyax;
-        modelDefinition.__nyax_modelNamespace = namespace;
-        modelDefinition.__nyax_modelKey = key;
+        let getters: any;
+        let actions: any;
+
+        modelDefinition = new ((modelContext.modelDefinitionClass as ModelDefinitionConstructor) as typeof ModelDefinitionBase)(
+          {
+            nyax: nyaxContext.nyax,
+
+            namespace,
+            key,
+
+            get state() {
+              return nyaxContext.nyax.store.getModelState(namespace, key);
+            },
+            get getters() {
+              if (!getters && modelDefinition) {
+                getters = createGetters(nyaxContext.nyax, modelDefinition);
+              }
+              return getters;
+            },
+            get actions() {
+              if (!actions && modelDefinition) {
+                actions = createActionHelpers(
+                  nyaxContext.nyax,
+                  modelDefinition
+                );
+              }
+              return actions;
+            },
+          }
+        );
         modelContext.modelDefinitionByKey.set(key, modelDefinition);
       }
 
