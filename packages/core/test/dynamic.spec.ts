@@ -18,11 +18,9 @@ export function test(options: {
         dependencies,
         createStore: options.createStore,
       });
-      const { getModel } = nyax;
+      const { getModel, getState } = nyax;
 
       const todoListModel = getModel(TodoListModelDefinition);
-      const getTodoItemModel = (id: string) =>
-        getModel(TodoItemModelDefinition, id);
 
       expect(todoListModel).eq(getModel("todo.list"));
       expect(todoListModel.namespace).eq("todo.list");
@@ -49,7 +47,51 @@ export function test(options: {
         },
       ]);
 
-      expect(getTodoItemModel("1").isRegistered).eq(true);
+      const todoItem1Model = getModel(TodoItemModelDefinition, "1");
+      expect(todoItem1Model.isRegistered).eq(true);
+      expect(todoItem1Model.state).eq(getState(TodoItemModelDefinition)?.["1"]);
+      expect(todoItem1Model.state).eq(getState(TodoItemModelDefinition, "1"));
+      expect(todoItem1Model.getters.id).eq("1");
+      expect(todoItem1Model.getters.summary).eq("TODO 1: nyan");
+      todoItem1Model.actions.setIsDone.dispatch(true);
+      expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
+
+      const todoItem2Model = getModel(TodoItemModelDefinition, "2");
+      expect(todoItem2Model.isRegistered).eq(false);
+
+      todoItem2Model.register();
+      expect(todoItem2Model.isRegistered).eq(true);
+      todoItem2Model.actions.setTitle.dispatch("TODO 2");
+      todoItem2Model.actions.setDescription.dispatch("meow");
+      expect(todoItem2Model.getters.summary).eq("TODO 2: meow");
+      expect(todoItem2Model.state).eq(getState(TodoItemModelDefinition)?.["2"]);
+      expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
+
+      todoItem2Model.unregister();
+      expect(todoItem2Model.isRegistered).eq(false);
+      expect(todoItem2Model.getters.summary).eq(": ");
+      expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
+      expect(getState(TodoItemModelDefinition)?.["2"]).eq(undefined);
+
+      await todoListModel.actions.add.dispatch({
+        title: "todo 2",
+        description: "zzzz",
+      });
+      expect(todoItem2Model.isRegistered).eq(true);
+      expect(todoItem2Model.getters.summary).eq("todo 2: zzzz");
+      expect(todoListModel.state.ids).deep.eq(["1", "2"]);
+      expect(todoListModel.getters.items).deep.eq([
+        {
+          title: "TODO 1",
+          description: "nyan",
+          isDone: true,
+        },
+        {
+          title: "todo 2",
+          description: "zzzz",
+          isDone: false,
+        },
+      ]);
     });
   });
 }

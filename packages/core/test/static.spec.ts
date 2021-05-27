@@ -19,12 +19,8 @@ export function test(options: {
         dependencies,
         createStore: options.createStore,
       });
-      const {
-        store,
-        getState,
-        getModel,
-        registerModelDefinitionClasses,
-      } = nyax;
+      const { store, getState, getModel, registerModelDefinitionClasses } =
+        nyax;
 
       expect(() => getModel("app")).throw();
 

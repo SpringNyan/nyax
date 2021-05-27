@@ -16,7 +16,7 @@ import {
   UnregisterActionPayload,
   unregisterActionType,
 } from "@nyax/core";
-import { computed, ComputedRef, reactive } from "vue";
+import { computed, ComputedRef } from "vue";
 import { createStore as vuexCreateStore, Store as VuexStore } from "vuex";
 
 interface ModelContext {
@@ -28,7 +28,6 @@ interface ModelContext {
   flattenedReducerKeySet: Set<string>;
   flattenedEffectKeySet: Set<string>;
 
-  reactiveState: unknown;
   computedRefByGetterPath: Record<string, ComputedRef>;
 }
 
@@ -67,9 +66,6 @@ export function createNyaxCreateStore(options: {
             Object.keys(flattenObject(modelDefinition.effects))
           ),
 
-          reactiveState: reactive(
-            mergeObjects({}, modelDefinition.initialState)
-          ),
           computedRefByGetterPath: mergeObjects(
             {},
             flattenObject<any>(modelDefinition.selectors),
@@ -371,7 +367,7 @@ export function createNyaxCreateStore(options: {
           return state;
         } else {
           return getModelContext(concatLastString(namespace, key))
-            ?.reactiveState;
+            ?.modelDefinition.initialState;
         }
       },
       getModelComputed(namespace, key, getterPath) {
