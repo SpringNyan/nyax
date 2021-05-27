@@ -1,18 +1,19 @@
 import { defineModelDefinition } from "../../src";
 import { testDependencies } from "../dependencies";
+import { TodoListModelDefinition } from "./todoList";
 import { ModelDefinitionBase } from "./_base";
 
 export const TodoItemModelDefinition = defineModelDefinition(
   "todo.item",
   class extends ModelDefinitionBase {
-    public override initialState = {
+    public initialState = {
       title: "",
       description: "",
 
       isDone: false,
     };
 
-    public override selectors = {
+    public selectors = {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       id: () => this.key!,
       summary: testDependencies.createSelector(
@@ -24,7 +25,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       ),
     };
 
-    public override reducers = {
+    public reducers = {
       setTitle: (value: string) => {
         this.state.title = value;
       },
@@ -36,7 +37,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       },
     };
 
-    public override effects = {
+    public effects = {
       load: async (payload: {
         title: string;
         description: string;
@@ -46,6 +47,19 @@ export const TodoItemModelDefinition = defineModelDefinition(
         await this.actions.setDescription.dispatch(payload.description);
         await this.actions.setIsDone.dispatch(payload.isDone);
       },
+    };
+
+    public subscriptions = {
+      allDone: () =>
+        this.nyax.store.subscribeAction(async (action) => {
+          if (
+            this.getModel(TodoListModelDefinition).actions.requestAllDone.is(
+              action
+            )
+          ) {
+            await this.actions.setIsDone.dispatch(true);
+          }
+        }),
     };
   },
   true

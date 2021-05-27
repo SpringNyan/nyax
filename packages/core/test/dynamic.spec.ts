@@ -8,6 +8,7 @@ import {
 } from "./dependencies";
 import { TodoItemModelDefinition } from "./models/todoItem";
 import { TodoListModelDefinition } from "./models/todoList";
+import { waitTime } from "./utils";
 
 export function test(options: {
   packageName: string;
@@ -74,11 +75,27 @@ export function test(options: {
     expect(todoItem2Model.state).eq(getState(TodoItemModelDefinition)?.["2"]);
     expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
 
+    todoItem1Model.actions.setIsDone.dispatch(false);
+    expect(todoItem1Model.state.isDone).eq(false);
+    expect(todoItem2Model.state.isDone).eq(false);
+    todoListModel.actions.requestAllDone.dispatch({});
+    await waitTime(10);
+    expect(todoItem1Model.state.isDone).eq(true);
+    expect(todoItem2Model.state.isDone).eq(true);
+
     todoItem2Model.unregister();
     expect(todoItem2Model.isRegistered).eq(false);
     expect(todoItem2Model.getters.summary).eq(": ");
     expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
     expect(getState(TodoItemModelDefinition)?.["2"]).eq(undefined);
+
+    todoItem1Model.actions.setIsDone.dispatch(false);
+    expect(todoItem1Model.state.isDone).eq(false);
+    expect(todoItem2Model.state.isDone).eq(false);
+    todoListModel.actions.requestAllDone.dispatch({});
+    await waitTime(10);
+    expect(todoItem1Model.state.isDone).eq(true);
+    expect(todoItem2Model.state.isDone).eq(false);
 
     await todoListModel.actions.add.dispatch({
       title: "todo 2",

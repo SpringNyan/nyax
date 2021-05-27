@@ -6,13 +6,13 @@ import { ModelDefinitionBase } from "./_base";
 export const TodoListModelDefinition = defineModelDefinition(
   "todo.list",
   class extends ModelDefinitionBase {
-    public override initialState = {
+    public initialState = {
       ids: [] as string[],
 
       nextId: 1,
     };
 
-    public override selectors = {
+    public selectors = {
       items: testDependencies.createSelector(
         () => this.state.ids,
         () => this.nyax.getState(TodoItemModelDefinition),
@@ -21,7 +21,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       ),
     };
 
-    public override reducers = {
+    public reducers = {
       addId: (id: string) => {
         this.state.ids.push(id);
       },
@@ -34,7 +34,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       },
     };
 
-    public override effects = {
+    public effects = {
       add: async (item: { title: string; description: string }) => {
         const id = this.state.nextId + "";
         await this.actions.increaseNextId.dispatch({});
@@ -50,6 +50,10 @@ export const TodoListModelDefinition = defineModelDefinition(
       remove: async (id: string) => {
         await this.actions.removeId.dispatch(id);
         this.getModel(TodoItemModelDefinition, id).unregister();
+      },
+
+      requestAllDone: async () => {
+        // noop
       },
     };
   }

@@ -6,7 +6,7 @@ import { ModelDefinitionBase } from "./_base";
 export const UserModelDefinition = defineModelDefinition(
   "user",
   class extends ModelDefinitionBase {
-    public override initialState = {
+    public initialState = {
       name: "nyan",
       age: 17,
       email: "nyan@example.com",
@@ -14,7 +14,7 @@ export const UserModelDefinition = defineModelDefinition(
       nameChangeTimes: 0,
     };
 
-    public override selectors = {
+    public selectors = {
       summary: testDependencies.createSelector(
         () => this.state.name,
         () => this.state.age,
@@ -22,7 +22,7 @@ export const UserModelDefinition = defineModelDefinition(
       ),
     };
 
-    public override reducers = {
+    public reducers = {
       setName: (value: string) => {
         this.state.name = value;
       },
@@ -37,7 +37,7 @@ export const UserModelDefinition = defineModelDefinition(
       },
     };
 
-    public override effects = {
+    public effects = {
       setNameAfter10ms: async (value: string) => {
         await waitTime(10);
         await this.actions.setName.dispatch(value);
@@ -50,7 +50,7 @@ export const UserModelDefinition = defineModelDefinition(
       },
     };
 
-    public override subscriptions = {
+    public subscriptions = {
       nameChange: () => {
         return this.nyax.store.subscribeAction(async (action) => {
           if (this.actions.setName.is(action)) {
