@@ -20,16 +20,16 @@
     "@rollup/plugin-typescript": "^8.2.1",
     "@types/chai": "^4.2.18",
     "@types/mocha": "^8.2.2",
-    "@typescript-eslint/eslint-plugin": "^4.22.1",
-    "@typescript-eslint/parser": "^4.22.1",
+    "@typescript-eslint/eslint-plugin": "^4.25.0",
+    "@typescript-eslint/parser": "^4.25.0",
     "chai": "^4.3.4",
-    "eslint": "^7.26.0",
+    "eslint": "^7.27.0",
     "mocha": "^8.4.0",
-    "prettier": "^2.2.1",
+    "prettier": "^2.3.0",
     "rimraf": "^3.0.2",
-    "rollup": "^2.47.0",
-    "ts-node": "^9.1.1",
-    "typescript": "^4.2.4"
+    "rollup": "^2.50.2",
+    "ts-node": "^10.0.0",
+    "typescript": "^4.3.2"
   },
   "scripts": {
     "build": "rimraf dist types && rollup -c && tsc -p tsconfig.types.json",
