@@ -21,6 +21,12 @@ export const AppModelDefinition = defineModelDefinition(
       packageName: () => {
         return this.dependencies.packageName;
       },
+      userSummary: () => {
+        return this.getModel(UserModelDefinition).getters.summary;
+      },
+      userName: () => {
+        return this.nyax.getState(UserModelDefinition)?.name;
+      },
     };
 
     public override reducers = {

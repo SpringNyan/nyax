@@ -5,14 +5,16 @@ export type CreateSelector = <TDeps extends any[], TResult>(
   ]
 ) => () => TResult;
 
+export const defaultCreateSelector: CreateSelector = (...args) => {
+  const deps = args.slice(0, args.length - 1) as (() => any)[];
+  const fn = args[args.length - 1] as (...args: any[]) => any;
+  return () => fn(...deps.map((dep) => dep()));
+};
+
 export const testDependencies: {
   createSelector: CreateSelector;
 } = {
-  createSelector: (...args) => {
-    const deps = args.slice(0, args.length - 1) as (() => any)[];
-    const fn = args[args.length - 1] as (...args: any[]) => any;
-    return () => fn(...deps.map((dep) => dep()));
-  },
+  createSelector: defaultCreateSelector,
 };
 
 export interface Dependencies {

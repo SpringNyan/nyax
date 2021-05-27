@@ -21,7 +21,7 @@ export function test(options: {
   testDependencies.createSelector =
     options.createSelector ?? defaultCreateSelector;
 
-  it("static", async () => {
+  it("merge", async () => {
     const nyax = createNyax({
       dependencies,
       createStore: options.createStore,
@@ -51,8 +51,6 @@ export function test(options: {
     expect(appModel.state.isInitialized).eq(false);
     expect(appModel.state.errorMessage).eq(null);
     expect(appModel.getters.packageName).eq(options.packageName);
-    expect(appModel.getters.userSummary).eq("name: nyan; age: 17");
-    expect(appModel.getters.userName).eq(undefined);
 
     expect(userModel).eq(getModel("user"));
     expect(userModel.namespace).eq("user");
@@ -78,7 +76,6 @@ export function test(options: {
     expect(userModel.state.age).eq(17);
     expect(userModel.state.email).eq("nyan@example.com");
     expect(userModel.getters.summary).eq("name: nyan; age: 17");
-    expect(appModel.getters.userName).eq("nyan");
 
     expect(appModel.state.initializeTimes).eq(0);
 
