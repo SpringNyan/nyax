@@ -5,14 +5,14 @@ import { ModelDefinitionBase } from "./_base";
 export const TodoItemModelDefinition = defineModelDefinition(
   "todo.item",
   class extends ModelDefinitionBase {
-    public initialState = {
+    public override initialState = {
       title: "",
       description: "",
 
       isDone: false,
     };
 
-    public selectors = {
+    public override selectors = {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       id: () => this.key!,
       summary: testDependencies.createSelector(
@@ -24,7 +24,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       ),
     };
 
-    public reducers = {
+    public override reducers = {
       setTitle: (value: string) => {
         this.state.title = value;
       },
@@ -36,7 +36,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       },
     };
 
-    public effects = {
+    public override effects = {
       load: async (payload: {
         title: string;
         description: string;

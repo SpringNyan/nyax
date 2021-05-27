@@ -18,12 +18,7 @@ export function test(options: {
         dependencies,
         createStore: options.createStore,
       });
-      const {
-        store,
-        getState,
-        getModel,
-        registerModelDefinitionClasses,
-      } = nyax;
+      const { getModel } = nyax;
 
       const todoListModel = getModel(TodoListModelDefinition);
       const getTodoItemModel = (id: string) =>

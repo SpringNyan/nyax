@@ -245,11 +245,11 @@ export function mergeModelDefinitionClasses<
       });
     })();
 
-    public initialState: any = this._mergeProperty("initialState");
-    public selectors: any = this._mergeProperty("selectors");
-    public reducers: any = this._mergeProperty("reducers");
-    public effects: any = this._mergeProperty("effects");
-    public subscriptions: any = this._mergeProperty("subscriptions");
+    public override initialState: any = this._mergeProperty("initialState");
+    public override selectors: any = this._mergeProperty("selectors");
+    public override reducers: any = this._mergeProperty("reducers");
+    public override effects: any = this._mergeProperty("effects");
+    public override subscriptions: any = this._mergeProperty("subscriptions");
 
     private _mergeProperty(propertyKey: ModelDefinitionPropertyKey): any {
       const result: Record<string, unknown> = {};
@@ -329,11 +329,11 @@ export function mergeSubModelDefinitionClasses<
       return subModelDefinitions;
     })();
 
-    public initialState: any = this._mergeSubProperty("initialState");
-    public selectors: any = this._mergeSubProperty("selectors");
-    public reducers: any = this._mergeSubProperty("reducers");
-    public effects: any = this._mergeSubProperty("effects");
-    public subscriptions: any = this._mergeSubProperty("subscriptions");
+    public override initialState: any = this._mergeSubProperty("initialState");
+    public override selectors: any = this._mergeSubProperty("selectors");
+    public override reducers: any = this._mergeSubProperty("reducers");
+    public override effects: any = this._mergeSubProperty("effects");
+    public override subscriptions: any = this._mergeSubProperty("subscriptions");
 
     private _mergeSubProperty(propertyKey: ModelDefinitionPropertyKey): any {
       const result: Record<string, any> = {};

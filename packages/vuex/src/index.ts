@@ -286,13 +286,12 @@ export function createNyaxCreateStore(options: {
         ) => {
           action.payload.forEach((item) => {
             if (item.state !== undefined) {
-              const nextState = mergeObjects({}, item.state as any);
               if (rootState) {
                 if (item.key === undefined) {
-                  rootState[item.namespace] = nextState;
+                  rootState[item.namespace] = item.state;
                 } else {
                   if (rootState[item.namespace]) {
-                    rootState[item.namespace][item.key] = nextState;
+                    rootState[item.namespace][item.key] = item.state;
                   }
                 }
               }
@@ -307,9 +306,7 @@ export function createNyaxCreateStore(options: {
           action: Action<ReloadActionPayload>
         ) => {
           if (action.payload.state !== undefined) {
-            vuexStore.replaceState(
-              mergeObjects({}, action.payload.state as any)
-            );
+            vuexStore.replaceState(action.payload.state);
           }
         },
       },

@@ -93,7 +93,7 @@ export function flattenObject<T>(
 ): Record<string, T> {
   const result: Record<string, T> = {};
 
-  mergeObjects({}, obj, (item, key, parent, paths) => {
+  mergeObjects({}, obj, (item, _key, _parent, paths) => {
     result[paths.join(separator)] = item;
   });
 
