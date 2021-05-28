@@ -22,16 +22,19 @@ export interface ModelDefinition<
   TSubscriptions = {}
   /* eslint-enable @typescript-eslint/ban-types */
 > {
-  initialState: TInitialState;
-  selectors: TSelectors;
-  reducers: TReducers;
-  effects: TEffects;
-  subscriptions: TSubscriptions;
+  initialState(): TInitialState;
+  selectors(): TSelectors;
+  reducers(): TReducers;
+  effects(): TEffects;
+  subscriptions(): TSubscriptions;
 
   dependencies: TDependencies;
-  state: ConvertState<this["initialState"]>;
-  getters: ConvertGetters<this["selectors"]>;
-  actions: ConvertActionHelpers<this["reducers"], this["effects"]>;
+  state: ConvertState<ReturnType<this["initialState"]>>;
+  getters: ConvertGetters<ReturnType<this["selectors"]>>;
+  actions: ConvertActionHelpers<
+    ReturnType<this["reducers"]>,
+    ReturnType<this["effects"]>
+  >;
 
   namespace: string;
   key: string | undefined;
@@ -85,25 +88,16 @@ export type ModelDefinitionPropertyKey =
   | "selectors"
   | "reducers"
   | "effects"
-  | "subscriptions"
-  | "dependencies"
-  | "state"
-  | "getters"
-  | "actions";
-
-export type ExtractModelDefinitionProperty<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor,
-  TPropertyKey extends ModelDefinitionPropertyKey
-> = InstanceType<TModelDefinitionConstructor>[TPropertyKey];
+  | "subscriptions";
 
 export type MergeModelDefinitionsProperty<
   TModelDefinitionConstructors extends ModelDefinitionConstructor[],
   TPropertyKey extends ModelDefinitionPropertyKey
 > = UnionToIntersection<
   {
-    [K in keyof TModelDefinitionConstructors & number]: InstanceType<
-      TModelDefinitionConstructors[K]
-    >[TPropertyKey];
+    [K in keyof TModelDefinitionConstructors & number]: ReturnType<
+      InstanceType<TModelDefinitionConstructors[K]>[TPropertyKey]
+    >;
   }[number]
 >;
 
@@ -115,15 +109,21 @@ export type MergeSubModelDefinitionsProperty<
   TPropertyKey extends ModelDefinitionPropertyKey
 > = Spread<
   {
-    [K in keyof TSubModelDefinitionConstructors]: InstanceType<
-      TSubModelDefinitionConstructors[K]
-    >[TPropertyKey];
+    [K in keyof TSubModelDefinitionConstructors]: ReturnType<
+      InstanceType<TSubModelDefinitionConstructors[K]>[TPropertyKey]
+    >;
   }
 >;
 
 export type MergeModelDefinitionsDependencies<
   TModelDefinitionConstructors extends ModelDefinitionConstructor[]
-> = MergeModelDefinitionsProperty<TModelDefinitionConstructors, "dependencies">;
+> = UnionToIntersection<
+  {
+    [K in keyof TModelDefinitionConstructors & number]: InstanceType<
+      TModelDefinitionConstructors[K]
+    >["dependencies"];
+  }[number]
+>;
 
 export type MergeSubModelDefinitionsDependencies<
   TSubModelDefinitionConstructors extends Record<
@@ -131,11 +131,21 @@ export type MergeSubModelDefinitionsDependencies<
     ModelDefinitionConstructor
   >
 > = UnionToIntersection<
-  MergeSubModelDefinitionsProperty<
-    TSubModelDefinitionConstructors,
-    "dependencies"
+  Spread<
+    {
+      [K in keyof TSubModelDefinitionConstructors]: InstanceType<
+        TSubModelDefinitionConstructors[K]
+      >["dependencies"];
+    }
   >[keyof TSubModelDefinitionConstructors]
 >;
+
+export type ModelPropertyKey = "state" | "getters" | "actions";
+
+export type ExtractModelProperty<
+  TModelDefinitionConstructor extends ModelDefinitionConstructor,
+  TPropertyKey extends ModelPropertyKey
+> = InstanceType<TModelDefinitionConstructor>[TPropertyKey];
 
 export class ModelDefinitionBase<TDependencies = unknown>
   implements
@@ -149,11 +159,21 @@ export class ModelDefinitionBase<TDependencies = unknown>
       {}
       /* eslint-enable @typescript-eslint/ban-types */
     > {
-  public initialState: any = {};
-  public selectors: any = {};
-  public reducers: any = {};
-  public effects: any = {};
-  public subscriptions: any = {};
+  public initialState(): any {
+    return {};
+  }
+  public selectors(): any {
+    return {};
+  }
+  public reducers(): any {
+    return {};
+  }
+  public effects(): any {
+    return {};
+  }
+  public subscriptions(): any {
+    return {};
+  }
 
   constructor(
     protected readonly __nyax_context: {
@@ -245,20 +265,28 @@ export function mergeModelDefinitionClasses<
       });
     })();
 
-    public initialState: any = this._mergeProperty("initialState");
-    public selectors: any = this._mergeProperty("selectors");
-    public reducers: any = this._mergeProperty("reducers");
-    public effects: any = this._mergeProperty("effects");
-    public subscriptions: any = this._mergeProperty("subscriptions");
+    public initialState(): any {
+      return this._mergeProperty("initialState");
+    }
+    public selectors(): any {
+      return this._mergeProperty("selectors");
+    }
+    public reducers(): any {
+      return this._mergeProperty("reducers");
+    }
+    public effects(): any {
+      return this._mergeProperty("effects");
+    }
+    public subscriptions(): any {
+      return this._mergeProperty("subscriptions");
+    }
 
     private _mergeProperty(propertyKey: ModelDefinitionPropertyKey): any {
       const result: Record<string, unknown> = {};
 
-      this.__nyax_modelDefinitions
-        .map((modelDefinition) => modelDefinition[propertyKey])
-        .forEach((property) => {
-          mergeObjects(result, property);
-        });
+      this.__nyax_modelDefinitions.forEach((modelDefinition) => {
+        mergeObjects(result, modelDefinition[propertyKey]());
+      });
 
       return result;
     }
@@ -329,17 +357,27 @@ export function mergeSubModelDefinitionClasses<
       return subModelDefinitions;
     })();
 
-    public initialState: any = this._mergeSubProperty("initialState");
-    public selectors: any = this._mergeSubProperty("selectors");
-    public reducers: any = this._mergeSubProperty("reducers");
-    public effects: any = this._mergeSubProperty("effects");
-    public subscriptions: any = this._mergeSubProperty("subscriptions");
+    public initialState(): any {
+      return this._mergeSubProperty("initialState");
+    }
+    public selectors(): any {
+      return this._mergeSubProperty("selectors");
+    }
+    public reducers(): any {
+      return this._mergeSubProperty("reducers");
+    }
+    public effects(): any {
+      return this._mergeSubProperty("effects");
+    }
+    public subscriptions(): any {
+      return this._mergeSubProperty("subscriptions");
+    }
 
     private _mergeSubProperty(propertyKey: ModelDefinitionPropertyKey): any {
-      const result: Record<string, any> = {};
+      const result: Record<string, unknown> = {};
 
       Object.keys(this.__nyax_subModelDefinitions).forEach((key) => {
-        result[key] = this.__nyax_subModelDefinitions[key]?.[propertyKey];
+        result[key] = this.__nyax_subModelDefinitions[key]?.[propertyKey]();
       });
 
       return result;
@@ -390,6 +428,7 @@ export function defineModelDefinition<
   TSubscriptions,
   TDynamic
 > {
+  // TODO: cache
   return class extends modelDefinitionClass {
     public static namespace = namespace;
     public static isDynamic = (isDynamic ?? false) as TDynamic;
@@ -399,9 +438,9 @@ export function defineModelDefinition<
 export interface Model<
   TModelDefinitionClass extends ModelDefinitionConstructor = ModelDefinitionConstructor
 > {
-  state: ExtractModelDefinitionProperty<TModelDefinitionClass, "state">;
-  getters: ExtractModelDefinitionProperty<TModelDefinitionClass, "getters">;
-  actions: ExtractModelDefinitionProperty<TModelDefinitionClass, "actions">;
+  state: ExtractModelProperty<TModelDefinitionClass, "state">;
+  getters: ExtractModelProperty<TModelDefinitionClass, "getters">;
+  actions: ExtractModelProperty<TModelDefinitionClass, "actions">;
 
   modelDefinitionClass: TModelDefinitionClass;
 
@@ -445,24 +484,15 @@ export class ModelImpl<
     );
   }
 
-  public get state(): ExtractModelDefinitionProperty<
-    TModelDefinitionClass,
-    "state"
-  > {
+  public get state(): ExtractModelProperty<TModelDefinitionClass, "state"> {
     return this._modelDefinition.state;
   }
 
-  public get getters(): ExtractModelDefinitionProperty<
-    TModelDefinitionClass,
-    "getters"
-  > {
+  public get getters(): ExtractModelProperty<TModelDefinitionClass, "getters"> {
     return this._modelDefinition.getters;
   }
 
-  public get actions(): ExtractModelDefinitionProperty<
-    TModelDefinitionClass,
-    "actions"
-  > {
+  public get actions(): ExtractModelProperty<TModelDefinitionClass, "actions"> {
     return this._modelDefinition.actions;
   }
 
