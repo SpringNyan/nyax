@@ -1,8 +1,5 @@
 import { ConvertActionHelperTypeParamsObjectFromEffects } from "./effect";
-import {
-  ExtractModelDefinitionProperty,
-  ModelDefinitionConstructor,
-} from "./model";
+import { ExtractModelProperty, ModelDefinitionConstructor } from "./model";
 import { ConvertActionHelperTypeParamsObjectFromReducers } from "./reducer";
 import { Nyax } from "./store";
 import { concatLastString, mergeObjects } from "./util";
@@ -18,6 +15,8 @@ export interface Action<TPayload = unknown> {
 }
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
+  (payload: TPayload): Promise<TResult>;
+
   type: string;
   is(action: unknown): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
@@ -43,51 +42,6 @@ export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
     : never
   : never;
 
-export class ActionHelperBaseImpl<TPayload> {
-  public readonly type: string;
-
-  constructor(
-    public readonly namespace: string,
-    public readonly key: string | undefined,
-    public readonly actionType: string
-  ) {
-    this.type = concatLastString(concatLastString(namespace, key), actionType);
-  }
-
-  public is(action: unknown): action is Action<TPayload> {
-    return (action as Action<TPayload> | undefined)?.type === this.type;
-  }
-
-  public create(payload: TPayload): Action<TPayload> {
-    return {
-      type: this.type,
-      payload,
-    };
-  }
-}
-
-export class ActionHelperImpl<TPayload, TResult>
-  extends ActionHelperBaseImpl<TPayload>
-  implements ActionHelper<TPayload, TResult> {
-  constructor(
-    private readonly _nyax: Nyax,
-    namespace: string,
-    key: string | undefined,
-    actionType: string
-  ) {
-    super(namespace, key, actionType);
-  }
-
-  public dispatch(payload: TPayload): Promise<TResult> {
-    return this._nyax.store.dispatchModelAction(
-      this.namespace,
-      this.key,
-      this.actionType,
-      payload
-    ) as Promise<TResult>;
-  }
-}
-
 export const registerActionType = "@@nyax/register";
 export type RegisterActionPayload = RegisterActionPayloadItem[];
 export interface RegisterActionPayloadItem {
@@ -95,11 +49,6 @@ export interface RegisterActionPayloadItem {
   key?: string;
   state?: unknown;
 }
-export const registerActionHelper = new ActionHelperBaseImpl<RegisterActionPayload>(
-  "",
-  undefined,
-  registerActionType
-);
 
 export const unregisterActionType = "@@nyax/unregister";
 export type UnregisterActionPayload = UnregisterActionPayloadItem[];
@@ -107,36 +56,51 @@ export interface UnregisterActionPayloadItem {
   namespace: string;
   key?: string;
 }
-export const unregisterActionHelper = new ActionHelperBaseImpl<UnregisterActionPayload>(
-  "",
-  undefined,
-  unregisterActionType
-);
 
 export const reloadActionType = "@@nyax/reload";
 export interface ReloadActionPayload {
   state?: unknown;
 }
-export const reloadActionHelper = new ActionHelperBaseImpl<ReloadActionPayload>(
-  "",
-  undefined,
-  reloadActionType
-);
+
+export function createActionHelper<TPayload, TResult>(
+  nyax: Nyax,
+  namespace: string,
+  key: string | undefined,
+  actionType: string
+): ActionHelper<TPayload, TResult> {
+  const actionHelper: ActionHelper<TPayload, TResult> = (payload) =>
+    nyax.store.dispatchModelAction(
+      namespace,
+      key,
+      actionType,
+      payload
+    ) as Promise<TResult>;
+  actionHelper.type = concatLastString(
+    concatLastString(namespace, key),
+    actionType
+  );
+  actionHelper.is = (action): action is Action<TPayload> =>
+    (action as Action<TPayload> | undefined)?.type === actionHelper.type;
+  actionHelper.create = (payload) => ({ type: actionHelper.type, payload });
+  actionHelper.dispatch = actionHelper;
+
+  return actionHelper;
+}
 
 export function createActionHelpers<
   TModelDefinitionConstructor extends ModelDefinitionConstructor
 >(
   nyax: Nyax,
   modelDefinition: InstanceType<TModelDefinitionConstructor>
-): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "actions"> {
+): ExtractModelProperty<TModelDefinitionConstructor, "actions"> {
   const actionHelpers: Record<string, unknown> = {};
 
   const obj: Record<string, unknown> = {};
-  mergeObjects(obj, modelDefinition.reducers);
-  mergeObjects(obj, modelDefinition.effects);
+  mergeObjects(obj, modelDefinition.reducers());
+  mergeObjects(obj, modelDefinition.effects());
 
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
-    parent[key] = new ActionHelperImpl(
+    parent[key] = createActionHelper(
       nyax,
       modelDefinition.namespace,
       modelDefinition.key,
@@ -144,7 +108,7 @@ export function createActionHelpers<
     );
   });
 
-  return actionHelpers as ExtractModelDefinitionProperty<
+  return actionHelpers as ExtractModelProperty<
     TModelDefinitionConstructor,
     "actions"
   >;

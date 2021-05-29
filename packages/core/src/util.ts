@@ -1,4 +1,4 @@
-export type Spread<T> = {
+export type Resolved<T> = {
   "0": { [K in keyof T]: T[K] };
 }["0"];
 
@@ -7,12 +7,6 @@ export type UnionToIntersection<U> = (
 ) extends (k: infer I) => void
   ? I
   : never;
-
-export type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends ((...args: any[]) => any) | any[]
-    ? T[K]
-    : DeepPartial<T[K]>;
-};
 
 export interface DeepRecord<T> {
   [key: string]: T | DeepRecord<T>;

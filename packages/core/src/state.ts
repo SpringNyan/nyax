@@ -1,5 +1,5 @@
 import { NyaxContext } from "./context";
-import { ExtractModelDefinitionProperty, ModelDefinitionClass } from "./model";
+import { ExtractModelProperty, ModelDefinitionClass } from "./model";
 
 export interface InitialState {
   [key: string]: unknown | InitialState;
@@ -23,10 +23,7 @@ export interface GetState {
     true
   >
     ?
-        | Record<
-            string,
-            ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
-          >
+        | Record<string, ExtractModelProperty<TModelDefinitionClass, "state">>
         | undefined
     : TModelDefinitionClass extends ModelDefinitionClass<
         any,
@@ -37,13 +34,10 @@ export interface GetState {
         any,
         false
       >
-    ? ExtractModelDefinitionProperty<TModelDefinitionClass, "state"> | undefined
+    ? ExtractModelProperty<TModelDefinitionClass, "state"> | undefined
     :
-        | Record<
-            string,
-            ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
-          >
-        | ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
+        | Record<string, ExtractModelProperty<TModelDefinitionClass, "state">>
+        | ExtractModelProperty<TModelDefinitionClass, "state">
         | undefined;
   <TModelDefinitionClass extends ModelDefinitionClass>(
     modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
@@ -57,7 +51,7 @@ export interface GetState {
     any,
     true
   >
-    ? ExtractModelDefinitionProperty<TModelDefinitionClass, "state"> | undefined
+    ? ExtractModelProperty<TModelDefinitionClass, "state"> | undefined
     : TModelDefinitionClass extends ModelDefinitionClass<
         any,
         any,
@@ -68,10 +62,7 @@ export interface GetState {
         false
       >
     ? never
-    :
-        | ExtractModelDefinitionProperty<TModelDefinitionClass, "state">
-        | never
-        | undefined;
+    : ExtractModelProperty<TModelDefinitionClass, "state"> | never | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {

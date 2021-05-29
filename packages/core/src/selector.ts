@@ -1,7 +1,4 @@
-import {
-  ExtractModelDefinitionProperty,
-  ModelDefinitionConstructor,
-} from "./model";
+import { ExtractModelProperty, ModelDefinitionConstructor } from "./model";
 import { Nyax } from "./store";
 import { defineGetter, mergeObjects } from "./util";
 
@@ -24,12 +21,12 @@ export function createGetters<
 >(
   nyax: Nyax,
   modelDefinition: InstanceType<TModelDefinitionConstructor>
-): ExtractModelDefinitionProperty<TModelDefinitionConstructor, "getters"> {
+): ExtractModelProperty<TModelDefinitionConstructor, "getters"> {
   const getters: Record<string, unknown> = {};
 
   mergeObjects(
     getters,
-    modelDefinition.selectors,
+    modelDefinition.selectors(),
     (_item, key, parent, paths) => {
       const getterPath = paths.join(".");
       defineGetter(parent, key, () =>
@@ -42,7 +39,7 @@ export function createGetters<
     }
   );
 
-  return getters as ExtractModelDefinitionProperty<
+  return getters as ExtractModelProperty<
     TModelDefinitionConstructor,
     "getters"
   >;

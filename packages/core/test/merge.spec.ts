@@ -67,17 +67,17 @@ export function test(options: {
     expect(mergedSubEntityModel.state.foo.foo).eq("foo");
     expect(mergedSubEntityModel.state.bar.bar).eq("bar");
     expect(mergedSubEntityModel.state.baz.baz).eq("baz");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(0);
+    expect(mergedSubEntityModel.state.barChangeTimes).eq(2);
 
     await mergedSubEntityModel.actions.baz.setBazTrim.dispatch(" xyz ");
     expect(mergedSubEntityModel.state.baz.baz).eq("xyz");
     expect(mergedSubEntityModel.getters.baz.baz0baz).eq("xyz0xyz");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(0);
+    expect(mergedSubEntityModel.state.barChangeTimes).eq(2);
 
     await mergedSubEntityModel.actions.bar.setBarLower.dispatch("NYAN");
     expect(mergedSubEntityModel.state.bar.bar).eq("nyan");
     expect(mergedSubEntityModel.getters.bar.bar_bar).eq("nyan_nyan");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(1);
+    expect(mergedSubEntityModel.state.barChangeTimes).eq(3);
 
     await mergedSubEntityModel.actions.setFooBarBaz.dispatch({
       foo: "FOO",
@@ -85,6 +85,6 @@ export function test(options: {
       baz: "BAZ",
     });
     expect(mergedSubEntityModel.getters.fooBarBaz).eq("FOOBARBAZ");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(2);
+    expect(mergedSubEntityModel.state.barChangeTimes).eq(4);
   });
 }

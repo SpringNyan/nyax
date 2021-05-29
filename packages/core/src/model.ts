@@ -1,7 +1,7 @@
 import {
   ConvertActionHelpers,
-  registerActionHelper,
-  unregisterActionHelper,
+  registerActionType,
+  unregisterActionType,
 } from "./action";
 import { NyaxContext } from "./context";
 import { Effects } from "./effect";
@@ -10,7 +10,7 @@ import { ConvertGetters, Selectors } from "./selector";
 import { ConvertState, InitialState } from "./state";
 import { Nyax } from "./store";
 import { Subscriptions } from "./subscription";
-import { mergeObjects, Spread, UnionToIntersection } from "./util";
+import { mergeObjects, Resolved, UnionToIntersection } from "./util";
 
 export interface ModelDefinition<
   /* eslint-disable @typescript-eslint/ban-types */
@@ -107,7 +107,7 @@ export type MergeSubModelDefinitionsProperty<
     ModelDefinitionConstructor
   >,
   TPropertyKey extends ModelDefinitionPropertyKey
-> = Spread<
+> = Resolved<
   {
     [K in keyof TSubModelDefinitionConstructors]: ReturnType<
       InstanceType<TSubModelDefinitionConstructors[K]>[TPropertyKey]
@@ -131,13 +131,11 @@ export type MergeSubModelDefinitionsDependencies<
     ModelDefinitionConstructor
   >
 > = UnionToIntersection<
-  Spread<
-    {
-      [K in keyof TSubModelDefinitionConstructors]: InstanceType<
-        TSubModelDefinitionConstructors[K]
-      >["dependencies"];
-    }
-  >[keyof TSubModelDefinitionConstructors]
+  {
+    [K in keyof TSubModelDefinitionConstructors]: InstanceType<
+      TSubModelDefinitionConstructors[K]
+    >["dependencies"];
+  }[keyof TSubModelDefinitionConstructors]
 >;
 
 export type ModelPropertyKey = "state" | "getters" | "actions";
@@ -428,11 +426,55 @@ export function defineModelDefinition<
   TSubscriptions,
   TDynamic
 > {
-  // TODO: cache
-  return class extends modelDefinitionClass {
+  return (class extends modelDefinitionClass {
     public static namespace = namespace;
     public static isDynamic = (isDynamic ?? false) as TDynamic;
-  };
+
+    private __nyax_initialState: any;
+    private __nyax_selectors: any;
+    private __nyax_reducers: any;
+    private __nyax_effects: any;
+    private __nyax_subscriptions: any;
+
+    public initialState(): any {
+      if (this.__nyax_initialState === undefined) {
+        this.__nyax_initialState = super.initialState();
+      }
+      return this.__nyax_initialState;
+    }
+    public selectors(): any {
+      if (this.__nyax_selectors === undefined) {
+        this.__nyax_selectors = super.selectors();
+      }
+      return this.__nyax_selectors;
+    }
+    public reducers(): any {
+      if (this.__nyax_reducers === undefined) {
+        this.__nyax_reducers = super.reducers();
+      }
+      return this.__nyax_reducers;
+    }
+    public effects(): any {
+      if (this.__nyax_effects === undefined) {
+        this.__nyax_effects = super.effects();
+      }
+      return this.__nyax_effects;
+    }
+    public subscriptions(): any {
+      if (this.__nyax_subscriptions === undefined) {
+        this.__nyax_subscriptions = super.subscriptions();
+      }
+      return this.__nyax_subscriptions;
+    }
+  } as ModelDefinitionConstructor) as ModelDefinitionClass<
+    TDependencies,
+    TInitialState,
+    TSelectors,
+    TReducers,
+    TEffects,
+    TSubscriptions,
+    TDynamic
+  >;
 }
 
 export interface Model<
@@ -501,26 +543,18 @@ export class ModelImpl<
       throw new Error("Model is already registered.");
     }
 
-    this._nyaxContext.nyax.store.dispatch(
-      registerActionHelper.create([
-        {
-          namespace: this.namespace,
-          key: this.key,
-        },
-      ])
-    );
+    this._nyaxContext.nyax.store.dispatch({
+      type: registerActionType,
+      payload: [{ namespace: this.namespace, key: this.key }],
+    });
   }
 
   public unregister(): void {
     if (this.isRegistered) {
-      this._nyaxContext.nyax.store.dispatch(
-        unregisterActionHelper.create([
-          {
-            namespace: this.namespace,
-            key: this.key,
-          },
-        ])
-      );
+      this._nyaxContext.nyax.store.dispatch({
+        type: unregisterActionType,
+        payload: [{ namespace: this.namespace, key: this.key }],
+      });
     }
 
     this._nyaxContext.modelContextByNamespace
@@ -610,11 +644,10 @@ export function createRegisterModelDefinitionClasses(
     });
 
     if (toRegisterNamespaces.length > 0) {
-      nyaxContext.nyax.store.dispatch(
-        registerActionHelper.create(
-          toRegisterNamespaces.map((namespace) => ({ namespace }))
-        )
-      );
+      nyaxContext.nyax.store.dispatch({
+        type: registerActionType,
+        payload: toRegisterNamespaces.map((namespace) => ({ namespace })),
+      });
     }
   };
 }
