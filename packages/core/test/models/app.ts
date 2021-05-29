@@ -63,13 +63,13 @@ export const AppModelDefinition = defineModelDefinition(
         initialize: async (payload: { errorMessage?: string }) => {
           const { errorMessage } = payload;
           if (errorMessage) {
-            await this.actions.initializeFailure.dispatch(errorMessage);
+            await this.actions.initializeFailure(errorMessage);
           } else {
-            await this.actions.initializeSuccess.dispatch({});
+            await this.actions.initializeSuccess({});
           }
         },
         initializeSuccess: async () => {
-          await this.actions.setInitializedTimestamp.dispatch(Date.now());
+          await this.actions.setInitializedTimestamp(Date.now());
         },
       };
     }
@@ -79,21 +79,21 @@ export const AppModelDefinition = defineModelDefinition(
         initialize: () => {
           return this.nyax.store.subscribeAction(async (action) => {
             if (this.actions.initialize.is(action)) {
-              await this.actions.increaseInitializeTimes.dispatch({});
+              await this.actions.increaseInitializeTimes({});
             }
           });
         },
         initializeSuccess: () => {
           return this.nyax.store.subscribeAction(async (action) => {
             if (this.actions.initializeSuccess.is(action)) {
-              await this.actions.increaseInitializedTimes.dispatch({});
+              await this.actions.increaseInitializedTimes({});
             }
           });
         },
         userAgeChange: () => {
           return this.nyax.store.subscribeAction(async (action) => {
             if (this.getModel(UserModelDefinition).actions.setAge.is(action)) {
-              await this.actions.increaseUserAgeChangeTimes.dispatch({});
+              await this.actions.increaseUserAgeChangeTimes({});
             }
           });
         },

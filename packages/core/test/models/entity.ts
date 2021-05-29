@@ -33,7 +33,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
   public effects() {
     return {
       setFooUpper: async (value: string) => {
-        await this.actions.setFoo.dispatch(value.toUpperCase());
+        await this.actions.setFoo(value.toUpperCase());
       },
     };
   }
@@ -45,7 +45,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
           if (this.actions.setFoo.is(action)) {
             await this.getModel(
               MergedEntityModelDefinition
-            ).actions.increaseFooChangeTimes.dispatch({});
+            ).actions.increaseFooChangeTimes({});
           }
         }),
     };
@@ -79,7 +79,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
   public effects() {
     return {
       setBarLower: async (value: string) => {
-        await this.actions.setBar.dispatch(value.toLowerCase());
+        await this.actions.setBar(value.toLowerCase());
       },
     };
   }
@@ -91,7 +91,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
           if (this.actions.setBar.is(action)) {
             await this.getModel(
               MergedSubEntityModelDefinition
-            ).actions.increaseBarChangeTimes.dispatch({});
+            ).actions.increaseBarChangeTimes({});
           }
         }),
     };
@@ -125,7 +125,7 @@ class BazEntityModelDefinition extends ModelDefinitionBase {
   public effects() {
     return {
       setBazTrim: async (value: string) => {
-        await this.actions.setBaz.dispatch(value.trim());
+        await this.actions.setBaz(value.trim());
       },
     };
   }
@@ -178,9 +178,9 @@ export const MergedEntityModelDefinition = defineModelDefinition(
           bar: string;
           baz: string;
         }) => {
-          await this.actions.setFoo.dispatch(payload.foo);
-          await this.actions.setBar.dispatch(payload.bar);
-          await this.actions.setBaz.dispatch(payload.baz);
+          await this.actions.setFoo(payload.foo);
+          await this.actions.setBar(payload.bar);
+          await this.actions.setBaz(payload.baz);
         },
       };
     }
@@ -234,9 +234,9 @@ export const MergedSubEntityModelDefinition = defineModelDefinition(
           bar: string;
           baz: string;
         }) => {
-          await this.actions.foo.setFoo.dispatch(payload.foo);
-          await this.actions.bar.setBar.dispatch(payload.bar);
-          await this.actions.baz.setBaz.dispatch(payload.baz);
+          await this.actions.foo.setFoo(payload.foo);
+          await this.actions.bar.setBar(payload.bar);
+          await this.actions.baz.setBaz(payload.baz);
         },
       };
     }

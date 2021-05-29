@@ -82,9 +82,7 @@ export function test(options: {
 
     expect(appModel.state.initializeTimes).eq(0);
 
-    await appModel.actions.initialize.dispatch({
-      errorMessage: "Orz",
-    });
+    await appModel.actions.initialize({ errorMessage: "Orz" });
     expect(appModel.state.isInitialized).eq(false);
     expect(appModel.state.errorMessage).eq("Orz");
     expect(appModel.state.initializedTimestamp).eq(null);
@@ -92,7 +90,7 @@ export function test(options: {
 
     expect(appModel.state.initializeTimes).eq(1);
 
-    await appModel.actions.initialize.dispatch({});
+    await appModel.actions.initialize({});
     expect(appModel.state.isInitialized).eq(true);
     expect(appModel.state.errorMessage).eq(null);
     expect(appModel.state.initializedTimestamp).not.eq(null);
@@ -100,7 +98,7 @@ export function test(options: {
 
     expect(appModel.state.initializeTimes).eq(2);
 
-    userModel.actions.setName.dispatch("meow");
+    userModel.actions.setName("meow");
     expect(userModel.state.name).eq("meow");
     expect(userModel.getters.summary).eq("name: meow; age: 17");
 
@@ -108,13 +106,13 @@ export function test(options: {
     expect(userModel.state.email).eq("meow@example.com");
     expect(userModel.getters.summary).eq("name: meow; age: 17");
 
-    userModel.actions.setNameAfter10ms.dispatch("nyan10");
+    userModel.actions.setNameAfter10ms("nyan10");
     expect(userModel.state.name).eq("meow");
     await waitTime(10);
     expect(userModel.state.name).eq("nyan10");
 
     await (async () => {
-      const promise = userModel.actions.setNameAfter20ms.dispatch("nyan20");
+      const promise = userModel.actions.setNameAfter20ms("nyan20");
       await waitTime(10);
       expect(userModel.state.name).eq("nyan10");
       const result = await promise;
@@ -142,16 +140,16 @@ export function test(options: {
     expect(userModel.state.email).eq("nyan@example.com");
     expect(userModel.getters.summary).eq("name: nyan; age: 17");
 
-    userModel.actions.setEmail.dispatch("meow@example.com");
+    userModel.actions.setEmail("meow@example.com");
     expect(userModel.state.email).eq("meow@example.com");
 
     appModel.unregister();
     expect(appModel.state.userAgeChangeTimes).eq(0);
-    userModel.actions.setAge.dispatch(998);
+    userModel.actions.setAge(998);
     expect(appModel.state.userAgeChangeTimes).eq(0);
     appModel.register();
     expect(appModel.state.userAgeChangeTimes).eq(0);
-    userModel.actions.setAge.dispatch(666);
+    userModel.actions.setAge(666);
     expect(appModel.state.userAgeChangeTimes).eq(1);
   });
 }

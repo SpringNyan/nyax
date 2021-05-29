@@ -39,7 +39,7 @@ export function test(options: {
     expect(todoListModel.state.ids).deep.eq([]);
     expect(todoListModel.getters.items).deep.eq([]);
 
-    await todoListModel.actions.add.dispatch({
+    await todoListModel.actions.add({
       title: "TODO 1",
       description: "nyan",
     });
@@ -61,7 +61,7 @@ export function test(options: {
     expect(todoItem1Model.state).eq(getState(TodoItemModelDefinition, "1"));
     expect(todoItem1Model.getters.id).eq("1");
     expect(todoItem1Model.getters.summary).eq("TODO 1: nyan");
-    todoItem1Model.actions.setIsDone.dispatch(true);
+    todoItem1Model.actions.setIsDone(true);
     expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
 
     const todoItem2Model = getModel(TodoItemModelDefinition, "2");
@@ -69,16 +69,16 @@ export function test(options: {
 
     todoItem2Model.register();
     expect(todoItem2Model.isRegistered).eq(true);
-    todoItem2Model.actions.setTitle.dispatch("TODO 2");
-    todoItem2Model.actions.setDescription.dispatch("meow");
+    todoItem2Model.actions.setTitle("TODO 2");
+    todoItem2Model.actions.setDescription("meow");
     expect(todoItem2Model.getters.summary).eq("TODO 2: meow");
     expect(todoItem2Model.state).eq(getState(TodoItemModelDefinition)?.["2"]);
     expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
 
-    todoItem1Model.actions.setIsDone.dispatch(false);
+    todoItem1Model.actions.setIsDone(false);
     expect(todoItem1Model.state.isDone).eq(false);
     expect(todoItem2Model.state.isDone).eq(false);
-    todoListModel.actions.requestAllDone.dispatch({});
+    todoListModel.actions.requestAllDone({});
     await waitTime(10);
     expect(todoItem1Model.state.isDone).eq(true);
     expect(todoItem2Model.state.isDone).eq(true);
@@ -89,15 +89,15 @@ export function test(options: {
     expect(todoItem1Model.getters.summary).eq("[DONE] TODO 1: nyan");
     expect(getState(TodoItemModelDefinition)?.["2"]).eq(undefined);
 
-    todoItem1Model.actions.setIsDone.dispatch(false);
+    todoItem1Model.actions.setIsDone(false);
     expect(todoItem1Model.state.isDone).eq(false);
     expect(todoItem2Model.state.isDone).eq(false);
-    todoListModel.actions.requestAllDone.dispatch({});
+    todoListModel.actions.requestAllDone({});
     await waitTime(10);
     expect(todoItem1Model.state.isDone).eq(true);
     expect(todoItem2Model.state.isDone).eq(false);
 
-    await todoListModel.actions.add.dispatch({
+    await todoListModel.actions.add({
       title: "todo 2",
       description: "zzzz",
     });

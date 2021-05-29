@@ -47,12 +47,12 @@ export const UserModelDefinition = defineModelDefinition(
       return {
         setNameAfter10ms: async (value: string) => {
           await waitTime(10);
-          await this.actions.setName.dispatch(value);
+          await this.actions.setName(value);
           return value;
         },
         setNameAfter20ms: async (value: string) => {
           await waitTime(10);
-          await this.actions.setNameAfter10ms.dispatch(value);
+          await this.actions.setNameAfter10ms(value);
           return value;
         },
       };
@@ -63,7 +63,7 @@ export const UserModelDefinition = defineModelDefinition(
         nameChange: () => {
           return this.nyax.store.subscribeAction(async (action) => {
             if (this.actions.setName.is(action)) {
-              await this.actions.increaseNameChangeTimes.dispatch({});
+              await this.actions.increaseNameChangeTimes({});
             }
           });
         },

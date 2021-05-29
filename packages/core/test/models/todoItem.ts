@@ -50,9 +50,9 @@ export const TodoItemModelDefinition = defineModelDefinition(
           description: string;
           isDone: boolean;
         }) => {
-          await this.actions.setTitle.dispatch(payload.title);
-          await this.actions.setDescription.dispatch(payload.description);
-          await this.actions.setIsDone.dispatch(payload.isDone);
+          await this.actions.setTitle(payload.title);
+          await this.actions.setDescription(payload.description);
+          await this.actions.setIsDone(payload.isDone);
         },
       };
     }
@@ -66,7 +66,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
                 action
               )
             ) {
-              await this.actions.setIsDone.dispatch(true);
+              await this.actions.setIsDone(true);
             }
           }),
       };

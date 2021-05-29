@@ -44,21 +44,18 @@ export const TodoListModelDefinition = defineModelDefinition(
       return {
         add: async (item: { title: string; description: string }) => {
           const id = this.state.nextId + "";
-          await this.actions.increaseNextId.dispatch({});
+          await this.actions.increaseNextId({});
 
-          await this.getModel(
-            TodoItemModelDefinition,
-            id
-          ).actions.load.dispatch({
+          await this.getModel(TodoItemModelDefinition, id).actions.load({
             ...item,
             isDone: false,
           });
-          await this.actions.addId.dispatch(id);
+          await this.actions.addId(id);
 
           return id;
         },
         remove: async (id: string) => {
-          await this.actions.removeId.dispatch(id);
+          await this.actions.removeId(id);
           this.getModel(TodoItemModelDefinition, id).unregister();
         },
 
