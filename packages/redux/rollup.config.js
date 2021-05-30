@@ -14,5 +14,5 @@ export default {
     },
   ],
   plugins: [typescript()],
-  external: [],
+  external: ["@nyax/core", "redux", "immer"],
 };
