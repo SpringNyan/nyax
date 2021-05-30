@@ -9,8 +9,8 @@
     "dist",
     "types"
   ],
-  "main": "dist/nyax.js",
-  "module": "dist/nyax.esm.js",
+  "main": "dist/nyax-core.js",
+  "module": "dist/nyax-core.esm.js",
   "types": "types/index.d.ts",
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.1",
