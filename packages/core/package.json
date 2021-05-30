@@ -32,6 +32,6 @@
     "build": "rimraf dist types && rollup -c && tsc -p tsconfig.types.json",
     "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha --require ts-node/register test/**/*.ts",
     "lint": "eslint src/**",
-    "release": "npm run lint && npm run build && npm publish"
+    "release": "npm run lint && npm run build && npm publish --access=public"
   }
 }
