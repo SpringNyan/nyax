@@ -651,3 +651,39 @@ export function createRegisterModelDefinitionClasses(
     }
   };
 }
+
+export interface SubModel<
+  /* eslint-disable @typescript-eslint/ban-types */
+  TState = {},
+  TGetters = {},
+  TActionHelpers = {}
+  /* eslint-enable @typescript-eslint/ban-types */
+> {
+  state: TState;
+  getters: TGetters;
+  actions: TActionHelpers;
+}
+
+export function createSubModel<
+  TSubModel extends SubModel<any, any, any>,
+  TSubKey extends string
+>(
+  subModel: TSubModel,
+  subKey: TSubKey
+): SubModel<
+  TSubModel["state"][TSubKey],
+  TSubModel["getters"][TSubKey],
+  TSubModel["actions"][TSubKey]
+> {
+  return {
+    get state(): TSubModel["state"][TSubKey] {
+      return subModel.state?.[subKey];
+    },
+    get getters(): TSubModel["getters"][TSubKey] {
+      return subModel.getters?.[subKey];
+    },
+    get actions(): TSubModel["actions"][TSubKey] {
+      return subModel.actions?.[subKey];
+    },
+  };
+}

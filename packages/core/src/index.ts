@@ -14,6 +14,7 @@ export type {
 export type { Effect } from "./effect";
 export {
   createModelDefinitionBaseClass,
+  createSubModel,
   defineModelDefinition,
   mergeModelDefinitionClasses,
   mergeSubModelDefinitionClasses,
@@ -24,6 +25,7 @@ export type {
   ModelDefinition,
   ModelDefinitionClass,
   RegisterModelDefinitionClasses,
+  SubModel,
 } from "./model";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";

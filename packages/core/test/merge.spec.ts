@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { createNyax, CreateStore } from "../src";
+import { createNyax, CreateStore, createSubModel } from "../src";
 import {
   CreateSelector,
   defaultCreateSelector,
@@ -86,5 +86,14 @@ export function test(options: {
     });
     expect(mergedSubEntityModel.getters.fooBarBaz).eq("FOOBARBAZ");
     expect(mergedSubEntityModel.state.barChangeTimes).eq(4);
+
+    const bazModel = createSubModel(mergedSubEntityModel, "baz");
+    expect(bazModel.state.baz).eq(mergedSubEntityModel.state.baz.baz);
+    expect(bazModel.getters.baz0baz).eq(
+      mergedSubEntityModel.getters.baz.baz0baz
+    );
+    await bazModel.actions.setBazTrim.dispatch("  Orz  ");
+    expect(bazModel.getters.baz0baz).eq("Orz0Orz");
+    expect(mergedSubEntityModel.getters.fooBarBaz).eq("FOOBAROrz");
   });
 }
