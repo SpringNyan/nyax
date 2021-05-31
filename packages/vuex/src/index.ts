@@ -235,16 +235,21 @@ export function createNyaxCreateStore(options: {
               });
             });
         } else {
+          const addedModelPathSet = new Set<string>();
           mergeObjects(
             {},
             payload.state as any,
             (_item, _key, _parent, paths) => {
               const [namespace, key] = paths;
               if (namespace && getModelDefinition(namespace, key)) {
-                registerActionPayload.push({
-                  namespace,
-                  key,
-                });
+                const modelPath = concatLastString(namespace, key);
+                if (!addedModelPathSet.has(modelPath)) {
+                  addedModelPathSet.add(modelPath);
+                  registerActionPayload.push({
+                    namespace,
+                    key,
+                  });
+                }
               }
             }
           );
