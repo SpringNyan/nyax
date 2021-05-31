@@ -12,6 +12,10 @@ export interface DeepRecord<T> {
   [key: string]: T | DeepRecord<T>;
 }
 
+export function last<T>(arr: T[]): T | undefined {
+  return arr[arr.length - 1];
+}
+
 export function is(x: unknown, y: unknown): boolean {
   if (x === y) {
     return x !== 0 || y !== 0 || 1 / x === 1 / y;
@@ -20,12 +24,8 @@ export function is(x: unknown, y: unknown): boolean {
   }
 }
 
-export function isObject(obj: unknown): obj is Record<string, unknown> {
+export function isPlainObject(obj: unknown): obj is Record<string, unknown> {
   return obj != null && typeof obj === "object" && !Array.isArray(obj);
-}
-
-export function last<T>(arr: T[]): T | undefined {
-  return arr[arr.length - 1];
 }
 
 export function mergeObjects<T>(
@@ -39,16 +39,16 @@ export function mergeObjects<T>(
   ) => void,
   paths: string[] = []
 ): DeepRecord<T> {
-  if (!isObject(target)) {
+  if (!isPlainObject(target)) {
     throw new Error("`target` is not an object.");
   }
 
-  if (!isObject(source)) {
+  if (!isPlainObject(source)) {
     throw new Error("`source` is not an object.");
   }
 
   Object.keys(source).forEach((key) => {
-    if (key === "__proto__") {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return;
     }
 
@@ -56,13 +56,13 @@ export function mergeObjects<T>(
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const sourceItem = source[key]!;
-    if (isObject(sourceItem)) {
+    if (isPlainObject(sourceItem)) {
       if (target[key] === undefined) {
         target[key] = {};
       }
 
       const targetItem = target[key];
-      if (!isObject(targetItem)) {
+      if (!isPlainObject(targetItem)) {
         throw new Error('`target["${key}"]` is not an object.');
       }
 

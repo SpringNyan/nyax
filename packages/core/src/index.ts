@@ -42,7 +42,7 @@ export type { Subscription } from "./subscription";
 export {
   concatLastString,
   flattenObject,
-  isObject,
+  isPlainObject,
   last,
   mergeObjects,
   splitLastString,

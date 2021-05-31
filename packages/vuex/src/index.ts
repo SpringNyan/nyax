@@ -5,7 +5,7 @@ import {
   concatLastString,
   CreateStore,
   flattenObject,
-  isObject,
+  isPlainObject,
   mergeObjects,
   ModelDefinition,
   RegisterActionPayload,
@@ -16,7 +16,7 @@ import {
   UnregisterActionPayload,
   unregisterActionType,
 } from "@nyax/core";
-import { computed, ComputedRef } from "vue";
+import { ComputedRef } from "vue";
 import {
   createStore as vuexCreateStore,
   Plugin as VuexPlugin,
@@ -36,7 +36,7 @@ interface ModelContext {
 }
 
 function isAction(action: unknown): action is AnyAction {
-  return isObject(action) && !!action["type"];
+  return isPlainObject(action) && !!action["type"];
 }
 
 export function createNyaxCreateStore(options: {
@@ -46,6 +46,7 @@ export function createNyaxCreateStore(options: {
 }): CreateStore {
   return ({ getModelDefinition, deleteModelDefinition }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
+    const registerCountByModelNamespace = new Map<string, number>();
 
     function getModelContext(modelPath: string) {
       let modelContext = modelContextByModelPath.get(modelPath);
@@ -79,7 +80,14 @@ export function createNyaxCreateStore(options: {
                 {},
                 flattenObject<any>(modelDefinition?.selectors() ?? {}),
                 (item, key, parent) => {
-                  parent[key] = computed(() => item());
+                  // TODO: https://github.com/vuejs/vuex/pull/1884
+                  // parent[key] = computed(() => item());
+
+                  parent[key] = {
+                    get value() {
+                      return item();
+                    },
+                  };
                 }
               );
             }
@@ -94,7 +102,7 @@ export function createNyaxCreateStore(options: {
 
     let actionSubscribers: ActionSubscriber[] = [];
     const vuexPlugin: VuexPlugin<unknown> = (store) => {
-      function registerModels(payload: RegisterActionPayload) {
+      function register(payload: RegisterActionPayload) {
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
@@ -162,10 +170,18 @@ export function createNyaxCreateStore(options: {
           });
 
           modelContext.isRegistered = true;
+
+          const registerCount =
+            (registerCountByModelNamespace.get(modelDefinition.namespace) ??
+              0) + 1;
+          registerCountByModelNamespace.set(
+            modelDefinition.namespace,
+            registerCount
+          );
         });
       }
 
-      function unregisterModels(payload: UnregisterActionPayload) {
+      function unregister(payload: UnregisterActionPayload) {
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
@@ -179,15 +195,30 @@ export function createNyaxCreateStore(options: {
             store.unregisterModule(modulePaths);
           }
 
+          const modelNamespace =
+            modelContext?.modelDefinition.namespace ?? null;
+          if (modelNamespace) {
+            const registerCount =
+              (registerCountByModelNamespace.get(modelNamespace) ?? 0) - 1;
+            if (registerCount >= 0) {
+              registerCountByModelNamespace.set(modelNamespace, registerCount);
+              if (registerCount === 0) {
+                if (store.hasModule(modelNamespace)) {
+                  store.unregisterModule(modelNamespace);
+                }
+              }
+            }
+          }
+
           modelContextByModelPath.delete(modelPath);
           deleteModelDefinition(item.namespace, item.key);
         });
       }
 
-      function reloadModels(payload: ReloadActionPayload) {
+      function reload(payload: ReloadActionPayload) {
         const modelContexts = Array.from(modelContextByModelPath.values());
 
-        unregisterModels(
+        unregister(
           modelContexts.map((e) => ({
             namespace: e.modelDefinition.namespace,
             key: e.modelDefinition.key,
@@ -218,10 +249,10 @@ export function createNyaxCreateStore(options: {
             }
           );
         }
-        registerModels(registerActionPayload);
+        register(registerActionPayload);
       }
 
-      function autoRegisterModel(
+      function autoRegister(
         modelContext: ModelContext | null,
         actionType: string
       ) {
@@ -250,19 +281,19 @@ export function createNyaxCreateStore(options: {
 
         const [modelPath, actionType] = splitLastString(type);
         const modelContext = getModelContext(modelPath);
-        autoRegisterModel(modelContext, actionType);
+        autoRegister(modelContext, actionType);
 
         switch (type) {
           case registerActionType: {
-            registerModels(payload);
+            register(payload);
             break;
           }
           case unregisterActionType: {
-            unregisterModels(payload);
+            unregister(payload);
             break;
           }
           case reloadActionType: {
-            reloadModels(payload);
+            reload(payload);
             break;
           }
           default:
@@ -278,7 +309,7 @@ export function createNyaxCreateStore(options: {
 
         const [modelPath, actionType] = splitLastString(type);
         const modelContext = getModelContext(modelPath);
-        autoRegisterModel(modelContext, actionType);
+        autoRegister(modelContext, actionType);
 
         return _dispatch.apply(store, args);
       }.bind(store);

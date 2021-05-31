@@ -1,4 +1,4 @@
-import { AnyAction } from "./action";
+import { AnyAction, reloadActionType } from "./action";
 import { createNyaxContext } from "./context";
 import {
   createGetModel,
@@ -53,6 +53,7 @@ export interface Nyax {
   getState: GetState;
   getModel: GetModel;
   registerModelDefinitionClasses: RegisterModelDefinitionClasses;
+  reload: (state?: unknown) => void;
 }
 
 export function createNyax(options: NyaxOptions): Nyax {
@@ -65,9 +66,14 @@ export function createNyax(options: NyaxOptions): Nyax {
     }),
     getState: createGetState(nyaxContext),
     getModel: createGetModel(nyaxContext),
-    registerModelDefinitionClasses: createRegisterModelDefinitionClasses(
-      nyaxContext
-    ),
+    registerModelDefinitionClasses:
+      createRegisterModelDefinitionClasses(nyaxContext),
+    reload: (state) => {
+      nyaxContext.nyax.store.dispatch({
+        type: reloadActionType,
+        payload: { state },
+      });
+    },
   };
 
   return nyaxContext.nyax;
