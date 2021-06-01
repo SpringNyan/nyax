@@ -1,27 +1,36 @@
 import {
-  Action,
   ActionSubscriber,
   AnyAction,
-  concatLastString,
   CreateStore,
-  flattenObject,
-  isObject,
-  mergeObjects,
+  Effect,
   ModelDefinition,
+  Reducer,
   RegisterActionPayload,
   registerActionType,
   ReloadActionPayload,
   reloadActionType,
-  splitLastString,
   UnregisterActionPayload,
   unregisterActionType,
+  utils,
 } from "@nyax/core";
-import { computed, ComputedRef } from "vue";
+import produce from "immer";
 import {
-  createStore as vuexCreateStore,
-  Plugin as VuexPlugin,
-  Store as VuexStore,
-} from "vuex";
+  applyMiddleware as reduxApplyMiddleware,
+  createStore as reduxCreateStore,
+  Dispatch as ReduxDispatch,
+  Middleware as ReduxMiddleware,
+  Reducer as ReduxReducer,
+  Store as ReduxStore,
+} from "redux";
+
+const {
+  concatLastString,
+  flattenObject,
+  is,
+  isPlainObject,
+  mergeObjects,
+  splitLastString,
+} = utils;
 
 interface ModelContext {
   modelDefinition: ModelDefinition;
@@ -29,20 +38,57 @@ interface ModelContext {
 
   subscriptionDisposables: (() => void)[];
 
-  flattenedReducerKeySet: Set<string>;
-  flattenedEffectKeySet: Set<string>;
+  flattenedReducers: Record<string, Reducer>;
+  flattenedEffects: Record<string, Effect>;
+  flattenedGetters: Record<string, () => unknown>;
 
-  computedRefByGetterPath: Record<string, ComputedRef>;
+  draftState: unknown | undefined;
 }
 
-function isAction(action: unknown): action is AnyAction {
-  return isObject(action) && !!action["type"];
+function setSubState(
+  state: unknown,
+  value: unknown,
+  namespace: string,
+  key: string | undefined
+): unknown {
+  if (state === undefined) {
+    state = {};
+  }
+  if (!isPlainObject(state)) {
+    throw new Error("state is not an object");
+  }
+
+  if (key === undefined) {
+    if (is(state[namespace], value)) {
+      return state;
+    }
+
+    const nextState = { ...state };
+    if (value === undefined) {
+      delete nextState[namespace];
+    } else {
+      nextState[namespace] = value;
+    }
+
+    return nextState;
+  } else {
+    const subState = setSubState(state[namespace], value, key, undefined);
+    if (is(state[namespace], subState)) {
+      return state;
+    }
+
+    return {
+      ...state,
+      [namespace]: subState,
+    };
+  }
 }
 
 export function createNyaxCreateStore(options: {
-  createVuexStore?: (options: {
-    plugin: VuexPlugin<unknown>;
-  }) => VuexStore<unknown>;
+  createReduxStore?: (options: {
+    reducer: ReduxReducer;
+    middleware: ReduxMiddleware;
+  }) => ReduxStore;
 }): CreateStore {
   return ({ getModelDefinition, deleteModelDefinition }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
@@ -59,32 +105,23 @@ export function createNyaxCreateStore(options: {
           return null;
         }
 
-        let _computedRefByGetterPath: Record<string, ComputedRef> | undefined;
         modelContext = {
           modelDefinition,
           isRegistered: false,
 
           subscriptionDisposables: [],
 
-          flattenedReducerKeySet: new Set(
-            Object.keys(flattenObject(modelDefinition.reducers()))
-          ),
-          flattenedEffectKeySet: new Set(
-            Object.keys(flattenObject(modelDefinition.effects()))
+          flattenedReducers: flattenObject(modelDefinition.reducers()),
+          flattenedEffects: flattenObject(modelDefinition.effects()),
+          flattenedGetters: mergeObjects(
+            {},
+            flattenObject<any>(modelDefinition.selectors()),
+            (item, key, parent) => {
+              parent[key] = () => item();
+            }
           ),
 
-          get computedRefByGetterPath() {
-            if (_computedRefByGetterPath === undefined) {
-              _computedRefByGetterPath = mergeObjects(
-                {},
-                flattenObject<any>(modelDefinition?.selectors() ?? {}),
-                (item, key, parent) => {
-                  parent[key] = computed(() => item());
-                }
-              );
-            }
-            return _computedRefByGetterPath;
-          },
+          draftState: undefined,
         };
         modelContextByModelPath.set(modelPath, modelContext);
       }
@@ -93,8 +130,122 @@ export function createNyaxCreateStore(options: {
     }
 
     let actionSubscribers: ActionSubscriber[] = [];
-    const vuexPlugin: VuexPlugin<unknown> = (store) => {
-      function registerModels(payload: RegisterActionPayload) {
+    let cachedRootState: unknown | undefined;
+    let dispatchActionPromise: Promise<unknown> | undefined;
+
+    const reduxReducer: ReduxReducer = (() => {
+      function register(rootState: unknown, payload: RegisterActionPayload) {
+        payload.forEach((item) => {
+          let state = item.state;
+          if (state === undefined) {
+            const modelPath = concatLastString(item.namespace, item.key);
+            const modelContext = getModelContext(modelPath);
+            if (!modelContext) {
+              throw new Error("Model definition is not found.");
+            }
+            state = modelContext.modelDefinition.initialState();
+          }
+          rootState = setSubState(rootState, state, item.namespace, item.key);
+        });
+        return rootState;
+      }
+
+      function unregister(
+        rootState: unknown,
+        payload: UnregisterActionPayload
+      ) {
+        payload.forEach((item) => {
+          rootState = setSubState(
+            rootState,
+            undefined,
+            item.namespace,
+            item.key
+          );
+        });
+        return rootState;
+      }
+
+      function reload(rootState: unknown, payload: ReloadActionPayload) {
+        if (payload.state !== undefined) {
+          return payload.state;
+        } else {
+          const modelContexts = Array.from(modelContextByModelPath.values());
+          const registerActionPayload: RegisterActionPayload = [];
+          modelContexts
+            .filter((e) => e.modelDefinition.key === undefined)
+            .forEach((e) => {
+              registerActionPayload.push({
+                namespace: e.modelDefinition.namespace,
+              });
+            });
+          return register(rootState, registerActionPayload);
+        }
+      }
+
+      const rootReducer = (rootState: any, action: AnyAction) => {
+        if (rootState === undefined) {
+          rootState = {};
+        }
+
+        switch (action.type) {
+          case registerActionType: {
+            return register(rootState, action.payload as RegisterActionPayload);
+          }
+          case unregisterActionType: {
+            return unregister(
+              rootState,
+              action.payload as UnregisterActionPayload
+            );
+          }
+          case reloadActionType: {
+            return reload(rootState, action.payload as ReloadActionPayload);
+          }
+          default: {
+            break;
+          }
+        }
+
+        const [modelPath, actionType] = splitLastString(action.type);
+        const modelContext = getModelContext(modelPath);
+        if (!modelContext?.isRegistered) {
+          return rootState;
+        }
+
+        const reducer = modelContext.flattenedReducers[actionType];
+        if (!reducer) {
+          return rootState;
+        }
+
+        const modelDefinition = modelContext.modelDefinition;
+        let state = rootState?.[modelDefinition.namespace];
+        if (modelDefinition.key !== undefined) {
+          state = state?.[modelDefinition.key];
+        }
+
+        const newState = produce(state, (draft: any) => {
+          modelContext.draftState = draft;
+          reducer(action.payload);
+          modelContext.draftState = undefined;
+        });
+
+        return setSubState(
+          rootState,
+          newState,
+          modelDefinition.namespace,
+          modelDefinition.key
+        );
+      };
+
+      return (rootState: any, action: AnyAction) => {
+        cachedRootState = rootState;
+        rootState = rootReducer(rootState, action);
+        cachedRootState = undefined;
+        return rootState;
+      };
+    })();
+
+    const reduxMiddleware: ReduxMiddleware = (() => {
+      function register(payload: RegisterActionPayload) {
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
@@ -103,38 +254,6 @@ export function createNyaxCreateStore(options: {
           }
 
           const modelDefinition = modelContext.modelDefinition;
-
-          const state = () => mergeObjects({}, modelDefinition.initialState());
-
-          const getters = mergeObjects(
-            {},
-            flattenObject<any>(modelDefinition.selectors()),
-            (item, key, parent) => {
-              parent[concatLastString(modelPath, key)] = () => item();
-            }
-          );
-
-          const mutations = mergeObjects(
-            {},
-            flattenObject<any>(modelDefinition.reducers()),
-            (item, key, parent) => {
-              parent[concatLastString(modelPath, key)] = (
-                _state: unknown,
-                action: AnyAction
-              ) => item(action.payload);
-            }
-          );
-
-          const actions = mergeObjects(
-            {},
-            flattenObject<any>(modelDefinition.effects()),
-            (item, key, parent) => {
-              parent[concatLastString(modelPath, key)] = (
-                _context: unknown,
-                action: AnyAction
-              ) => item(action.payload);
-            }
-          );
 
           mergeObjects(
             {},
@@ -145,27 +264,11 @@ export function createNyaxCreateStore(options: {
             }
           );
 
-          const modulePaths = modelPath.split("/");
-          if (
-            modulePaths[0] &&
-            modulePaths[1] &&
-            !store.hasModule(modulePaths[0])
-          ) {
-            store.registerModule(modulePaths[0], {});
-          }
-
-          store.registerModule(modulePaths, {
-            state,
-            mutations,
-            actions,
-            getters,
-          });
-
           modelContext.isRegistered = true;
         });
       }
 
-      function unregisterModels(payload: UnregisterActionPayload) {
+      function unregister(payload: UnregisterActionPayload) {
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
@@ -174,20 +277,15 @@ export function createNyaxCreateStore(options: {
             disposable()
           );
 
-          const modulePaths = modelPath.split("/");
-          if (store.hasModule(modulePaths)) {
-            store.unregisterModule(modulePaths);
-          }
-
           modelContextByModelPath.delete(modelPath);
           deleteModelDefinition(item.namespace, item.key);
         });
       }
 
-      function reloadModels(payload: ReloadActionPayload) {
+      function reload(payload: ReloadActionPayload) {
         const modelContexts = Array.from(modelContextByModelPath.values());
 
-        unregisterModels(
+        unregister(
           modelContexts.map((e) => ({
             namespace: e.modelDefinition.namespace,
             key: e.modelDefinition.key,
@@ -208,198 +306,127 @@ export function createNyaxCreateStore(options: {
             {},
             payload.state as any,
             (_item, _key, _parent, paths) => {
+              if (paths.length > 2) {
+                return;
+              }
               const [namespace, key] = paths;
               if (namespace && getModelDefinition(namespace, key)) {
-                registerActionPayload.push({
-                  namespace,
-                  key,
-                });
+                registerActionPayload.push({ namespace, key });
               }
             }
           );
         }
-        registerModels(registerActionPayload);
+        register(registerActionPayload);
       }
 
-      function autoRegisterModel(
-        modelContext: ModelContext | null,
-        actionType: string
-      ) {
-        if (
-          modelContext &&
-          !modelContext.isRegistered &&
-          (modelContext.flattenedReducerKeySet.has(actionType) ||
-            modelContext.flattenedEffectKeySet.has(actionType))
-        ) {
-          store.commit({
-            type: registerActionType,
-            payload: [
-              {
-                namespace: modelContext.modelDefinition.namespace,
-                key: modelContext.modelDefinition.key,
-              },
-            ],
-          });
-        }
-      }
-
-      const _commit = store.commit;
-      store.commit = function (...args: [any, any?]) {
-        const type = isAction(args[0]) ? args[0].type : args[0];
-        const payload = isAction(args[0]) ? args[0].payload : args[1];
-
-        const [modelPath, actionType] = splitLastString(type);
-        const modelContext = getModelContext(modelPath);
-        autoRegisterModel(modelContext, actionType);
-
-        switch (type) {
-          case registerActionType: {
-            registerModels(payload);
-            break;
-          }
-          case unregisterActionType: {
-            unregisterModels(payload);
-            break;
-          }
-          case reloadActionType: {
-            reloadModels(payload);
-            break;
-          }
-          default:
-            break;
-        }
-
-        return _commit.apply(store, args);
-      }.bind(store);
-
-      const _dispatch = store.dispatch;
-      store.dispatch = function (...args: [any, any?, any?]) {
-        const type = isAction(args[0]) ? args[0].type : args[0];
-
-        const [modelPath, actionType] = splitLastString(type);
-        const modelContext = getModelContext(modelPath);
-        autoRegisterModel(modelContext, actionType);
-
-        return _dispatch.apply(store, args);
-      }.bind(store);
-
-      store.registerModule("@@nyax", {
-        mutations: {
-          [registerActionType]: (
-            rootState: any,
-            action: Action<RegisterActionPayload>
-          ) => {
-            action.payload.forEach((item) => {
-              if (item.state !== undefined) {
-                if (rootState) {
-                  if (item.key === undefined) {
-                    rootState[item.namespace] = item.state;
-                  } else {
-                    if (rootState[item.namespace]) {
-                      rootState[item.namespace][item.key] = item.state;
-                    }
-                  }
-                }
-              }
-            });
-          },
-          [unregisterActionType]: () => {
-            // noop
-          },
-          [reloadActionType]: (
-            _rootState: any,
-            action: Action<ReloadActionPayload>
-          ) => {
-            if (action.payload.state !== undefined) {
-              store.replaceState(action.payload.state);
+      return (store: { dispatch: ReduxDispatch }) =>
+        (next: ReduxDispatch) =>
+        (action: AnyAction) => {
+          switch (action.type) {
+            case registerActionType: {
+              register(action.payload as RegisterActionPayload);
+              break;
             }
-          },
-        },
-      });
+            case unregisterActionType: {
+              unregister(action.payload as UnregisterActionPayload);
+              break;
+            }
+            case reloadActionType: {
+              reload(action.payload as ReloadActionPayload);
+              break;
+            }
+            default:
+              break;
+          }
 
-      store.subscribe((action) => {
-        actionSubscribers.forEach((fn) => fn(action));
-      });
-      store.subscribeAction({
-        before: (action) => {
           const [modelPath, actionType] = splitLastString(action.type);
           const modelContext = getModelContext(modelPath);
 
+          // auto register
           if (
-            modelContext?.flattenedEffectKeySet.has(actionType) &&
-            !modelContext?.flattenedReducerKeySet.has(actionType)
+            modelContext &&
+            !modelContext.isRegistered &&
+            (modelContext.flattenedReducers[actionType] ||
+              modelContext.flattenedEffects[actionType])
           ) {
-            actionSubscribers.forEach((fn) => fn(action));
+            store.dispatch({
+              type: registerActionType,
+              payload: [
+                {
+                  namespace: modelContext.modelDefinition.namespace,
+                  key: modelContext.modelDefinition.key,
+                },
+              ],
+            });
           }
-        },
-      });
-    };
 
-    const createVuexStore =
-      options.createVuexStore ??
-      (({ plugin }) => vuexCreateStore({ plugins: [plugin] }));
+          const result = next(action);
 
-    const vuexStore = createVuexStore({ plugin: vuexPlugin });
+          // action subscribers
+          actionSubscribers.forEach((fn) => fn(action));
 
-    const dispatchAction = (action: AnyAction) => {
-      const [modelPath, actionType] = splitLastString(action.type);
-      const modelContext = getModelContext(modelPath);
+          if (modelContext?.isRegistered) {
+            const effect = modelContext.flattenedEffects[actionType];
+            dispatchActionPromise = effect ? effect(action.payload) : undefined;
+          }
 
-      if (modelContext) {
-        if (modelContext.flattenedReducerKeySet.has(actionType)) {
-          vuexStore.commit(action);
-        }
+          return result;
+        };
+    })();
 
-        if (modelContext.flattenedEffectKeySet.has(actionType)) {
-          return vuexStore.dispatch(action);
-        }
-      } else {
-        vuexStore.commit(action);
-      }
+    const createReduxStore =
+      options.createReduxStore ??
+      (({ reducer, middleware }) =>
+        reduxCreateStore(reducer, reduxApplyMiddleware(middleware)));
 
-      return Promise.resolve();
-    };
+    const reduxStore = createReduxStore({
+      reducer: reduxReducer,
+      middleware: reduxMiddleware,
+    });
 
     return {
       getState() {
-        return vuexStore.state;
+        return cachedRootState !== undefined
+          ? cachedRootState
+          : reduxStore.getState();
       },
       dispatch(action) {
-        dispatchAction(action);
+        reduxStore.dispatch(action);
       },
       subscribe(fn) {
-        return vuexStore.subscribe(fn);
+        return reduxStore.subscribe(fn);
       },
 
       getModelState(namespace, key) {
-        let state = vuexStore.state as any;
-        state = state?.[namespace];
-        if (key !== undefined) {
-          state = state?.[key];
-        }
+        const modelPath = concatLastString(namespace, key);
+        const modelContext = getModelContext(modelPath);
 
-        if (state !== undefined) {
+        if (modelContext?.isRegistered) {
+          if (modelContext.draftState !== undefined) {
+            return modelContext.draftState;
+          }
+
+          let state = reduxStore.getState();
+          state = state?.[namespace];
+          if (key !== undefined) {
+            state = state?.[key];
+          }
           return state;
         } else {
-          return getModelContext(
-            concatLastString(namespace, key)
-          )?.modelDefinition.initialState();
+          return modelContext?.modelDefinition.initialState();
         }
       },
       getModelComputed(namespace, key, getterPath) {
         const modelPath = concatLastString(namespace, key);
-        const path = concatLastString(modelPath, getterPath);
         const modelContext = getModelContext(modelPath);
-
-        return modelContext?.isRegistered
-          ? vuexStore.getters[path]
-          : modelContext?.computedRefByGetterPath[getterPath]?.value;
+        return modelContext?.flattenedGetters[getterPath]?.();
       },
       dispatchModelAction(namespace, key, actionType, payload) {
-        return dispatchAction({
+        reduxStore.dispatch({
           type: concatLastString(concatLastString(namespace, key), actionType),
           payload,
         });
+        return dispatchActionPromise ?? Promise.resolve();
       },
 
       subscribeAction: (fn) => {

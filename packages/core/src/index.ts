@@ -39,11 +39,4 @@ export type {
   Store,
 } from "./store";
 export type { Subscription } from "./subscription";
-export {
-  concatLastString,
-  flattenObject,
-  isPlainObject,
-  last,
-  mergeObjects,
-  splitLastString,
-} from "./util";
+export * as utils from "./util";

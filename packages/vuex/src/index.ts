@@ -2,19 +2,15 @@ import {
   Action,
   ActionSubscriber,
   AnyAction,
-  concatLastString,
   CreateStore,
-  flattenObject,
-  isPlainObject,
-  mergeObjects,
   ModelDefinition,
   RegisterActionPayload,
   registerActionType,
   ReloadActionPayload,
   reloadActionType,
-  splitLastString,
   UnregisterActionPayload,
   unregisterActionType,
+  utils,
 } from "@nyax/core";
 import { ComputedRef } from "vue";
 import {
@@ -22,6 +18,14 @@ import {
   Plugin as VuexPlugin,
   Store as VuexStore,
 } from "vuex";
+
+const {
+  concatLastString,
+  flattenObject,
+  isPlainObject,
+  mergeObjects,
+  splitLastString,
+} = utils;
 
 interface ModelContext {
   modelDefinition: ModelDefinition;
@@ -235,21 +239,16 @@ export function createNyaxCreateStore(options: {
               });
             });
         } else {
-          const addedModelPathSet = new Set<string>();
           mergeObjects(
             {},
             payload.state as any,
             (_item, _key, _parent, paths) => {
+              if (paths.length > 2) {
+                return;
+              }
               const [namespace, key] = paths;
               if (namespace && getModelDefinition(namespace, key)) {
-                const modelPath = concatLastString(namespace, key);
-                if (!addedModelPathSet.has(modelPath)) {
-                  addedModelPathSet.add(modelPath);
-                  registerActionPayload.push({
-                    namespace,
-                    key,
-                  });
-                }
+                registerActionPayload.push({ namespace, key });
               }
             }
           );
@@ -424,9 +423,9 @@ export function createNyaxCreateStore(options: {
       },
       getModelComputed(namespace, key, getterPath) {
         const modelPath = concatLastString(namespace, key);
-        const path = concatLastString(modelPath, getterPath);
         const modelContext = getModelContext(modelPath);
 
+        const path = concatLastString(modelPath, getterPath);
         return modelContext?.isRegistered
           ? vuexStore.getters[path]
           : modelContext?.computedRefByGetterPath[getterPath]?.value;

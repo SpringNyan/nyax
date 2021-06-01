@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { toRaw } from "vue";
 import { createNyax, CreateStore } from "../src";
 import {
   CreateSelector,
@@ -15,6 +14,10 @@ import {
 import { TodoItemModelDefinition } from "./models/todoItem";
 import { TodoListModelDefinition } from "./models/todoList";
 import { UserModelDefinition } from "./models/user";
+
+function clone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
 
 export function test(options: {
   packageName: string;
@@ -42,7 +45,7 @@ export function test(options: {
       MergedEntityModelDefinition,
       MergedSubEntityModelDefinition
     );
-    const initialRootState = JSON.parse(JSON.stringify(toRaw(getState())));
+    const initialRootState: any = clone(getState());
 
     const appModel = getModel(AppModelDefinition);
     const userModel = getModel(UserModelDefinition);
@@ -75,14 +78,14 @@ export function test(options: {
 
     await mergedSubEntityModel.actions.foo.setFooUpper("o_o");
 
-    const snapshotRootState = JSON.parse(JSON.stringify(toRaw(getState())));
+    const snapshotRootState: any = clone(getState());
     expect(snapshotRootState).not.deep.eq(initialRootState);
 
     // When calling `reload` without state, only reload registered static models at that time.
     reload();
     const expectedInitialRootState = { ...initialRootState };
     delete expectedInitialRootState["user"];
-    expect(toRaw(getState())).deep.eq(expectedInitialRootState);
+    expect(clone(getState())).deep.eq(expectedInitialRootState);
     expect(userModel.isRegistered).eq(false);
 
     expect(appModel.isRegistered).eq(true);
@@ -94,7 +97,7 @@ export function test(options: {
     expect(getModel(TodoItemModelDefinition, "3").isRegistered).eq(false);
 
     reload(snapshotRootState);
-    expect(toRaw(getState())).deep.eq(snapshotRootState);
+    expect(clone(getState())).deep.eq(snapshotRootState);
     expect(appModel.isRegistered).eq(true);
     expect(userModel.isRegistered).eq(false);
     expect(todoListModel.isRegistered).eq(true);
