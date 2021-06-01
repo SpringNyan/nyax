@@ -165,7 +165,7 @@ export function createNyaxCreateStore(options: {
         return rootState;
       }
 
-      function reload(rootState: unknown, payload: ReloadActionPayload) {
+      function reload(_rootState: unknown, payload: ReloadActionPayload) {
         if (payload.state !== undefined) {
           return payload.state;
         } else {
@@ -178,7 +178,7 @@ export function createNyaxCreateStore(options: {
                 namespace: e.modelDefinition.namespace,
               });
             });
-          return register(rootState, registerActionPayload);
+          return register(undefined, registerActionPayload);
         }
       }
 
