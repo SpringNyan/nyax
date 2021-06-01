@@ -440,3 +440,52 @@ export function createNyaxCreateStore(options: {
     };
   };
 }
+
+export type InputSelector<TResult> = (lastResult?: TResult) => TResult;
+export type OutputSelector<TResult> = () => TResult;
+
+export function createSelector<TDeps extends any[] | [], TResult>(
+  selectors: { [K in keyof TDeps]: InputSelector<TDeps[K]> },
+  combiner: (deps: TDeps, lastResult?: TResult) => TResult
+): OutputSelector<TResult>;
+export function createSelector<TDeps extends any[], TResult>(
+  ...args: [
+    ...selectors: { [K in keyof TDeps]: InputSelector<TDeps[K]> },
+    combiner: (...args: [...deps: TDeps, lastResult?: TResult]) => TResult
+  ]
+): OutputSelector<TResult>;
+export function createSelector(...args: unknown[]): OutputSelector<unknown> {
+  const arrayMode = Array.isArray(args[0]);
+  const selectors = (
+    arrayMode ? args[0] : args.slice(0, args.length - 1)
+  ) as InputSelector<unknown>[];
+  const combiner = args[args.length - 1] as (...args: unknown[]) => unknown;
+
+  let lastDeps: unknown[] | undefined;
+  let lastResult: unknown | undefined;
+
+  return () => {
+    let recalc = !lastDeps;
+    if (lastDeps === undefined) {
+      lastDeps = [];
+    }
+
+    const currDeps: unknown[] = [];
+    for (let i = 0; i < selectors.length; i += 1) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      currDeps.push(selectors[i]!(lastDeps[i]));
+      if (!recalc && !is(currDeps[i], lastDeps[i])) {
+        recalc = true;
+      }
+    }
+
+    lastDeps = currDeps;
+    if (recalc) {
+      lastResult = arrayMode
+        ? combiner(currDeps, lastResult)
+        : combiner(...currDeps, lastResult);
+    }
+
+    return lastResult;
+  };
+}
