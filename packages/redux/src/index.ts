@@ -9,6 +9,8 @@ import {
   registerActionType,
   ReloadActionPayload,
   reloadActionType,
+  Selector,
+  Subscription,
   UnregisterActionPayload,
   unregisterActionType,
   utils,
@@ -32,25 +34,16 @@ const {
   splitLastString,
 } = utils;
 
-interface ModelContext {
-  modelDefinition: ModelDefinition;
-  isRegistered: boolean;
+// TODO: model context in unregister reducer, subscriptions in register middleware, reload rootstate
 
-  subscriptionDisposables: (() => void)[];
-
-  flattenedReducers: Record<string, Reducer>;
-  flattenedEffects: Record<string, Effect>;
-  flattenedGetters: Record<string, () => unknown>;
-
-  draftState: unknown | undefined;
-}
+const NOTHING = {};
 
 function setSubState(
-  state: unknown,
-  value: unknown,
+  state: any,
+  value: any,
   namespace: string,
   key: string | undefined
-): unknown {
+): any {
   if (state === undefined) {
     state = {};
   }
@@ -63,14 +56,14 @@ function setSubState(
       return state;
     }
 
-    const nextState = { ...state };
-    if (value === undefined) {
-      delete nextState[namespace];
+    state = { ...state };
+    if (value === NOTHING) {
+      delete state[namespace];
     } else {
-      nextState[namespace] = value;
+      state[namespace] = value;
     }
 
-    return nextState;
+    return state;
   } else {
     const subState = setSubState(state[namespace], value, key, undefined);
     if (is(state[namespace], subState)) {
@@ -82,6 +75,19 @@ function setSubState(
       [namespace]: subState,
     };
   }
+}
+
+interface ModelContext {
+  modelDefinition: ModelDefinition;
+  isRegistered: boolean;
+
+  subscriptionDisposables: (() => void)[];
+
+  flattenedReducers: Record<string, Reducer>;
+  flattenedEffects: Record<string, Effect>;
+  flattenedGetters: Record<string, () => unknown>;
+
+  draftState: unknown | typeof NOTHING;
 }
 
 export function createNyaxCreateStore(options: {
@@ -116,12 +122,12 @@ export function createNyaxCreateStore(options: {
           flattenedGetters: mergeObjects(
             {},
             flattenObject<any>(modelDefinition.selectors()),
-            (item, key, parent) => {
-              parent[key] = () => item();
+            (item: Selector, key, parent) => {
+              parent[key] = item;
             }
           ),
 
-          draftState: undefined,
+          draftState: NOTHING,
         };
         modelContextByModelPath.set(modelPath, modelContext);
       }
@@ -129,10 +135,7 @@ export function createNyaxCreateStore(options: {
       return modelContext;
     }
 
-    let actionSubscribers: ActionSubscriber[] = [];
-    let cachedRootState: unknown | undefined;
-    let dispatchActionPromise: Promise<unknown> | undefined;
-
+    let cachedRootState: unknown | typeof NOTHING = NOTHING;
     const reduxReducer: ReduxReducer = (() => {
       function register(rootState: unknown, payload: RegisterActionPayload) {
         payload.forEach((item) => {
@@ -155,21 +158,37 @@ export function createNyaxCreateStore(options: {
         payload: UnregisterActionPayload
       ) {
         payload.forEach((item) => {
-          rootState = setSubState(
-            rootState,
-            undefined,
-            item.namespace,
-            item.key
-          );
+          rootState = setSubState(rootState, NOTHING, item.namespace, item.key);
+
+          if (
+            item.key !== undefined &&
+            Object.keys((rootState as any)?.[item.namespace] ?? {}).length === 0
+          ) {
+            rootState = setSubState(
+              rootState,
+              NOTHING,
+              item.namespace,
+              undefined
+            );
+          }
         });
         return rootState;
       }
 
-      function reload(_rootState: unknown, payload: ReloadActionPayload) {
+      function reload(rootState: unknown, payload: ReloadActionPayload) {
         if (payload.state !== undefined) {
           return payload.state;
         } else {
           const modelContexts = Array.from(modelContextByModelPath.values());
+
+          rootState = unregister(
+            rootState,
+            modelContexts.map((e) => ({
+              namespace: e.modelDefinition.namespace,
+              key: e.modelDefinition.key,
+            }))
+          );
+
           const registerActionPayload: RegisterActionPayload = [];
           modelContexts
             .filter((e) => e.modelDefinition.key === undefined)
@@ -178,7 +197,7 @@ export function createNyaxCreateStore(options: {
                 namespace: e.modelDefinition.namespace,
               });
             });
-          return register(undefined, registerActionPayload);
+          return register(rootState, registerActionPayload);
         }
       }
 
@@ -225,7 +244,7 @@ export function createNyaxCreateStore(options: {
         const newState = produce(state, (draft: any) => {
           modelContext.draftState = draft;
           reducer(action.payload);
-          modelContext.draftState = undefined;
+          modelContext.draftState = NOTHING;
         });
 
         return setSubState(
@@ -239,10 +258,13 @@ export function createNyaxCreateStore(options: {
       return (rootState: any, action: AnyAction) => {
         cachedRootState = rootState;
         rootState = rootReducer(rootState, action);
-        cachedRootState = undefined;
+        cachedRootState = NOTHING;
         return rootState;
       };
     })();
+
+    let actionSubscribers: ActionSubscriber[] = [];
+    const dispatchPromiseByAction = new Map<AnyAction, Promise<unknown>>();
 
     const reduxMiddleware: ReduxMiddleware = (() => {
       function register(payload: RegisterActionPayload) {
@@ -258,9 +280,11 @@ export function createNyaxCreateStore(options: {
           mergeObjects(
             {},
             flattenObject<any>(modelDefinition.subscriptions()),
-            (item) => {
+            (item: Subscription) => {
               const disposable = item();
-              modelContext.subscriptionDisposables.push(disposable);
+              if (disposable) {
+                modelContext.subscriptionDisposables.push(disposable);
+              }
             }
           );
 
@@ -304,7 +328,7 @@ export function createNyaxCreateStore(options: {
         } else {
           mergeObjects(
             {},
-            payload.state as any,
+            payload.state as Record<string, unknown>,
             (_item, _key, _parent, paths) => {
               if (paths.length > 2) {
                 return;
@@ -342,7 +366,6 @@ export function createNyaxCreateStore(options: {
           const [modelPath, actionType] = splitLastString(action.type);
           const modelContext = getModelContext(modelPath);
 
-          // auto register
           if (
             modelContext &&
             !modelContext.isRegistered &&
@@ -362,12 +385,13 @@ export function createNyaxCreateStore(options: {
 
           const result = next(action);
 
-          // action subscribers
           actionSubscribers.forEach((fn) => fn(action));
 
           if (modelContext?.isRegistered) {
             const effect = modelContext.flattenedEffects[actionType];
-            dispatchActionPromise = effect ? effect(action.payload) : undefined;
+            if (effect) {
+              dispatchPromiseByAction.set(action, effect(action.payload));
+            }
           }
 
           return result;
@@ -386,7 +410,7 @@ export function createNyaxCreateStore(options: {
 
     return {
       getState() {
-        return cachedRootState !== undefined
+        return cachedRootState !== NOTHING
           ? cachedRootState
           : reduxStore.getState();
       },
@@ -402,7 +426,7 @@ export function createNyaxCreateStore(options: {
         const modelContext = getModelContext(modelPath);
 
         if (modelContext?.isRegistered) {
-          if (modelContext.draftState !== undefined) {
+          if (modelContext.draftState !== NOTHING) {
             return modelContext.draftState;
           }
 
@@ -422,11 +446,14 @@ export function createNyaxCreateStore(options: {
         return modelContext?.flattenedGetters[getterPath]?.();
       },
       dispatchModelAction(namespace, key, actionType, payload) {
-        reduxStore.dispatch({
+        const action = {
           type: concatLastString(concatLastString(namespace, key), actionType),
           payload,
-        });
-        return dispatchActionPromise ?? Promise.resolve();
+        };
+        reduxStore.dispatch(action);
+        const promise = dispatchPromiseByAction.get(action);
+        dispatchPromiseByAction.delete(action);
+        return promise ?? Promise.resolve();
       },
 
       subscribeAction: (fn) => {

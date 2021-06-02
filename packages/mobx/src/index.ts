@@ -10,14 +10,17 @@ import {
   ReloadActionPayload,
   reloadActionType,
   Selector,
+  Subscription,
   UnregisterActionPayload,
   unregisterActionType,
   utils,
 } from "@nyax/core";
-import { action, computed, observable } from "mobx";
+import { action, computed, observable, runInAction } from "mobx";
 
 const { concatLastString, flattenObject, mergeObjects, splitLastString } =
   utils;
+
+const NOTHING = {};
 
 function setSubState(
   state: any,
@@ -30,7 +33,7 @@ function setSubState(
   }
 
   if (key === undefined) {
-    if (value === undefined) {
+    if (value === NOTHING) {
       delete state[namespace];
     } else {
       state[namespace] = value;
@@ -51,14 +54,10 @@ interface ModelContext {
   flattenedReducers: Record<string, Reducer>;
   flattenedEffects: Record<string, Effect>;
   flattenedGetters: Record<string, () => unknown>;
-
-  observableState: unknown | undefined;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function createNyaxCreateStore(_options: {
-  //
-}): CreateStore {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types
+export function createNyaxCreateStore(_options: {}): CreateStore {
   return ({ getModelDefinition, deleteModelDefinition }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
 
@@ -83,21 +82,19 @@ export function createNyaxCreateStore(_options: {
           flattenedReducers: mergeObjects(
             {},
             flattenObject<any>(modelDefinition.reducers()),
-            (item, key, parent) => {
-              parent[key] = action(item as Reducer);
+            (item: Reducer, key, parent) => {
+              parent[key] = action(item);
             }
           ),
           flattenedEffects: flattenObject(modelDefinition.effects()),
           flattenedGetters: mergeObjects(
             {},
             flattenObject<any>(modelDefinition.selectors()),
-            (item, key, parent) => {
-              const computedValue = computed(item as Selector);
+            (item: Selector, key, parent) => {
+              const computedValue = computed(item);
               parent[key] = () => computedValue.get();
             }
           ),
-
-          observableState: observable(modelDefinition.initialState()),
         };
         modelContextByModelPath.set(modelPath, modelContext);
       }
@@ -109,9 +106,11 @@ export function createNyaxCreateStore(_options: {
     let subscribers: (() => void)[] = [];
     let actionSubscribers: ActionSubscriber[] = [];
 
-    const registerCountByModelNamespace = new Map<string, number>();
+    function register(payload: RegisterActionPayload, rootState?: unknown) {
+      if (rootState !== undefined) {
+        observableRootState = observable(rootState as Record<string, unknown>);
+      }
 
-    function register(payload: RegisterActionPayload) {
       payload.forEach((item) => {
         const modelPath = concatLastString(item.namespace, item.key);
         const modelContext = getModelContext(modelPath);
@@ -119,37 +118,35 @@ export function createNyaxCreateStore(_options: {
           throw new Error("Model definition is not found.");
         }
 
+        modelContext.isRegistered = true;
+
         const modelDefinition = modelContext.modelDefinition;
+
+        if (rootState === undefined) {
+          const state =
+            item.state !== undefined
+              ? item.state
+              : modelDefinition.initialState();
+
+          runInAction(() => {
+            setSubState(
+              observableRootState,
+              state,
+              modelDefinition.namespace,
+              modelDefinition.key
+            );
+          });
+        }
 
         mergeObjects(
           {},
           flattenObject<any>(modelDefinition.subscriptions()),
-          (item) => {
+          (item: Subscription) => {
             const disposable = item();
-            modelContext.subscriptionDisposables.push(disposable);
+            if (disposable) {
+              modelContext.subscriptionDisposables.push(disposable);
+            }
           }
-        );
-
-        modelContext.isRegistered = true;
-
-        if (item.state !== undefined) {
-          modelContext.observableState = observable(
-            item.state as Record<string, unknown>
-          );
-        }
-        setSubState(
-          observableRootState,
-          modelContext.observableState,
-          modelDefinition.namespace,
-          modelDefinition.key
-        );
-
-        const registerCount =
-          (registerCountByModelNamespace.get(modelDefinition.namespace) ?? 0) +
-          1;
-        registerCountByModelNamespace.set(
-          modelDefinition.namespace,
-          registerCount
         );
       });
     }
@@ -168,29 +165,29 @@ export function createNyaxCreateStore(_options: {
 
         if (modelContext) {
           const modelDefinition = modelContext.modelDefinition;
-          setSubState(
-            observableRootState,
-            undefined,
-            modelDefinition.namespace,
-            modelDefinition.key
-          );
-
-          const registerCount =
-            (registerCountByModelNamespace.get(modelDefinition.namespace) ??
-              0) - 1;
-          if (registerCount >= 0) {
-            registerCountByModelNamespace.set(
+          runInAction(() => {
+            setSubState(
+              observableRootState,
+              NOTHING,
               modelDefinition.namespace,
-              registerCount
+              modelDefinition.key
             );
-            if (registerCount === 0) {
+          });
+
+          if (
+            modelDefinition.key !== undefined &&
+            Object.keys(
+              (observableRootState as any)?.[modelDefinition.namespace] ?? {}
+            ).length === 0
+          ) {
+            runInAction(() => {
               setSubState(
                 observableRootState,
-                undefined,
+                NOTHING,
                 modelDefinition.namespace,
                 undefined
               );
-            }
+            });
           }
         }
       });
@@ -218,7 +215,7 @@ export function createNyaxCreateStore(_options: {
       } else {
         mergeObjects(
           {},
-          payload.state as any,
+          payload.state as Record<string, unknown>,
           (_item, _key, _parent, paths) => {
             if (paths.length > 2) {
               return;
@@ -230,16 +227,10 @@ export function createNyaxCreateStore(_options: {
           }
         );
       }
-      register(registerActionPayload);
-
-      if (payload.state !== undefined) {
-        observableRootState = observable(
-          payload.state as Record<string, unknown>
-        );
-      }
+      register(registerActionPayload, payload.state);
     }
 
-    const dispatchAction = (action: AnyAction) => {
+    function dispatchAction(action: AnyAction) {
       switch (action.type) {
         case registerActionType: {
           register(action.payload as RegisterActionPayload);
@@ -261,36 +252,37 @@ export function createNyaxCreateStore(_options: {
       const [modelPath, actionType] = splitLastString(action.type);
       const modelContext = getModelContext(modelPath);
 
-      if (modelContext) {
-        if (
-          !modelContext.isRegistered &&
-          (modelContext.flattenedReducers[actionType] ||
-            modelContext.flattenedEffects[actionType])
-        ) {
-          dispatchAction({
-            type: registerActionType,
-            payload: [
-              {
-                namespace: modelContext.modelDefinition.namespace,
-                key: modelContext.modelDefinition.key,
-              },
-            ],
-          });
+      if (
+        modelContext &&
+        !modelContext.isRegistered &&
+        (modelContext.flattenedReducers[actionType] ||
+          modelContext.flattenedEffects[actionType])
+      ) {
+        dispatchAction({
+          type: registerActionType,
+          payload: [
+            {
+              namespace: modelContext.modelDefinition.namespace,
+              key: modelContext.modelDefinition.key,
+            },
+          ],
+        });
+      }
+
+      modelContext?.flattenedReducers[actionType]?.(action.payload);
+
+      subscribers.forEach((fn) => fn());
+      actionSubscribers.forEach((fn) => fn(action));
+
+      if (modelContext?.isRegistered) {
+        const effect = modelContext.flattenedEffects[actionType];
+        if (effect) {
+          return effect(action.payload);
         }
-
-        modelContext.flattenedReducers[actionType]?.(action.payload);
-
-        subscribers.forEach((fn) => fn());
-        actionSubscribers.forEach((fn) => fn(action));
-
-        return (
-          modelContext.flattenedEffects[actionType]?.(action.payload) ??
-          Promise.resolve()
-        );
       }
 
       return Promise.resolve();
-    };
+    }
 
     return {
       getState() {
@@ -309,7 +301,17 @@ export function createNyaxCreateStore(_options: {
       getModelState(namespace, key) {
         const modelPath = concatLastString(namespace, key);
         const modelContext = getModelContext(modelPath);
-        return modelContext?.observableState;
+
+        if (modelContext?.isRegistered) {
+          let state = observableRootState as any;
+          state = state?.[namespace];
+          if (key !== undefined) {
+            state = state?.[key];
+          }
+          return state;
+        } else {
+          return modelContext?.modelDefinition.initialState();
+        }
       },
       getModelComputed(namespace, key, getterPath) {
         const modelPath = concatLastString(namespace, key);

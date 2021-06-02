@@ -1,13 +1,16 @@
 import {
-  Action,
   ActionSubscriber,
   AnyAction,
   CreateStore,
+  Effect,
   ModelDefinition,
+  Reducer,
   RegisterActionPayload,
   registerActionType,
   ReloadActionPayload,
   reloadActionType,
+  Selector,
+  Subscription,
   UnregisterActionPayload,
   unregisterActionType,
   utils,
@@ -50,7 +53,6 @@ export function createNyaxCreateStore(options: {
 }): CreateStore {
   return ({ getModelDefinition, deleteModelDefinition }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
-    const registerCountByModelNamespace = new Map<string, number>();
 
     function getModelContext(modelPath: string) {
       let modelContext = modelContextByModelPath.get(modelPath);
@@ -83,9 +85,9 @@ export function createNyaxCreateStore(options: {
               _computedRefByGetterPath = mergeObjects(
                 {},
                 flattenObject<any>(modelDefinition?.selectors() ?? {}),
-                (item, key, parent) => {
+                (item: Selector, key, parent) => {
                   // TODO: https://github.com/vuejs/vuex/pull/1884
-                  // parent[key] = computed(() => item());
+                  // parent[key] = computed(item);
 
                   parent[key] = {
                     get value() {
@@ -106,7 +108,11 @@ export function createNyaxCreateStore(options: {
 
     let actionSubscribers: ActionSubscriber[] = [];
     const vuexPlugin: VuexPlugin<unknown> = (store) => {
-      function register(payload: RegisterActionPayload) {
+      function register(payload: RegisterActionPayload, rootState?: unknown) {
+        if (rootState !== undefined) {
+          store.replaceState(rootState);
+        }
+
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
@@ -114,22 +120,30 @@ export function createNyaxCreateStore(options: {
             throw new Error("Model definition is not found.");
           }
 
+          modelContext.isRegistered = true;
+
           const modelDefinition = modelContext.modelDefinition;
 
-          const state = () => mergeObjects({}, modelDefinition.initialState());
+          const state = () =>
+            mergeObjects(
+              {},
+              item.state !== undefined
+                ? (item.state as Record<string, unknown>)
+                : modelDefinition.initialState()
+            );
 
           const getters = mergeObjects(
             {},
             flattenObject<any>(modelDefinition.selectors()),
-            (item, key, parent) => {
-              parent[concatLastString(modelPath, key)] = () => item();
+            (item: Selector, key, parent) => {
+              parent[concatLastString(modelPath, key)] = item;
             }
           );
 
           const mutations = mergeObjects(
             {},
             flattenObject<any>(modelDefinition.reducers()),
-            (item, key, parent) => {
+            (item: Reducer, key, parent) => {
               parent[concatLastString(modelPath, key)] = (
                 _state: unknown,
                 action: AnyAction
@@ -140,20 +154,11 @@ export function createNyaxCreateStore(options: {
           const actions = mergeObjects(
             {},
             flattenObject<any>(modelDefinition.effects()),
-            (item, key, parent) => {
+            (item: Effect, key, parent) => {
               parent[concatLastString(modelPath, key)] = (
                 _context: unknown,
                 action: AnyAction
               ) => item(action.payload);
-            }
-          );
-
-          mergeObjects(
-            {},
-            flattenObject<any>(modelDefinition.subscriptions()),
-            (item) => {
-              const disposable = item();
-              modelContext.subscriptionDisposables.push(disposable);
             }
           );
 
@@ -163,24 +168,33 @@ export function createNyaxCreateStore(options: {
             modulePaths[1] &&
             !store.hasModule(modulePaths[0])
           ) {
-            store.registerModule(modulePaths[0], {});
+            store.registerModule(
+              modulePaths[0],
+              {},
+              { preserveState: rootState !== undefined }
+            );
           }
 
-          store.registerModule(modulePaths, {
-            state,
-            mutations,
-            actions,
-            getters,
-          });
+          store.registerModule(
+            modulePaths,
+            {
+              state,
+              mutations,
+              actions,
+              getters,
+            },
+            { preserveState: rootState !== undefined }
+          );
 
-          modelContext.isRegistered = true;
-
-          const registerCount =
-            (registerCountByModelNamespace.get(modelDefinition.namespace) ??
-              0) + 1;
-          registerCountByModelNamespace.set(
-            modelDefinition.namespace,
-            registerCount
+          mergeObjects(
+            {},
+            flattenObject<any>(modelDefinition.subscriptions()),
+            (item: Subscription) => {
+              const disposable = item();
+              if (disposable) {
+                modelContext.subscriptionDisposables.push(disposable);
+              }
+            }
           );
         });
       }
@@ -194,28 +208,25 @@ export function createNyaxCreateStore(options: {
             disposable()
           );
 
+          modelContextByModelPath.delete(modelPath);
+          deleteModelDefinition(item.namespace, item.key);
+
           const modulePaths = modelPath.split("/");
           if (store.hasModule(modulePaths)) {
             store.unregisterModule(modulePaths);
           }
 
-          const modelNamespace =
-            modelContext?.modelDefinition.namespace ?? null;
-          if (modelNamespace) {
-            const registerCount =
-              (registerCountByModelNamespace.get(modelNamespace) ?? 0) - 1;
-            if (registerCount >= 0) {
-              registerCountByModelNamespace.set(modelNamespace, registerCount);
-              if (registerCount === 0) {
-                if (store.hasModule(modelNamespace)) {
-                  store.unregisterModule(modelNamespace);
-                }
-              }
+          const modelDefinition = modelContext?.modelDefinition;
+          if (
+            modelDefinition &&
+            modelDefinition.key !== undefined &&
+            Object.keys((store.state as any)?.[modelDefinition.namespace] ?? {})
+              .length === 0
+          ) {
+            if (store.hasModule(modelDefinition.namespace)) {
+              store.unregisterModule(modelDefinition.namespace);
             }
           }
-
-          modelContextByModelPath.delete(modelPath);
-          deleteModelDefinition(item.namespace, item.key);
         });
       }
 
@@ -241,7 +252,7 @@ export function createNyaxCreateStore(options: {
         } else {
           mergeObjects(
             {},
-            payload.state as any,
+            payload.state as Record<string, unknown>,
             (_item, _key, _parent, paths) => {
               if (paths.length > 2) {
                 return;
@@ -253,7 +264,7 @@ export function createNyaxCreateStore(options: {
             }
           );
         }
-        register(registerActionPayload);
+        register(registerActionPayload, payload.state);
       }
 
       function autoRegister(
@@ -300,8 +311,9 @@ export function createNyaxCreateStore(options: {
             reload(payload);
             break;
           }
-          default:
+          default: {
             break;
+          }
         }
 
         return _commit.apply(store, args);
@@ -320,34 +332,14 @@ export function createNyaxCreateStore(options: {
 
       store.registerModule("@@nyax", {
         mutations: {
-          [registerActionType]: (
-            rootState: any,
-            action: Action<RegisterActionPayload>
-          ) => {
-            action.payload.forEach((item) => {
-              if (item.state !== undefined) {
-                if (rootState) {
-                  if (item.key === undefined) {
-                    rootState[item.namespace] = item.state;
-                  } else {
-                    if (rootState[item.namespace]) {
-                      rootState[item.namespace][item.key] = item.state;
-                    }
-                  }
-                }
-              }
-            });
+          [registerActionType]: () => {
+            // noop
           },
           [unregisterActionType]: () => {
             // noop
           },
-          [reloadActionType]: (
-            _rootState: any,
-            action: Action<ReloadActionPayload>
-          ) => {
-            if (action.payload.state !== undefined) {
-              store.replaceState(action.payload.state);
-            }
+          [reloadActionType]: () => {
+            // noop
           },
         },
       });
