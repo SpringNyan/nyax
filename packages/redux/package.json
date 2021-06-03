@@ -1,6 +1,6 @@
 {
   "name": "@nyax/redux",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Redux bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",

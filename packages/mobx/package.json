@@ -1,6 +1,6 @@
 {
   "name": "@nyax/mobx",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "MobX bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
