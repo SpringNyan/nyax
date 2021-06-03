@@ -34,8 +34,6 @@ const {
   splitLastString,
 } = utils;
 
-// TODO: model context in unregister reducer, subscriptions in register middleware, reload rootstate
-
 const NOTHING = {};
 
 function setSubState(
@@ -78,6 +76,8 @@ function setSubState(
 }
 
 interface ModelContext {
+  modelPath: string;
+
   modelDefinition: ModelDefinition;
   isRegistered: boolean;
 
@@ -112,6 +112,8 @@ export function createNyaxCreateStore(options: {
         }
 
         modelContext = {
+          modelPath,
+
           modelDefinition,
           isRegistered: false,
 
@@ -135,6 +137,9 @@ export function createNyaxCreateStore(options: {
       return modelContext;
     }
 
+    const registerModelContextsStack: ModelContext[][] = [];
+    const unregisterModelContextsStack: ModelContext[][] = [];
+
     let cachedRootState: unknown | typeof NOTHING = NOTHING;
     const reduxReducer: ReduxReducer = (() => {
       function register(rootState: unknown, payload: RegisterActionPayload) {
@@ -157,6 +162,8 @@ export function createNyaxCreateStore(options: {
         rootState: unknown,
         payload: UnregisterActionPayload
       ) {
+        unregisterModelContextsStack.pop();
+
         payload.forEach((item) => {
           rootState = setSubState(rootState, NOTHING, item.namespace, item.key);
 
@@ -176,19 +183,22 @@ export function createNyaxCreateStore(options: {
       }
 
       function reload(rootState: unknown, payload: ReloadActionPayload) {
+        const unregisterModelContexts = unregisterModelContextsStack.pop();
+
         if (payload.state !== undefined) {
           return payload.state;
         } else {
+          if (unregisterModelContexts) {
+            rootState = unregister(
+              rootState,
+              unregisterModelContexts.map((e) => ({
+                namespace: e.modelDefinition.namespace,
+                key: e.modelDefinition.key,
+              }))
+            );
+          }
+
           const modelContexts = Array.from(modelContextByModelPath.values());
-
-          rootState = unregister(
-            rootState,
-            modelContexts.map((e) => ({
-              namespace: e.modelDefinition.namespace,
-              key: e.modelDefinition.key,
-            }))
-          );
-
           const registerActionPayload: RegisterActionPayload = [];
           modelContexts
             .filter((e) => e.modelDefinition.key === undefined)
@@ -264,42 +274,43 @@ export function createNyaxCreateStore(options: {
     })();
 
     let actionSubscribers: ActionSubscriber[] = [];
-    const dispatchPromiseByAction = new Map<AnyAction, Promise<unknown>>();
+    const dispatchPromiseByAction = new Map<
+      AnyAction,
+      Promise<unknown> | null
+    >();
 
     const reduxMiddleware: ReduxMiddleware = (() => {
       function register(payload: RegisterActionPayload) {
+        const modelContexts: ModelContext[] = [];
+        registerModelContextsStack.push(modelContexts);
+
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
           if (!modelContext) {
             throw new Error("Model definition is not found.");
           }
-
-          const modelDefinition = modelContext.modelDefinition;
-
-          mergeObjects(
-            {},
-            flattenObject<any>(modelDefinition.subscriptions()),
-            (item: Subscription) => {
-              const disposable = item();
-              if (disposable) {
-                modelContext.subscriptionDisposables.push(disposable);
-              }
-            }
-          );
+          modelContexts.push(modelContext);
 
           modelContext.isRegistered = true;
         });
       }
 
       function unregister(payload: UnregisterActionPayload) {
+        const modelContexts: ModelContext[] = [];
+        unregisterModelContextsStack.push(modelContexts);
+
         payload.forEach((item) => {
           const modelPath = concatLastString(item.namespace, item.key);
           const modelContext = getModelContext(modelPath);
 
-          modelContext?.subscriptionDisposables.forEach((disposable) =>
-            disposable()
-          );
+          if (modelContext) {
+            modelContexts.push(modelContext);
+
+            modelContext.subscriptionDisposables.forEach((disposable) =>
+              disposable()
+            );
+          }
 
           modelContextByModelPath.delete(modelPath);
           deleteModelDefinition(item.namespace, item.key);
@@ -343,6 +354,46 @@ export function createNyaxCreateStore(options: {
         register(registerActionPayload);
       }
 
+      function autoRegister(
+        store: { dispatch: ReduxDispatch },
+        modelContext: ModelContext | null,
+        actionType: string
+      ) {
+        if (
+          modelContext &&
+          !modelContext.isRegistered &&
+          (modelContext.flattenedReducers[actionType] ||
+            modelContext.flattenedEffects[actionType])
+        ) {
+          store.dispatch({
+            type: registerActionType,
+            payload: [
+              {
+                namespace: modelContext.modelDefinition.namespace,
+                key: modelContext.modelDefinition.key,
+              },
+            ],
+          });
+        }
+      }
+
+      function afterRegister(modelContexts: ModelContext[]) {
+        modelContexts.forEach((modelContext) => {
+          if (modelContext === getModelContext(modelContext.modelPath)) {
+            mergeObjects(
+              {},
+              flattenObject<any>(modelContext.modelDefinition.subscriptions()),
+              (item: Subscription) => {
+                const disposable = item();
+                if (disposable) {
+                  modelContext.subscriptionDisposables.push(disposable);
+                }
+              }
+            );
+          }
+        });
+      }
+
       return (store: { dispatch: ReduxDispatch }) =>
         (next: ReduxDispatch) =>
         (action: AnyAction) => {
@@ -366,31 +417,28 @@ export function createNyaxCreateStore(options: {
           const [modelPath, actionType] = splitLastString(action.type);
           const modelContext = getModelContext(modelPath);
 
-          if (
-            modelContext &&
-            !modelContext.isRegistered &&
-            (modelContext.flattenedReducers[actionType] ||
-              modelContext.flattenedEffects[actionType])
-          ) {
-            store.dispatch({
-              type: registerActionType,
-              payload: [
-                {
-                  namespace: modelContext.modelDefinition.namespace,
-                  key: modelContext.modelDefinition.key,
-                },
-              ],
-            });
-          }
+          autoRegister(store, modelContext, actionType);
 
           const result = next(action);
-
           actionSubscribers.forEach((fn) => fn(action));
+
+          if (
+            action.type === registerActionType ||
+            action.type === reloadActionType
+          ) {
+            const registerModelContexts = registerModelContextsStack.pop();
+            if (registerModelContexts) {
+              afterRegister(registerModelContexts);
+            }
+          }
 
           if (modelContext?.isRegistered) {
             const effect = modelContext.flattenedEffects[actionType];
             if (effect) {
-              dispatchPromiseByAction.set(action, effect(action.payload));
+              const promise = effect(action.payload);
+              if (dispatchPromiseByAction.has(action)) {
+                dispatchPromiseByAction.set(action, promise);
+              }
             }
           }
 
@@ -450,7 +498,10 @@ export function createNyaxCreateStore(options: {
           type: concatLastString(concatLastString(namespace, key), actionType),
           payload,
         };
+        dispatchPromiseByAction.set(action, null);
+
         reduxStore.dispatch(action);
+
         const promise = dispatchPromiseByAction.get(action);
         dispatchPromiseByAction.delete(action);
         return promise ?? Promise.resolve();
