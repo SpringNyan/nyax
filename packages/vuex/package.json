@@ -13,7 +13,7 @@
   "module": "dist/nyax-vuex.esm.js",
   "types": "types/index.d.ts",
   "peerDependencies": {
-    "@nyax/core": "0.0.2",
+    "@nyax/core": "0.0.3",
     "vue": "^3.0.0",
     "vuex": "^4.0.0"
   },
