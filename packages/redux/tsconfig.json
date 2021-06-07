@@ -11,7 +11,7 @@
     "moduleResolution": "node",
     "isolatedModules": true,
     "noFallthroughCasesInSwitch": true,
-    // "noImplicitOverride": true,
+    "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,

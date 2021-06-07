@@ -156,7 +156,8 @@ export class ModelDefinitionBase<TDependencies = unknown>
       {},
       {}
       /* eslint-enable @typescript-eslint/ban-types */
-    > {
+    >
+{
   public initialState(): any {
     return {};
   }
@@ -235,8 +236,8 @@ export function mergeModelDefinitionClasses<
       const self = this;
 
       return modelDefinitionClasses.map((modelDefinitionClass) => {
-        const modelDefinition = new (modelDefinitionClass as typeof ModelDefinitionBase)(
-          {
+        const modelDefinition =
+          new (modelDefinitionClass as typeof ModelDefinitionBase)({
             get nyax() {
               return self.__nyax_context.nyax;
             },
@@ -257,25 +258,24 @@ export function mergeModelDefinitionClasses<
             get actions() {
               return self.__nyax_context.actions;
             },
-          }
-        );
+          });
         return modelDefinition;
       });
     })();
 
-    public initialState(): any {
+    public override initialState(): any {
       return this._mergeProperty("initialState");
     }
-    public selectors(): any {
+    public override selectors(): any {
       return this._mergeProperty("selectors");
     }
-    public reducers(): any {
+    public override reducers(): any {
       return this._mergeProperty("reducers");
     }
-    public effects(): any {
+    public override effects(): any {
       return this._mergeProperty("effects");
     }
-    public subscriptions(): any {
+    public override subscriptions(): any {
       return this._mergeProperty("subscriptions");
     }
 
@@ -324,8 +324,8 @@ export function mergeSubModelDefinitionClasses<
       Object.keys(subModelDefinitionClasses).forEach((key) => {
         const subModelDefinitionClass = subModelDefinitionClasses[key];
         if (subModelDefinitionClass) {
-          const subModelDefinition = new (subModelDefinitionClass as typeof ModelDefinitionBase)(
-            {
+          const subModelDefinition =
+            new (subModelDefinitionClass as typeof ModelDefinitionBase)({
               get nyax() {
                 return self.__nyax_context.nyax;
               },
@@ -346,8 +346,7 @@ export function mergeSubModelDefinitionClasses<
               get actions() {
                 return self.__nyax_context.actions?.[key];
               },
-            }
-          );
+            });
           subModelDefinitions[key] = subModelDefinition;
         }
       });
@@ -355,19 +354,19 @@ export function mergeSubModelDefinitionClasses<
       return subModelDefinitions;
     })();
 
-    public initialState(): any {
+    public override initialState(): any {
       return this._mergeSubProperty("initialState");
     }
-    public selectors(): any {
+    public override selectors(): any {
       return this._mergeSubProperty("selectors");
     }
-    public reducers(): any {
+    public override reducers(): any {
       return this._mergeSubProperty("reducers");
     }
-    public effects(): any {
+    public override effects(): any {
       return this._mergeSubProperty("effects");
     }
-    public subscriptions(): any {
+    public override subscriptions(): any {
       return this._mergeSubProperty("subscriptions");
     }
 
@@ -426,7 +425,7 @@ export function defineModelDefinition<
   TSubscriptions,
   TDynamic
 > {
-  return (class extends modelDefinitionClass {
+  return class extends modelDefinitionClass {
     public static namespace = namespace;
     public static isDynamic = (isDynamic ?? false) as TDynamic;
 
@@ -436,37 +435,37 @@ export function defineModelDefinition<
     private __nyax_effects: any;
     private __nyax_subscriptions: any;
 
-    public initialState(): any {
+    public override initialState(): any {
       if (this.__nyax_initialState === undefined) {
         this.__nyax_initialState = super.initialState();
       }
       return this.__nyax_initialState;
     }
-    public selectors(): any {
+    public override selectors(): any {
       if (this.__nyax_selectors === undefined) {
         this.__nyax_selectors = super.selectors();
       }
       return this.__nyax_selectors;
     }
-    public reducers(): any {
+    public override reducers(): any {
       if (this.__nyax_reducers === undefined) {
         this.__nyax_reducers = super.reducers();
       }
       return this.__nyax_reducers;
     }
-    public effects(): any {
+    public override effects(): any {
       if (this.__nyax_effects === undefined) {
         this.__nyax_effects = super.effects();
       }
       return this.__nyax_effects;
     }
-    public subscriptions(): any {
+    public override subscriptions(): any {
       if (this.__nyax_subscriptions === undefined) {
         this.__nyax_subscriptions = super.subscriptions();
       }
       return this.__nyax_subscriptions;
     }
-  } as ModelDefinitionConstructor) as ModelDefinitionClass<
+  } as ModelDefinitionConstructor as ModelDefinitionClass<
     TDependencies,
     TInitialState,
     TSelectors,
@@ -497,7 +496,8 @@ export interface Model<
 
 export class ModelImpl<
   TModelDefinitionClass extends ModelDefinitionClass = ModelDefinitionClass
-> implements Model<TModelDefinitionClass> {
+> implements Model<TModelDefinitionClass>
+{
   public readonly namespace: string;
 
   private get _modelDefinition() {

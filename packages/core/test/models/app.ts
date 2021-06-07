@@ -5,7 +5,7 @@ import { ModelDefinitionBase } from "./_base";
 export const AppModelDefinition = defineModelDefinition(
   "app",
   class extends ModelDefinitionBase {
-    public initialState() {
+    public override initialState() {
       return {
         isInitialized: false,
         errorMessage: null as string | null,
@@ -19,7 +19,7 @@ export const AppModelDefinition = defineModelDefinition(
       };
     }
 
-    public selectors() {
+    public override selectors() {
       return {
         packageName: () => {
           return this.dependencies.packageName;
@@ -33,7 +33,7 @@ export const AppModelDefinition = defineModelDefinition(
       };
     }
 
-    public reducers() {
+    public override reducers() {
       return {
         initializeSuccess: () => {
           this.state.isInitialized = true;
@@ -58,7 +58,7 @@ export const AppModelDefinition = defineModelDefinition(
       };
     }
 
-    public effects() {
+    public override effects() {
       return {
         initialize: async (payload: { errorMessage?: string }) => {
           const { errorMessage } = payload;
@@ -74,7 +74,7 @@ export const AppModelDefinition = defineModelDefinition(
       };
     }
 
-    public subscriptions() {
+    public override subscriptions() {
       return {
         initialize: () => {
           return this.nyax.store.subscribeAction(async (action) => {

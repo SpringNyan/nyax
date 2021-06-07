@@ -84,33 +84,34 @@ export function createNyaxContext(options: NyaxOptions): NyaxContext {
         let getters: any;
         let actions: any;
 
-        modelDefinition = new ((modelContext.modelDefinitionClass as ModelDefinitionConstructor) as typeof ModelDefinitionBase)(
-          {
-            nyax: nyaxContext.nyax,
+        modelDefinition =
+          new (modelContext.modelDefinitionClass as ModelDefinitionConstructor as typeof ModelDefinitionBase)(
+            {
+              nyax: nyaxContext.nyax,
 
-            namespace,
-            key,
+              namespace,
+              key,
 
-            get state() {
-              return nyaxContext.nyax.store.getModelState(namespace, key);
-            },
-            get getters() {
-              if (!getters && modelDefinition) {
-                getters = createGetters(nyaxContext.nyax, modelDefinition);
-              }
-              return getters;
-            },
-            get actions() {
-              if (!actions && modelDefinition) {
-                actions = createActionHelpers(
-                  nyaxContext.nyax,
-                  modelDefinition
-                );
-              }
-              return actions;
-            },
-          }
-        );
+              get state() {
+                return nyaxContext.nyax.store.getModelState(namespace, key);
+              },
+              get getters() {
+                if (!getters && modelDefinition) {
+                  getters = createGetters(nyaxContext.nyax, modelDefinition);
+                }
+                return getters;
+              },
+              get actions() {
+                if (!actions && modelDefinition) {
+                  actions = createActionHelpers(
+                    nyaxContext.nyax,
+                    modelDefinition
+                  );
+                }
+                return actions;
+              },
+            }
+          );
         modelContext.modelDefinitionByKey.set(key, modelDefinition);
       }
 

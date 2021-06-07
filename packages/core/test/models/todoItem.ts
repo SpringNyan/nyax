@@ -6,7 +6,7 @@ import { ModelDefinitionBase } from "./_base";
 export const TodoItemModelDefinition = defineModelDefinition(
   "todo.item",
   class extends ModelDefinitionBase {
-    public initialState() {
+    public override initialState() {
       return {
         title: "",
         description: "",
@@ -15,7 +15,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       };
     }
 
-    public selectors() {
+    public override selectors() {
       return {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         id: () => this.key!,
@@ -29,7 +29,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       };
     }
 
-    public reducers() {
+    public override reducers() {
       return {
         setTitle: (value: string) => {
           this.state.title = value;
@@ -43,7 +43,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       };
     }
 
-    public effects() {
+    public override effects() {
       return {
         load: async (payload: {
           title: string;
@@ -57,7 +57,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
       };
     }
 
-    public subscriptions() {
+    public override subscriptions() {
       return {
         allDone: () =>
           this.nyax.store.subscribeAction(async (action) => {

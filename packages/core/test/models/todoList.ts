@@ -6,7 +6,7 @@ import { ModelDefinitionBase } from "./_base";
 export const TodoListModelDefinition = defineModelDefinition(
   "todo.list",
   class extends ModelDefinitionBase {
-    public initialState() {
+    public override initialState() {
       return {
         ids: [] as string[],
 
@@ -14,7 +14,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       };
     }
 
-    public selectors() {
+    public override selectors() {
       return {
         items: testDependencies.createSelector(
           () => this.state.ids,
@@ -25,7 +25,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       };
     }
 
-    public reducers() {
+    public override reducers() {
       return {
         addId: (id: string) => {
           this.state.ids.push(id);
@@ -40,7 +40,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       };
     }
 
-    public effects() {
+    public override effects() {
       return {
         add: async (item: { title: string; description: string }) => {
           const id = this.state.nextId + "";

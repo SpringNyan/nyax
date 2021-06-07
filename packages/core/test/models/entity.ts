@@ -7,13 +7,13 @@ import { testDependencies } from "../dependencies";
 import { ModelDefinitionBase } from "./_base";
 
 class FooEntityModelDefinition extends ModelDefinitionBase {
-  public initialState() {
+  public override initialState() {
     return {
       foo: "foo",
     };
   }
 
-  public selectors() {
+  public override selectors() {
     return {
       foo$foo: testDependencies.createSelector(
         () => this.state.foo,
@@ -22,7 +22,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public reducers() {
+  public override reducers() {
     return {
       setFoo: (value: string) => {
         this.state.foo = value;
@@ -30,7 +30,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public effects() {
+  public override effects() {
     return {
       setFooUpper: async (value: string) => {
         await this.actions.setFoo(value.toUpperCase());
@@ -38,7 +38,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public subscriptions() {
+  public override subscriptions() {
     return {
       fooChange: () =>
         this.nyax.store.subscribeAction(async (action) => {
@@ -53,13 +53,13 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
 }
 
 class BarEntityModelDefinition extends ModelDefinitionBase {
-  public initialState() {
+  public override initialState() {
     return {
       bar: "bar",
     };
   }
 
-  public selectors() {
+  public override selectors() {
     return {
       bar_bar: testDependencies.createSelector(
         () => this.state.bar,
@@ -68,7 +68,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public reducers() {
+  public override reducers() {
     return {
       setBar: (value: string) => {
         this.state.bar = value;
@@ -76,7 +76,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public effects() {
+  public override effects() {
     return {
       setBarLower: async (value: string) => {
         await this.actions.setBar(value.toLowerCase());
@@ -84,7 +84,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public subscriptions() {
+  public override subscriptions() {
     return {
       barChange: () =>
         this.nyax.store.subscribeAction(async (action) => {
@@ -99,13 +99,13 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
 }
 
 class BazEntityModelDefinition extends ModelDefinitionBase {
-  public initialState() {
+  public override initialState() {
     return {
       baz: "baz",
     };
   }
 
-  public selectors() {
+  public override selectors() {
     return {
       baz0baz: testDependencies.createSelector(
         () => this.state.baz,
@@ -114,7 +114,7 @@ class BazEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public reducers() {
+  public override reducers() {
     return {
       setBaz: (value: string) => {
         this.state.baz = value;
@@ -122,7 +122,7 @@ class BazEntityModelDefinition extends ModelDefinitionBase {
     };
   }
 
-  public effects() {
+  public override effects() {
     return {
       setBazTrim: async (value: string) => {
         await this.actions.setBaz(value.trim());
@@ -138,7 +138,7 @@ export const MergedEntityModelDefinition = defineModelDefinition(
     BarEntityModelDefinition,
     BazEntityModelDefinition
   ) {
-    public initialState() {
+    public override initialState() {
       return {
         ...super.initialState(),
 
@@ -146,7 +146,7 @@ export const MergedEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public selectors() {
+    public override selectors() {
       return {
         ...super.selectors(),
 
@@ -159,7 +159,7 @@ export const MergedEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public reducers() {
+    public override reducers() {
       return {
         ...super.reducers(),
 
@@ -169,7 +169,7 @@ export const MergedEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public effects() {
+    public override effects() {
       return {
         ...super.effects(),
 
@@ -194,7 +194,7 @@ export const MergedSubEntityModelDefinition = defineModelDefinition(
     bar: BarEntityModelDefinition,
     baz: BazEntityModelDefinition,
   }) {
-    public initialState() {
+    public override initialState() {
       return {
         ...super.initialState(),
 
@@ -202,7 +202,7 @@ export const MergedSubEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public selectors() {
+    public override selectors() {
       return {
         ...super.selectors(),
 
@@ -215,7 +215,7 @@ export const MergedSubEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public reducers() {
+    public override reducers() {
       return {
         ...super.reducers(),
 
@@ -225,7 +225,7 @@ export const MergedSubEntityModelDefinition = defineModelDefinition(
       };
     }
 
-    public effects() {
+    public override effects() {
       return {
         ...super.effects(),
 
