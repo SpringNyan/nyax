@@ -20,10 +20,16 @@ export {
   mergeSubModelDefinitionClasses,
 } from "./model";
 export type {
+  ExtractModelDefinitionDependencies,
+  ExtractModelDefinitionProperty,
+  ExtractModelProperty,
   GetModel,
   Model,
   ModelDefinition,
   ModelDefinitionClass,
+  ModelDefinitionConstructor,
+  ModelDefinitionPropertyKey,
+  ModelPropertyKey,
   RegisterModelDefinitionClasses,
   SubModel,
 } from "./model";

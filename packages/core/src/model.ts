@@ -90,13 +90,24 @@ export type ModelDefinitionPropertyKey =
   | "effects"
   | "subscriptions";
 
+export type ExtractModelDefinitionProperty<
+  TModelDefinitionConstructor extends ModelDefinitionConstructor,
+  TPropertyKey extends ModelDefinitionPropertyKey
+> = ReturnType<InstanceType<TModelDefinitionConstructor>[TPropertyKey]>;
+
+export type ExtractModelDefinitionDependencies<
+  TModelDefinitionConstructor extends ModelDefinitionConstructor
+> = InstanceType<TModelDefinitionConstructor>["dependencies"];
+
 export type MergeModelDefinitionsProperty<
   TModelDefinitionConstructors extends ModelDefinitionConstructor[],
   TPropertyKey extends ModelDefinitionPropertyKey
 > = UnionToIntersection<
   {
-    [K in keyof TModelDefinitionConstructors & number]: ReturnType<
-      InstanceType<TModelDefinitionConstructors[K]>[TPropertyKey]
+    [K in keyof TModelDefinitionConstructors &
+      number]: ExtractModelDefinitionProperty<
+      TModelDefinitionConstructors[K],
+      TPropertyKey
     >;
   }[number]
 >;
@@ -109,8 +120,9 @@ export type MergeSubModelDefinitionsProperty<
   TPropertyKey extends ModelDefinitionPropertyKey
 > = Resolved<
   {
-    [K in keyof TSubModelDefinitionConstructors]: ReturnType<
-      InstanceType<TSubModelDefinitionConstructors[K]>[TPropertyKey]
+    [K in keyof TSubModelDefinitionConstructors]: ExtractModelDefinitionProperty<
+      TSubModelDefinitionConstructors[K],
+      TPropertyKey
     >;
   }
 >;
