@@ -187,7 +187,7 @@ export class ModelDefinitionBase<TDependencies = unknown>
   }
 
   constructor(
-    protected readonly __nyax_context: {
+    protected readonly __nyax_model: {
       nyax: Nyax;
 
       namespace: string;
@@ -200,31 +200,31 @@ export class ModelDefinitionBase<TDependencies = unknown>
   ) {}
 
   public get state(): any {
-    return this.__nyax_context.state;
+    return this.__nyax_model.state;
   }
   public get getters(): any {
-    return this.__nyax_context.getters;
+    return this.__nyax_model.getters;
   }
   public get actions(): any {
-    return this.__nyax_context.actions;
+    return this.__nyax_model.actions;
   }
 
   public get dependencies(): any {
-    return this.__nyax_context.nyax.dependencies;
+    return this.__nyax_model.nyax.dependencies;
   }
 
   public get namespace(): any {
-    return this.__nyax_context.namespace;
+    return this.__nyax_model.namespace;
   }
   public get key(): any {
-    return this.__nyax_context.key;
+    return this.__nyax_model.key;
   }
 
   public get getModel(): any {
-    return this.__nyax_context.nyax.getModel;
+    return this.__nyax_model.nyax.getModel;
   }
   public get nyax(): any {
-    return this.__nyax_context.nyax;
+    return this.__nyax_model.nyax;
   }
 }
 
@@ -251,24 +251,24 @@ export function mergeModelDefinitionClasses<
         const modelDefinition =
           new (modelDefinitionClass as typeof ModelDefinitionBase)({
             get nyax() {
-              return self.__nyax_context.nyax;
+              return self.__nyax_model.nyax;
             },
 
             get namespace() {
-              return self.__nyax_context.namespace;
+              return self.__nyax_model.namespace;
             },
             get key() {
-              return self.__nyax_context.key;
+              return self.__nyax_model.key;
             },
 
             get state() {
-              return self.__nyax_context.state;
+              return self.__nyax_model.state;
             },
             get getters() {
-              return self.__nyax_context.getters;
+              return self.__nyax_model.getters;
             },
             get actions() {
-              return self.__nyax_context.actions;
+              return self.__nyax_model.actions;
             },
           });
         return modelDefinition;
@@ -339,24 +339,24 @@ export function mergeSubModelDefinitionClasses<
           const subModelDefinition =
             new (subModelDefinitionClass as typeof ModelDefinitionBase)({
               get nyax() {
-                return self.__nyax_context.nyax;
+                return self.__nyax_model.nyax;
               },
 
               get namespace() {
-                return self.__nyax_context.namespace;
+                return self.__nyax_model.namespace;
               },
               get key() {
-                return self.__nyax_context.key;
+                return self.__nyax_model.key;
               },
 
               get state() {
-                return self.__nyax_context.state?.[key];
+                return self.__nyax_model.state?.[key];
               },
               get getters() {
-                return self.__nyax_context.getters?.[key];
+                return self.__nyax_model.getters?.[key];
               },
               get actions() {
-                return self.__nyax_context.actions?.[key];
+                return self.__nyax_model.actions?.[key];
               },
             });
           subModelDefinitions[key] = subModelDefinition;
