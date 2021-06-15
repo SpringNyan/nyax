@@ -1,6 +1,6 @@
 {
   "name": "@nyax/redux",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Redux bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
@@ -13,7 +13,7 @@
   "module": "dist/nyax-redux.esm.js",
   "types": "types/index.d.ts",
   "peerDependencies": {
-    "@nyax/core": "^0.0.5",
+    "@nyax/core": "^0.0.6",
     "immer": "^9.0.0",
     "redux": "^4.0.0"
   },

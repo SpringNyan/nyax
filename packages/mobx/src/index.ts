@@ -299,18 +299,18 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
       },
 
       getModelState(namespace, key) {
-        const modelPath = concatLastString(namespace, key);
-        const modelContext = getModelContext(modelPath);
+        let state = observableRootState as any;
+        state = state?.[namespace];
+        if (key !== undefined) {
+          state = state?.[key];
+        }
 
-        if (modelContext?.isRegistered) {
-          let state = observableRootState as any;
-          state = state?.[namespace];
-          if (key !== undefined) {
-            state = state?.[key];
-          }
+        if (state !== undefined) {
           return state;
         } else {
-          return modelContext?.modelDefinition.initialState();
+          return getModelContext(
+            concatLastString(namespace, key)
+          )?.modelDefinition.initialState();
         }
       },
       getModelComputed(namespace, key, getterPath) {

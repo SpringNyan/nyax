@@ -1,6 +1,6 @@
 {
   "name": "@nyax/vuex",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Vuex bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
@@ -13,7 +13,7 @@
   "module": "dist/nyax-vuex.esm.js",
   "types": "types/index.d.ts",
   "peerDependencies": {
-    "@nyax/core": "^0.0.5",
+    "@nyax/core": "^0.0.6",
     "vue": "^3.0.0",
     "vuex": "^4.0.0"
   },
