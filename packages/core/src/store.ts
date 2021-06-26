@@ -1,11 +1,10 @@
 import { AnyAction, reloadActionType } from "./action";
+import { createGetContainer, GetContainer } from "./container";
 import { createNyaxContext } from "./context";
 import {
-  createGetModel,
-  createRegisterModelDefinitionClasses,
-  GetModel,
-  ModelDefinition,
-  RegisterModelDefinitionClasses,
+  createRegisterModelClasses,
+  Model,
+  RegisterModelClasses,
 } from "./model";
 import { createGetState, GetState } from "./state";
 
@@ -33,11 +32,8 @@ export interface Store {
 }
 
 export interface CreateStoreOptions {
-  getModelDefinition(
-    namespace: string,
-    key: string | undefined
-  ): ModelDefinition | null;
-  deleteModelDefinition(namespace: string, key: string | undefined): void;
+  getModel(namespace: string, key: string | undefined): Model | null;
+  deleteModel(namespace: string, key: string | undefined): void;
 }
 
 export type CreateStore = (options: CreateStoreOptions) => Store;
@@ -51,8 +47,8 @@ export interface Nyax {
   dependencies: unknown;
   store: Store;
   getState: GetState;
-  getModel: GetModel;
-  registerModelDefinitionClasses: RegisterModelDefinitionClasses;
+  getContainer: GetContainer;
+  registerModelClasses: RegisterModelClasses;
   reload: (state?: unknown) => void;
 }
 
@@ -61,13 +57,12 @@ export function createNyax(options: NyaxOptions): Nyax {
   nyaxContext.nyax = {
     dependencies: options.dependencies,
     store: options.createStore({
-      getModelDefinition: nyaxContext.getModelDefinition,
-      deleteModelDefinition: nyaxContext.deleteModelDefinition,
+      getModel: nyaxContext.getModel,
+      deleteModel: nyaxContext.deleteModel,
     }),
     getState: createGetState(nyaxContext),
-    getModel: createGetModel(nyaxContext),
-    registerModelDefinitionClasses:
-      createRegisterModelDefinitionClasses(nyaxContext),
+    getContainer: createGetContainer(nyaxContext),
+    registerModelClasses: createRegisterModelClasses(nyaxContext),
     reload: (state) => {
       nyaxContext.nyax.store.dispatch({
         type: reloadActionType,

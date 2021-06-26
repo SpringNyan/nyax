@@ -1,5 +1,4 @@
-import { createModelDefinitionBaseClass } from "../../src";
+import { createBaseModelClass } from "../../src";
 import { Dependencies } from "../dependencies";
 
-export const ModelDefinitionBase =
-  createModelDefinitionBaseClass<Dependencies>();
+export const ModelBase = createBaseModelClass<Dependencies>();

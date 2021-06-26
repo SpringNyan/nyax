@@ -3,7 +3,7 @@ import {
   AnyAction,
   CreateStore,
   Effect,
-  ModelDefinition,
+  Model,
   Reducer,
   RegisterActionPayload,
   registerActionType,
@@ -31,7 +31,7 @@ const {
 } = utils;
 
 interface ModelContext {
-  modelDefinition: ModelDefinition;
+  model: Model;
   isRegistered: boolean;
 
   subscriptionDisposables: (() => void)[];
@@ -51,40 +51,40 @@ export function createNyaxCreateStore(options: {
     plugin: VuexPlugin<unknown>;
   }) => VuexStore<unknown>;
 }): CreateStore {
-  return ({ getModelDefinition, deleteModelDefinition }) => {
+  return ({ getModel, deleteModel }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
 
     function getModelContext(modelPath: string) {
       let modelContext = modelContextByModelPath.get(modelPath);
       if (!modelContext) {
-        let modelDefinition = getModelDefinition(modelPath, undefined);
-        if (!modelDefinition) {
+        let model = getModel(modelPath, undefined);
+        if (!model) {
           const [namespace, key] = splitLastString(modelPath);
-          modelDefinition = getModelDefinition(namespace, key);
+          model = getModel(namespace, key);
         }
-        if (!modelDefinition) {
+        if (!model) {
           return null;
         }
 
         let _computedRefByGetterPath: Record<string, ComputedRef> | undefined;
         modelContext = {
-          modelDefinition,
+          model,
           isRegistered: false,
 
           subscriptionDisposables: [],
 
           flattenedReducerKeySet: new Set(
-            Object.keys(flattenObject(modelDefinition.reducers()))
+            Object.keys(flattenObject(model.reducers()))
           ),
           flattenedEffectKeySet: new Set(
-            Object.keys(flattenObject(modelDefinition.effects()))
+            Object.keys(flattenObject(model.effects()))
           ),
 
           get computedRefByGetterPath() {
             if (_computedRefByGetterPath === undefined) {
               _computedRefByGetterPath = mergeObjects(
                 {},
-                flattenObject<any>(modelDefinition?.selectors() ?? {}),
+                flattenObject<any>(model?.selectors() ?? {}),
                 (item: Selector, key, parent) => {
                   // TODO: https://github.com/vuejs/vuex/pull/1884
                   // parent[key] = computed(item);
@@ -122,19 +122,19 @@ export function createNyaxCreateStore(options: {
 
           modelContext.isRegistered = true;
 
-          const modelDefinition = modelContext.modelDefinition;
+          const model = modelContext.model;
 
           const state = () =>
             mergeObjects(
               {},
               item.state !== undefined
                 ? (item.state as Record<string, unknown>)
-                : modelDefinition.initialState()
+                : model.initialState()
             );
 
           const getters = mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.selectors()),
+            flattenObject<any>(model.selectors()),
             (item: Selector, key, parent) => {
               parent[concatLastString(modelPath, key)] = item;
             }
@@ -142,7 +142,7 @@ export function createNyaxCreateStore(options: {
 
           const mutations = mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.reducers()),
+            flattenObject<any>(model.reducers()),
             (item: Reducer, key, parent) => {
               parent[concatLastString(modelPath, key)] = (
                 _state: unknown,
@@ -153,7 +153,7 @@ export function createNyaxCreateStore(options: {
 
           const actions = mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.effects()),
+            flattenObject<any>(model.effects()),
             (item: Effect, key, parent) => {
               parent[concatLastString(modelPath, key)] = (
                 _context: unknown,
@@ -188,7 +188,7 @@ export function createNyaxCreateStore(options: {
 
           mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.subscriptions()),
+            flattenObject<any>(model.subscriptions()),
             (item: Subscription) => {
               const disposable = item();
               if (disposable) {
@@ -209,22 +209,22 @@ export function createNyaxCreateStore(options: {
           );
 
           modelContextByModelPath.delete(modelPath);
-          deleteModelDefinition(item.namespace, item.key);
+          deleteModel(item.namespace, item.key);
 
           const modulePaths = modelPath.split("/");
           if (store.hasModule(modulePaths)) {
             store.unregisterModule(modulePaths);
           }
 
-          const modelDefinition = modelContext?.modelDefinition;
+          const model = modelContext?.model;
           if (
-            modelDefinition &&
-            modelDefinition.key !== undefined &&
-            Object.keys((store.state as any)?.[modelDefinition.namespace] ?? {})
+            model &&
+            model.key !== undefined &&
+            Object.keys((store.state as any)?.[model.namespace] ?? {})
               .length === 0
           ) {
-            if (store.hasModule(modelDefinition.namespace)) {
-              store.unregisterModule(modelDefinition.namespace);
+            if (store.hasModule(model.namespace)) {
+              store.unregisterModule(model.namespace);
             }
           }
         });
@@ -235,18 +235,18 @@ export function createNyaxCreateStore(options: {
 
         unregister(
           modelContexts.map((e) => ({
-            namespace: e.modelDefinition.namespace,
-            key: e.modelDefinition.key,
+            namespace: e.model.namespace,
+            key: e.model.key,
           }))
         );
 
         const registerActionPayload: RegisterActionPayload = [];
         if (payload.state === undefined) {
           modelContexts
-            .filter((e) => e.modelDefinition.key === undefined)
+            .filter((e) => e.model.key === undefined)
             .forEach((e) => {
               registerActionPayload.push({
-                namespace: e.modelDefinition.namespace,
+                namespace: e.model.namespace,
               });
             });
         } else {
@@ -258,7 +258,7 @@ export function createNyaxCreateStore(options: {
                 return;
               }
               const [namespace, key] = paths;
-              if (namespace && getModelDefinition(namespace, key)) {
+              if (namespace && getModel(namespace, key)) {
                 registerActionPayload.push({ namespace, key });
               }
             }
@@ -281,8 +281,8 @@ export function createNyaxCreateStore(options: {
             type: registerActionType,
             payload: [
               {
-                namespace: modelContext.modelDefinition.namespace,
-                key: modelContext.modelDefinition.key,
+                namespace: modelContext.model.namespace,
+                key: modelContext.model.key,
               },
             ],
           });
@@ -410,7 +410,7 @@ export function createNyaxCreateStore(options: {
         } else {
           return getModelContext(
             concatLastString(namespace, key)
-          )?.modelDefinition.initialState();
+          )?.model.initialState();
         }
       },
       getModelComputed(namespace, key, getterPath) {

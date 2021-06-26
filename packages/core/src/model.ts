@@ -1,8 +1,5 @@
-import {
-  ConvertActionHelpers,
-  registerActionType,
-  unregisterActionType,
-} from "./action";
+import { ConvertActionHelpers, registerActionType } from "./action";
+import { GetContainer } from "./container";
 import { NyaxContext } from "./context";
 import { Effects } from "./effect";
 import { Reducers } from "./reducer";
@@ -12,7 +9,7 @@ import { Nyax } from "./store";
 import { Subscriptions } from "./subscription";
 import { mergeObjects, Resolved, UnionToIntersection } from "./util";
 
-export interface ModelDefinition<
+export interface Model<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
   TInitialState = {},
@@ -39,11 +36,11 @@ export interface ModelDefinition<
   namespace: string;
   key: string | undefined;
 
-  getModel: GetModel;
+  getContainer: GetContainer;
   nyax: Nyax;
 }
 
-export type ModelDefinitionConstructor<
+export type ModelClass<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
   TInitialState = {},
@@ -52,7 +49,7 @@ export type ModelDefinitionConstructor<
   TEffects = {},
   TSubscriptions = {}
   /* eslint-enable @typescript-eslint/ban-types */
-> = new (...args: any[]) => ModelDefinition<
+> = new (...args: any[]) => Model<
   TDependencies,
   TInitialState,
   TSelectors,
@@ -61,7 +58,7 @@ export type ModelDefinitionConstructor<
   TSubscriptions
 >;
 
-export interface ModelDefinitionClass<
+export interface NamespacedModelClass<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies = unknown,
   TInitialState = {},
@@ -71,7 +68,7 @@ export interface ModelDefinitionClass<
   TSubscriptions = {},
   TDynamic = boolean
   /* eslint-enable @typescript-eslint/ban-types */
-> extends ModelDefinitionConstructor<
+> extends ModelClass<
     TDependencies,
     TInitialState,
     TSelectors,
@@ -83,83 +80,67 @@ export interface ModelDefinitionClass<
   isDynamic: TDynamic;
 }
 
-export type ModelDefinitionPropertyKey =
+export type ModelPropertyKey =
   | "initialState"
   | "selectors"
   | "reducers"
   | "effects"
   | "subscriptions";
 
-export type ExtractModelDefinitionProperty<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor,
-  TPropertyKey extends ModelDefinitionPropertyKey
-> = ReturnType<InstanceType<TModelDefinitionConstructor>[TPropertyKey]>;
+export type ExtractModelProperty<
+  TModelClass extends ModelClass,
+  TPropertyKey extends ModelPropertyKey
+> = ReturnType<InstanceType<TModelClass>[TPropertyKey]>;
 
-export type ExtractModelDefinitionDependencies<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor
-> = InstanceType<TModelDefinitionConstructor>["dependencies"];
+export type ExtractModelDependencies<TModelClass extends ModelClass> =
+  InstanceType<TModelClass>["dependencies"];
 
-export type MergeModelDefinitionsProperty<
-  TModelDefinitionConstructors extends ModelDefinitionConstructor[],
-  TPropertyKey extends ModelDefinitionPropertyKey
+export type MergeModelsProperty<
+  TModelClasses extends ModelClass[],
+  TPropertyKey extends ModelPropertyKey
 > = UnionToIntersection<
   {
-    [K in keyof TModelDefinitionConstructors &
-      number]: ExtractModelDefinitionProperty<
-      TModelDefinitionConstructors[K],
+    [K in keyof TModelClasses & number]: ExtractModelProperty<
+      TModelClasses[K],
       TPropertyKey
     >;
   }[number]
 >;
 
-export type MergeSubModelDefinitionsProperty<
-  TSubModelDefinitionConstructors extends Record<
-    string,
-    ModelDefinitionConstructor
-  >,
-  TPropertyKey extends ModelDefinitionPropertyKey
+export type MergeSubModelsProperty<
+  TSubModelClasses extends Record<string, ModelClass>,
+  TPropertyKey extends ModelPropertyKey
 > = Resolved<
   {
-    [K in keyof TSubModelDefinitionConstructors]: ExtractModelDefinitionProperty<
-      TSubModelDefinitionConstructors[K],
+    [K in keyof TSubModelClasses]: ExtractModelProperty<
+      TSubModelClasses[K],
       TPropertyKey
     >;
   }
 >;
 
-export type MergeModelDefinitionsDependencies<
-  TModelDefinitionConstructors extends ModelDefinitionConstructor[]
+export type MergeModelsDependencies<TModelClasses extends ModelClass[]> =
+  UnionToIntersection<
+    {
+      [K in keyof TModelClasses & number]: InstanceType<
+        TModelClasses[K]
+      >["dependencies"];
+    }[number]
+  >;
+
+export type MergeSubModelsDependencies<
+  TSubModelClasses extends Record<string, ModelClass>
 > = UnionToIntersection<
   {
-    [K in keyof TModelDefinitionConstructors & number]: InstanceType<
-      TModelDefinitionConstructors[K]
+    [K in keyof TSubModelClasses]: InstanceType<
+      TSubModelClasses[K]
     >["dependencies"];
-  }[number]
+  }[keyof TSubModelClasses]
 >;
 
-export type MergeSubModelDefinitionsDependencies<
-  TSubModelDefinitionConstructors extends Record<
-    string,
-    ModelDefinitionConstructor
-  >
-> = UnionToIntersection<
-  {
-    [K in keyof TSubModelDefinitionConstructors]: InstanceType<
-      TSubModelDefinitionConstructors[K]
-    >["dependencies"];
-  }[keyof TSubModelDefinitionConstructors]
->;
-
-export type ModelPropertyKey = "state" | "getters" | "actions";
-
-export type ExtractModelProperty<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor,
-  TPropertyKey extends ModelPropertyKey
-> = InstanceType<TModelDefinitionConstructor>[TPropertyKey];
-
-export class ModelDefinitionBase<TDependencies = unknown>
+export class ModelBase<TDependencies = unknown>
   implements
-    ModelDefinition<
+    Model<
       /* eslint-disable @typescript-eslint/ban-types */
       TDependencies,
       {},
@@ -187,7 +168,7 @@ export class ModelDefinitionBase<TDependencies = unknown>
   }
 
   constructor(
-    protected readonly __nyax_model: {
+    protected readonly __nyax_container: {
       nyax: Nyax;
 
       namespace: string;
@@ -200,78 +181,75 @@ export class ModelDefinitionBase<TDependencies = unknown>
   ) {}
 
   public get state(): any {
-    return this.__nyax_model.state;
+    return this.__nyax_container.state;
   }
   public get getters(): any {
-    return this.__nyax_model.getters;
+    return this.__nyax_container.getters;
   }
   public get actions(): any {
-    return this.__nyax_model.actions;
+    return this.__nyax_container.actions;
   }
 
   public get dependencies(): any {
-    return this.__nyax_model.nyax.dependencies;
+    return this.__nyax_container.nyax.dependencies;
   }
 
   public get namespace(): any {
-    return this.__nyax_model.namespace;
+    return this.__nyax_container.namespace;
   }
   public get key(): any {
-    return this.__nyax_model.key;
+    return this.__nyax_container.key;
   }
 
-  public get getModel(): any {
-    return this.__nyax_model.nyax.getModel;
+  public get getContainer(): any {
+    return this.__nyax_container.nyax.getContainer;
   }
   public get nyax(): any {
-    return this.__nyax_model.nyax;
+    return this.__nyax_container.nyax;
   }
 }
 
-export function mergeModelDefinitionClasses<
-  TModelDefinitionConstructors extends
-    | ModelDefinitionConstructor[]
-    | [ModelDefinitionConstructor]
+export function mergeModelClasses<
+  TModelClasses extends ModelClass[] | [ModelClass]
 >(
-  ...modelDefinitionClasses: TModelDefinitionConstructors
-): ModelDefinitionConstructor<
-  MergeModelDefinitionsDependencies<TModelDefinitionConstructors>,
-  MergeModelDefinitionsProperty<TModelDefinitionConstructors, "initialState">,
-  MergeModelDefinitionsProperty<TModelDefinitionConstructors, "selectors">,
-  MergeModelDefinitionsProperty<TModelDefinitionConstructors, "reducers">,
-  MergeModelDefinitionsProperty<TModelDefinitionConstructors, "effects">,
-  MergeModelDefinitionsProperty<TModelDefinitionConstructors, "subscriptions">
+  ...modelClasses: TModelClasses
+): ModelClass<
+  MergeModelsDependencies<TModelClasses>,
+  MergeModelsProperty<TModelClasses, "initialState">,
+  MergeModelsProperty<TModelClasses, "selectors">,
+  MergeModelsProperty<TModelClasses, "reducers">,
+  MergeModelsProperty<TModelClasses, "effects">,
+  MergeModelsProperty<TModelClasses, "subscriptions">
 > {
-  return class extends ModelDefinitionBase {
-    private readonly __nyax_modelDefinitions = (() => {
+  return class extends ModelBase {
+    private readonly __nyax_models = (() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
-      return modelDefinitionClasses.map((modelDefinitionClass) => {
-        const modelDefinition =
-          new (modelDefinitionClass as typeof ModelDefinitionBase)({
-            get nyax() {
-              return self.__nyax_model.nyax;
-            },
+      return modelClasses.map((modelClass) => {
+        const model = new (modelClass as typeof ModelBase)({
+          get nyax() {
+            return self.__nyax_container.nyax;
+          },
 
-            get namespace() {
-              return self.__nyax_model.namespace;
-            },
-            get key() {
-              return self.__nyax_model.key;
-            },
+          get namespace() {
+            return self.__nyax_container.namespace;
+          },
+          get key() {
+            return self.__nyax_container.key;
+          },
 
-            get state() {
-              return self.__nyax_model.state;
-            },
-            get getters() {
-              return self.__nyax_model.getters;
-            },
-            get actions() {
-              return self.__nyax_model.actions;
-            },
-          });
-        return modelDefinition;
+          get state() {
+            return self.__nyax_container.state;
+          },
+          get getters() {
+            return self.__nyax_container.getters;
+          },
+          get actions() {
+            return self.__nyax_container.actions;
+          },
+        });
+        return model;
       });
     })();
 
@@ -291,11 +269,11 @@ export function mergeModelDefinitionClasses<
       return this._mergeProperty("subscriptions");
     }
 
-    private _mergeProperty(propertyKey: ModelDefinitionPropertyKey): any {
+    private _mergeProperty(propertyKey: ModelPropertyKey): any {
       const result: Record<string, unknown> = {};
 
-      this.__nyax_modelDefinitions.forEach((modelDefinition) => {
-        mergeObjects(result, modelDefinition[propertyKey]());
+      this.__nyax_models.forEach((model) => {
+        mergeObjects(result, model[propertyKey]());
       });
 
       return result;
@@ -303,67 +281,54 @@ export function mergeModelDefinitionClasses<
   };
 }
 
-export function mergeSubModelDefinitionClasses<
-  TSubModelDefinitionConstructors extends Record<
-    string,
-    ModelDefinitionConstructor
-  >
+export function mergeSubModelClasses<
+  TSubModelClasses extends Record<string, ModelClass>
 >(
-  subModelDefinitionClasses: TSubModelDefinitionConstructors
-): ModelDefinitionConstructor<
-  MergeSubModelDefinitionsDependencies<TSubModelDefinitionConstructors>,
-  MergeSubModelDefinitionsProperty<
-    TSubModelDefinitionConstructors,
-    "initialState"
-  >,
-  MergeSubModelDefinitionsProperty<
-    TSubModelDefinitionConstructors,
-    "selectors"
-  >,
-  MergeSubModelDefinitionsProperty<TSubModelDefinitionConstructors, "reducers">,
-  MergeSubModelDefinitionsProperty<TSubModelDefinitionConstructors, "effects">,
-  MergeSubModelDefinitionsProperty<
-    TSubModelDefinitionConstructors,
-    "subscriptions"
-  >
+  subModelClasses: TSubModelClasses
+): ModelClass<
+  MergeSubModelsDependencies<TSubModelClasses>,
+  MergeSubModelsProperty<TSubModelClasses, "initialState">,
+  MergeSubModelsProperty<TSubModelClasses, "selectors">,
+  MergeSubModelsProperty<TSubModelClasses, "reducers">,
+  MergeSubModelsProperty<TSubModelClasses, "effects">,
+  MergeSubModelsProperty<TSubModelClasses, "subscriptions">
 > {
-  return class extends ModelDefinitionBase {
-    private readonly __nyax_subModelDefinitions = (() => {
+  return class extends ModelBase {
+    private readonly __nyax_subModels = (() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
-      const subModelDefinitions: Record<string, ModelDefinitionBase> = {};
-      Object.keys(subModelDefinitionClasses).forEach((key) => {
-        const subModelDefinitionClass = subModelDefinitionClasses[key];
-        if (subModelDefinitionClass) {
-          const subModelDefinition =
-            new (subModelDefinitionClass as typeof ModelDefinitionBase)({
-              get nyax() {
-                return self.__nyax_model.nyax;
-              },
+      const subModels: Record<string, ModelBase> = {};
+      Object.keys(subModelClasses).forEach((key) => {
+        const subModelClass = subModelClasses[key];
+        if (subModelClass) {
+          const subModel = new (subModelClass as typeof ModelBase)({
+            get nyax() {
+              return self.__nyax_container.nyax;
+            },
 
-              get namespace() {
-                return self.__nyax_model.namespace;
-              },
-              get key() {
-                return self.__nyax_model.key;
-              },
+            get namespace() {
+              return self.__nyax_container.namespace;
+            },
+            get key() {
+              return self.__nyax_container.key;
+            },
 
-              get state() {
-                return self.__nyax_model.state?.[key];
-              },
-              get getters() {
-                return self.__nyax_model.getters?.[key];
-              },
-              get actions() {
-                return self.__nyax_model.actions?.[key];
-              },
-            });
-          subModelDefinitions[key] = subModelDefinition;
+            get state() {
+              return self.__nyax_container.state?.[key];
+            },
+            get getters() {
+              return self.__nyax_container.getters?.[key];
+            },
+            get actions() {
+              return self.__nyax_container.actions?.[key];
+            },
+          });
+          subModels[key] = subModel;
         }
       });
 
-      return subModelDefinitions;
+      return subModels;
     })();
 
     public override initialState(): any {
@@ -382,11 +347,11 @@ export function mergeSubModelDefinitionClasses<
       return this._mergeSubProperty("subscriptions");
     }
 
-    private _mergeSubProperty(propertyKey: ModelDefinitionPropertyKey): any {
+    private _mergeSubProperty(propertyKey: ModelPropertyKey): any {
       const result: Record<string, unknown> = {};
 
-      Object.keys(this.__nyax_subModelDefinitions).forEach((key) => {
-        result[key] = this.__nyax_subModelDefinitions[key]?.[propertyKey]();
+      Object.keys(this.__nyax_subModels).forEach((key) => {
+        result[key] = this.__nyax_subModels[key]?.[propertyKey]();
       });
 
       return result;
@@ -394,9 +359,7 @@ export function mergeSubModelDefinitionClasses<
   };
 }
 
-export function createModelDefinitionBaseClass<
-  TDependencies
->(): ModelDefinitionConstructor<
+export function createBaseModelClass<TDependencies>(): ModelClass<
   /* eslint-disable @typescript-eslint/ban-types */
   TDependencies,
   {},
@@ -406,10 +369,10 @@ export function createModelDefinitionBaseClass<
   {}
   /* eslint-enable @typescript-eslint/ban-types */
 > {
-  return class extends ModelDefinitionBase<TDependencies> {};
+  return class extends ModelBase<TDependencies> {};
 }
 
-export function defineModelDefinition<
+export function defineModel<
   TDependencies,
   TInitialState extends InitialState,
   TSelectors extends Selectors,
@@ -419,7 +382,7 @@ export function defineModelDefinition<
   TDynamic extends boolean = false
 >(
   namespace: string,
-  modelDefinitionClass: ModelDefinitionConstructor<
+  modelClass: ModelClass<
     TDependencies,
     TInitialState,
     TSelectors,
@@ -428,7 +391,7 @@ export function defineModelDefinition<
     TSubscriptions
   >,
   isDynamic?: TDynamic
-): ModelDefinitionClass<
+): NamespacedModelClass<
   TDependencies,
   TInitialState,
   TSelectors,
@@ -437,7 +400,7 @@ export function defineModelDefinition<
   TSubscriptions,
   TDynamic
 > {
-  return class extends modelDefinitionClass {
+  return class extends modelClass {
     public static namespace = namespace;
     public static isDynamic = (isDynamic ?? false) as TDynamic;
 
@@ -477,7 +440,7 @@ export function defineModelDefinition<
       }
       return this.__nyax_subscriptions;
     }
-  } as ModelDefinitionConstructor as ModelDefinitionClass<
+  } as ModelClass as NamespacedModelClass<
     TDependencies,
     TInitialState,
     TSelectors,
@@ -488,169 +451,24 @@ export function defineModelDefinition<
   >;
 }
 
-export interface Model<
-  TModelDefinitionClass extends ModelDefinitionConstructor = ModelDefinitionConstructor
-> {
-  state: ExtractModelProperty<TModelDefinitionClass, "state">;
-  getters: ExtractModelProperty<TModelDefinitionClass, "getters">;
-  actions: ExtractModelProperty<TModelDefinitionClass, "actions">;
-
-  modelDefinitionClass: TModelDefinitionClass;
-
-  namespace: string;
-  key: string | undefined;
-
-  isRegistered: boolean;
-
-  register(): void;
-  unregister(): void;
-}
-
-export class ModelImpl<
-  TModelDefinitionClass extends ModelDefinitionClass = ModelDefinitionClass
-> implements Model<TModelDefinitionClass>
-{
-  public readonly namespace: string;
-
-  private get _modelDefinition() {
-    const modelDefinition = this._nyaxContext.getModelDefinition(
-      this.namespace,
-      this.key
-    );
-    if (!modelDefinition) {
-      throw new Error("Model definition is not registered.");
-    }
-    return modelDefinition as InstanceType<TModelDefinitionClass>;
-  }
-
-  constructor(
-    private readonly _nyaxContext: NyaxContext,
-    public readonly modelDefinitionClass: TModelDefinitionClass,
-    public readonly key: string | undefined
-  ) {
-    this.namespace = modelDefinitionClass.namespace;
-  }
-
-  public get isRegistered(): boolean {
-    return (
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this._nyaxContext.nyax.getState(this.namespace, this.key!) !== undefined
-    );
-  }
-
-  public get state(): ExtractModelProperty<TModelDefinitionClass, "state"> {
-    return this._modelDefinition.state;
-  }
-
-  public get getters(): ExtractModelProperty<TModelDefinitionClass, "getters"> {
-    return this._modelDefinition.getters;
-  }
-
-  public get actions(): ExtractModelProperty<TModelDefinitionClass, "actions"> {
-    return this._modelDefinition.actions;
-  }
-
-  public register(): void {
-    if (this.isRegistered) {
-      throw new Error("Model is already registered.");
-    }
-
-    this._nyaxContext.nyax.store.dispatch({
-      type: registerActionType,
-      payload: [{ namespace: this.namespace, key: this.key }],
-    });
-  }
-
-  public unregister(): void {
-    if (this.isRegistered) {
-      this._nyaxContext.nyax.store.dispatch({
-        type: unregisterActionType,
-        payload: [{ namespace: this.namespace, key: this.key }],
-      });
-    }
-
-    this._nyaxContext.modelContextByNamespace
-      .get(this.namespace)
-      ?.modelByKey.delete(this.key);
-  }
-}
-
-export interface GetModel {
-  <TModelDefinitionClass extends ModelDefinitionClass>(
-    modelDefinitionClassOrNamespace: TModelDefinitionClass | string
-  ): TModelDefinitionClass extends ModelDefinitionClass<
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    true
-  >
-    ? never
-    : Model<TModelDefinitionClass>;
-  <TModelDefinitionClass extends ModelDefinitionClass>(
-    modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
-    key: string
-  ): TModelDefinitionClass extends ModelDefinitionClass<
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    false
-  >
-    ? never
-    : Model<TModelDefinitionClass>;
-}
-
-export function createGetModel(nyaxContext: NyaxContext): GetModel {
-  return <TModelDefinitionClass extends ModelDefinitionClass>(
-    modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
-    key?: string
-  ): Model<TModelDefinitionClass> => {
-    const modelContext = nyaxContext.getModelContext(
-      modelDefinitionClassOrNamespace
-    );
-    const modelDefinitionClass = modelContext.modelDefinitionClass;
-
-    if (key === undefined && modelDefinitionClass.isDynamic) {
-      throw new Error("Key is required for dynamic model.");
-    }
-
-    if (key !== undefined && !modelDefinitionClass.isDynamic) {
-      throw new Error("Key is not available for static model.");
-    }
-
-    let model = modelContext.modelByKey.get(key);
-    if (!model) {
-      model = new ModelImpl(nyaxContext, modelDefinitionClass, key);
-      modelContext.modelByKey.set(key, model);
-    }
-
-    return model as Model<TModelDefinitionClass>;
-  };
-}
-
-export type RegisterModelDefinitionClasses = (
-  ...modelDefinitionClasses: ModelDefinitionClass[]
+export type RegisterModelClasses = (
+  ...modelClasses: NamespacedModelClass[]
 ) => void;
 
-export function createRegisterModelDefinitionClasses(
+export function createRegisterModelClasses(
   nyaxContext: NyaxContext
-): RegisterModelDefinitionClasses {
-  return (...modelDefinitionClasses) => {
+): RegisterModelClasses {
+  return (...modelClasses) => {
     const toRegisterNamespaces: string[] = [];
 
-    modelDefinitionClasses.forEach((modelDefinitionClass) => {
+    modelClasses.forEach((modelClass) => {
       // initialize context
-      nyaxContext.getModelContext(modelDefinitionClass);
+      nyaxContext.getModelClassContext(modelClass);
 
-      if (!modelDefinitionClass.isDynamic) {
-        const model = nyaxContext.nyax.getModel(modelDefinitionClass);
-        if (!model.isRegistered) {
-          toRegisterNamespaces.push(model.namespace);
+      if (!modelClass.isDynamic) {
+        const container = nyaxContext.nyax.getContainer(modelClass);
+        if (!container.isRegistered) {
+          toRegisterNamespaces.push(container.namespace);
         }
       }
     });
@@ -661,41 +479,5 @@ export function createRegisterModelDefinitionClasses(
         payload: toRegisterNamespaces.map((namespace) => ({ namespace })),
       });
     }
-  };
-}
-
-export interface SubModel<
-  /* eslint-disable @typescript-eslint/ban-types */
-  TState = {},
-  TGetters = {},
-  TActionHelpers = {}
-  /* eslint-enable @typescript-eslint/ban-types */
-> {
-  state: TState;
-  getters: TGetters;
-  actions: TActionHelpers;
-}
-
-export function createSubModel<
-  TSubModel extends SubModel<any, any, any>,
-  TSubKey extends string
->(
-  subModel: TSubModel,
-  subKey: TSubKey
-): SubModel<
-  TSubModel["state"][TSubKey],
-  TSubModel["getters"][TSubKey],
-  TSubModel["actions"][TSubKey]
-> {
-  return {
-    get state(): TSubModel["state"][TSubKey] {
-      return subModel.state?.[subKey];
-    },
-    get getters(): TSubModel["getters"][TSubKey] {
-      return subModel.getters?.[subKey];
-    },
-    get actions(): TSubModel["actions"][TSubKey] {
-      return subModel.actions?.[subKey];
-    },
   };
 }

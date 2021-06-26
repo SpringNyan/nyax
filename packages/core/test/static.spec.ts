@@ -6,8 +6,8 @@ import {
   Dependencies,
   testDependencies,
 } from "./dependencies";
-import { AppModelDefinition } from "./models/app";
-import { UserModelDefinition } from "./models/user";
+import { AppModel } from "./models/app";
+import { UserModel } from "./models/user";
 import { waitTime } from "./utils";
 
 export function test(options: {
@@ -26,130 +26,128 @@ export function test(options: {
       dependencies,
       createStore: options.createStore,
     });
-    const { store, getState, getModel, registerModelDefinitionClasses } = nyax;
+    const { store, getState, getContainer, registerModelClasses } = nyax;
 
-    expect(() => getModel("app")).throw();
-
-    expect(getState()).eq(store.getState());
-
-    expect(getState(AppModelDefinition)).eq(undefined);
-    expect(getModel(AppModelDefinition).state).not.eq(undefined);
-
-    registerModelDefinitionClasses(AppModelDefinition);
+    expect(() => getContainer("app")).throw();
 
     expect(getState()).eq(store.getState());
-    expect(getState(AppModelDefinition)).eq(getModel(AppModelDefinition).state);
 
-    const appModel = getModel(AppModelDefinition);
-    const userModel = getModel(UserModelDefinition);
+    expect(getState(AppModel)).eq(undefined);
+    expect(getContainer(AppModel).state).not.eq(undefined);
 
-    expect(appModel).eq(getModel("app"));
-    expect(appModel.namespace).eq("app");
-    expect(appModel.key).eq(undefined);
-    expect(appModel.isRegistered).eq(true);
+    registerModelClasses(AppModel);
 
-    expect(appModel.state.isInitialized).eq(false);
-    expect(appModel.state.errorMessage).eq(null);
-    expect(appModel.getters.packageName).eq(options.packageName);
-    expect(appModel.getters.userSummary).eq("name: nyan; age: 17");
-    expect(appModel.getters.userName).eq(undefined);
+    expect(getState()).eq(store.getState());
+    expect(getState(AppModel)).eq(getContainer(AppModel).state);
 
-    expect(userModel).eq(getModel("user"));
-    expect(userModel.namespace).eq("user");
-    expect(userModel.key).eq(undefined);
-    expect(userModel.isRegistered).eq(false);
+    const appContainer = getContainer(AppModel);
+    const userContainer = getContainer(UserModel);
 
-    expect(userModel.state.name).eq("nyan");
-    expect(userModel.state.age).eq(17);
-    expect(userModel.state.email).eq("nyan@example.com");
-    expect(userModel.getters.summary).eq("name: nyan; age: 17");
+    expect(appContainer).eq(getContainer("app"));
+    expect(appContainer.namespace).eq("app");
+    expect(appContainer.key).eq(undefined);
+    expect(appContainer.isRegistered).eq(true);
 
-    expect(getState(UserModelDefinition)).eq(undefined);
-    expect(getModel(UserModelDefinition).state).not.eq(undefined);
+    expect(appContainer.state.isInitialized).eq(false);
+    expect(appContainer.state.errorMessage).eq(null);
+    expect(appContainer.getters.packageName).eq(options.packageName);
+    expect(appContainer.getters.userSummary).eq("name: nyan; age: 17");
+    expect(appContainer.getters.userName).eq(undefined);
 
-    userModel.register();
-    expect(userModel.isRegistered).eq(true);
+    expect(userContainer).eq(getContainer("user"));
+    expect(userContainer.namespace).eq("user");
+    expect(userContainer.key).eq(undefined);
+    expect(userContainer.isRegistered).eq(false);
 
-    expect(getState(UserModelDefinition)).eq(
-      getModel(UserModelDefinition).state
-    );
+    expect(userContainer.state.name).eq("nyan");
+    expect(userContainer.state.age).eq(17);
+    expect(userContainer.state.email).eq("nyan@example.com");
+    expect(userContainer.getters.summary).eq("name: nyan; age: 17");
 
-    expect(userModel.state.name).eq("nyan");
-    expect(userModel.state.age).eq(17);
-    expect(userModel.state.email).eq("nyan@example.com");
-    expect(userModel.getters.summary).eq("name: nyan; age: 17");
-    expect(appModel.getters.userName).eq("nyan");
+    expect(getState(UserModel)).eq(undefined);
+    expect(getContainer(UserModel).state).not.eq(undefined);
 
-    expect(appModel.state.initializeTimes).eq(0);
+    userContainer.register();
+    expect(userContainer.isRegistered).eq(true);
 
-    await appModel.actions.initialize({ errorMessage: "Orz" });
-    expect(appModel.state.isInitialized).eq(false);
-    expect(appModel.state.errorMessage).eq("Orz");
-    expect(appModel.state.initializedTimestamp).eq(null);
-    expect(appModel.state.initializedTimes).eq(0);
+    expect(getState(UserModel)).eq(getContainer(UserModel).state);
 
-    expect(appModel.state.initializeTimes).eq(1);
+    expect(userContainer.state.name).eq("nyan");
+    expect(userContainer.state.age).eq(17);
+    expect(userContainer.state.email).eq("nyan@example.com");
+    expect(userContainer.getters.summary).eq("name: nyan; age: 17");
+    expect(appContainer.getters.userName).eq("nyan");
 
-    await appModel.actions.initialize({});
-    expect(appModel.state.isInitialized).eq(true);
-    expect(appModel.state.errorMessage).eq(null);
-    expect(appModel.state.initializedTimestamp).not.eq(null);
-    expect(appModel.state.initializedTimes).eq(1);
+    expect(appContainer.state.initializeTimes).eq(0);
 
-    expect(appModel.state.initializeTimes).eq(2);
+    await appContainer.actions.initialize({ errorMessage: "Orz" });
+    expect(appContainer.state.isInitialized).eq(false);
+    expect(appContainer.state.errorMessage).eq("Orz");
+    expect(appContainer.state.initializedTimestamp).eq(null);
+    expect(appContainer.state.initializedTimes).eq(0);
 
-    userModel.actions.setName("meow");
-    expect(userModel.state.name).eq("meow");
-    expect(userModel.getters.summary).eq("name: meow; age: 17");
+    expect(appContainer.state.initializeTimes).eq(1);
 
-    userModel.actions.setEmail.dispatch("meow@example.com");
-    expect(userModel.state.email).eq("meow@example.com");
-    expect(userModel.getters.summary).eq("name: meow; age: 17");
+    await appContainer.actions.initialize({});
+    expect(appContainer.state.isInitialized).eq(true);
+    expect(appContainer.state.errorMessage).eq(null);
+    expect(appContainer.state.initializedTimestamp).not.eq(null);
+    expect(appContainer.state.initializedTimes).eq(1);
 
-    userModel.actions.setNameAfter10ms("nyan10");
-    expect(userModel.state.name).eq("meow");
+    expect(appContainer.state.initializeTimes).eq(2);
+
+    userContainer.actions.setName("meow");
+    expect(userContainer.state.name).eq("meow");
+    expect(userContainer.getters.summary).eq("name: meow; age: 17");
+
+    userContainer.actions.setEmail.dispatch("meow@example.com");
+    expect(userContainer.state.email).eq("meow@example.com");
+    expect(userContainer.getters.summary).eq("name: meow; age: 17");
+
+    userContainer.actions.setNameAfter10ms("nyan10");
+    expect(userContainer.state.name).eq("meow");
     await waitTime(10);
-    expect(userModel.state.name).eq("nyan10");
+    expect(userContainer.state.name).eq("nyan10");
 
     await (async () => {
-      const promise = userModel.actions.setNameAfter20ms("nyan20");
+      const promise = userContainer.actions.setNameAfter20ms("nyan20");
       await waitTime(10);
-      expect(userModel.state.name).eq("nyan10");
+      expect(userContainer.state.name).eq("nyan10");
       const result = await promise;
-      expect(userModel.state.name).eq("nyan20");
+      expect(userContainer.state.name).eq("nyan20");
       expect(result).eq("nyan20");
     })();
 
-    expect(userModel.getters.summary).eq("name: nyan20; age: 17");
-    store.dispatch(userModel.actions.setAge.create(233));
-    expect(userModel.getters.summary).eq("name: nyan20; age: 233");
+    expect(userContainer.getters.summary).eq("name: nyan20; age: 17");
+    store.dispatch(userContainer.actions.setAge.create(233));
+    expect(userContainer.getters.summary).eq("name: nyan20; age: 233");
 
     store.dispatch({ type: "user/setAge", payload: 666 });
-    expect(userModel.state.age).eq(666);
+    expect(userContainer.state.age).eq(666);
 
-    expect(userModel.state.nameChangeTimes).eq(3);
-    expect(appModel.state.userAgeChangeTimes).eq(2);
+    expect(userContainer.state.nameChangeTimes).eq(3);
+    expect(appContainer.state.userAgeChangeTimes).eq(2);
 
-    userModel.unregister();
+    userContainer.unregister();
 
-    expect(getState(UserModelDefinition)).eq(undefined);
-    expect(getModel(UserModelDefinition).state).not.eq(undefined);
+    expect(getState(UserModel)).eq(undefined);
+    expect(getContainer(UserModel).state).not.eq(undefined);
 
-    expect(userModel.state.name).eq("nyan");
-    expect(userModel.state.age).eq(17);
-    expect(userModel.state.email).eq("nyan@example.com");
-    expect(userModel.getters.summary).eq("name: nyan; age: 17");
+    expect(userContainer.state.name).eq("nyan");
+    expect(userContainer.state.age).eq(17);
+    expect(userContainer.state.email).eq("nyan@example.com");
+    expect(userContainer.getters.summary).eq("name: nyan; age: 17");
 
-    userModel.actions.setEmail("meow@example.com");
-    expect(userModel.state.email).eq("meow@example.com");
+    userContainer.actions.setEmail("meow@example.com");
+    expect(userContainer.state.email).eq("meow@example.com");
 
-    appModel.unregister();
-    expect(appModel.state.userAgeChangeTimes).eq(0);
-    userModel.actions.setAge(998);
-    expect(appModel.state.userAgeChangeTimes).eq(0);
-    appModel.register();
-    expect(appModel.state.userAgeChangeTimes).eq(0);
-    userModel.actions.setAge(666);
-    expect(appModel.state.userAgeChangeTimes).eq(1);
+    appContainer.unregister();
+    expect(appContainer.state.userAgeChangeTimes).eq(0);
+    userContainer.actions.setAge(998);
+    expect(appContainer.state.userAgeChangeTimes).eq(0);
+    appContainer.register();
+    expect(appContainer.state.userAgeChangeTimes).eq(0);
+    userContainer.actions.setAge(666);
+    expect(appContainer.state.userAgeChangeTimes).eq(1);
   });
 }

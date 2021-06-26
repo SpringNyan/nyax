@@ -1,11 +1,6 @@
 import { createActionHelpers } from "./action";
-import {
-  Model,
-  ModelDefinition,
-  ModelDefinitionBase,
-  ModelDefinitionClass,
-  ModelDefinitionConstructor,
-} from "./model";
+import { Container } from "./container";
+import { Model, ModelBase, ModelClass, NamespacedModelClass } from "./model";
 import { createGetters } from "./selector";
 import { Nyax, NyaxOptions } from "./store";
 
@@ -13,24 +8,21 @@ export interface NyaxContext {
   nyax: Nyax;
   options: NyaxOptions;
 
-  modelContextByNamespace: Map<string, ModelContext>;
+  modelClassContextByNamespace: Map<string, ModelClassContext>;
 
-  getModelContext(
-    modelDefinitionClassOrNamespace: ModelDefinitionClass | string
-  ): ModelContext;
+  getModelClassContext(
+    modelClassOrNamespace: NamespacedModelClass | string
+  ): ModelClassContext;
 
-  getModelDefinition(
-    namespace: string,
-    key: string | undefined
-  ): ModelDefinition | null;
-  deleteModelDefinition(namespace: string, key: string | undefined): void;
+  getModel(namespace: string, key: string | undefined): Model | null;
+  deleteModel(namespace: string, key: string | undefined): void;
 }
 
-export interface ModelContext {
-  modelDefinitionClass: ModelDefinitionClass;
+export interface ModelClassContext {
+  modelClass: NamespacedModelClass;
 
-  modelDefinitionByKey: Map<string | undefined, ModelDefinition>;
   modelByKey: Map<string | undefined, Model>;
+  containerByKey: Map<string | undefined, Container>;
 }
 
 export function createNyaxContext(options: NyaxOptions): NyaxContext {
@@ -39,88 +31,88 @@ export function createNyaxContext(options: NyaxOptions): NyaxContext {
     nyax: undefined!,
     options,
 
-    modelContextByNamespace: new Map(),
+    modelClassContextByNamespace: new Map(),
 
-    getModelContext(modelDefinitionClassOrNamespace) {
+    getModelClassContext(modelClassOrNamespace) {
       const namespace =
-        typeof modelDefinitionClassOrNamespace === "string"
-          ? modelDefinitionClassOrNamespace
-          : modelDefinitionClassOrNamespace.namespace;
+        typeof modelClassOrNamespace === "string"
+          ? modelClassOrNamespace
+          : modelClassOrNamespace.namespace;
 
-      let modelContext = nyaxContext.modelContextByNamespace.get(namespace);
-      if (!modelContext) {
-        if (typeof modelDefinitionClassOrNamespace !== "string") {
-          modelContext = {
-            modelDefinitionClass: modelDefinitionClassOrNamespace,
+      let modelClassContext =
+        nyaxContext.modelClassContextByNamespace.get(namespace);
+      if (!modelClassContext) {
+        if (typeof modelClassOrNamespace !== "string") {
+          modelClassContext = {
+            modelClass: modelClassOrNamespace,
             modelByKey: new Map(),
-            modelDefinitionByKey: new Map(),
+            containerByKey: new Map(),
           };
-          nyaxContext.modelContextByNamespace.set(namespace, modelContext);
+          nyaxContext.modelClassContextByNamespace.set(
+            namespace,
+            modelClassContext
+          );
         } else {
-          throw new Error("Model definition class is not registered.");
+          throw new Error("Model class is not registered.");
         }
       }
 
       if (
-        typeof modelDefinitionClassOrNamespace !== "string" &&
-        modelContext.modelDefinitionClass !== modelDefinitionClassOrNamespace
+        typeof modelClassOrNamespace !== "string" &&
+        modelClassContext.modelClass !== modelClassOrNamespace
       ) {
-        throw new Error("Model definition class is not matched.");
+        throw new Error("Model class is not matched.");
       }
 
-      return modelContext;
+      return modelClassContext;
     },
 
-    getModelDefinition(namespace, key) {
-      const modelContext = nyaxContext.modelContextByNamespace.get(namespace);
-      if (!modelContext) {
+    getModel(namespace, key) {
+      const modelClassContext =
+        nyaxContext.modelClassContextByNamespace.get(namespace);
+      if (!modelClassContext) {
         return null;
       }
 
-      let modelDefinition = modelContext.modelDefinitionByKey.get(key) as
-        | ModelDefinitionBase
+      let model = modelClassContext.modelByKey.get(key) as
+        | ModelBase
         | undefined;
-      if (!modelDefinition) {
+      if (!model) {
         let getters: any;
         let actions: any;
 
-        modelDefinition =
-          new (modelContext.modelDefinitionClass as ModelDefinitionConstructor as typeof ModelDefinitionBase)(
-            {
-              nyax: nyaxContext.nyax,
+        model =
+          new (modelClassContext.modelClass as ModelClass as typeof ModelBase)({
+            nyax: nyaxContext.nyax,
 
-              namespace,
-              key,
+            namespace,
+            key,
 
-              get state() {
-                return nyaxContext.nyax.store.getModelState(namespace, key);
-              },
-              get getters() {
-                if (!getters && modelDefinition) {
-                  getters = createGetters(nyaxContext.nyax, modelDefinition);
-                }
-                return getters;
-              },
-              get actions() {
-                if (!actions && modelDefinition) {
-                  actions = createActionHelpers(
-                    nyaxContext.nyax,
-                    modelDefinition
-                  );
-                }
-                return actions;
-              },
-            }
-          );
-        modelContext.modelDefinitionByKey.set(key, modelDefinition);
+            get state() {
+              return nyaxContext.nyax.store.getModelState(namespace, key);
+            },
+            get getters() {
+              if (!getters && model) {
+                getters = createGetters(nyaxContext.nyax, model);
+              }
+              return getters;
+            },
+            get actions() {
+              if (!actions && model) {
+                actions = createActionHelpers(nyaxContext.nyax, model);
+              }
+              return actions;
+            },
+          });
+        modelClassContext.modelByKey.set(key, model);
       }
 
-      return modelDefinition;
+      return model;
     },
-    deleteModelDefinition(namespace, key) {
-      nyaxContext.modelContextByNamespace
+    deleteModel(namespace, key) {
+      nyaxContext.modelClassContextByNamespace
         .get(namespace)
-        ?.modelDefinitionByKey.delete(key);
+        ?.modelByKey.delete(key);
     },
   };
 

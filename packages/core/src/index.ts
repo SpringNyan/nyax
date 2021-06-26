@@ -11,27 +11,29 @@ export type {
   ReloadActionPayload,
   UnregisterActionPayload,
 } from "./action";
+export { createSubContainer } from "./container";
+export type {
+  Container,
+  ContainerPropertyKey,
+  ExtractContainerProperty,
+  GetContainer,
+  SubContainer,
+} from "./container";
 export type { Effect } from "./effect";
 export {
-  createModelDefinitionBaseClass,
-  createSubModel,
-  defineModelDefinition,
-  mergeModelDefinitionClasses,
-  mergeSubModelDefinitionClasses,
+  createBaseModelClass,
+  defineModel,
+  mergeModelClasses,
+  mergeSubModelClasses,
 } from "./model";
 export type {
-  ExtractModelDefinitionDependencies,
-  ExtractModelDefinitionProperty,
+  ExtractModelDependencies,
   ExtractModelProperty,
-  GetModel,
   Model,
-  ModelDefinition,
-  ModelDefinitionClass,
-  ModelDefinitionConstructor,
-  ModelDefinitionPropertyKey,
+  ModelClass,
   ModelPropertyKey,
-  RegisterModelDefinitionClasses,
-  SubModel,
+  NamespacedModelClass,
+  RegisterModelClasses,
 } from "./model";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";

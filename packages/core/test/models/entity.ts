@@ -1,12 +1,12 @@
 import {
-  defineModelDefinition,
-  mergeModelDefinitionClasses,
-  mergeSubModelDefinitionClasses,
+  defineModel,
+  mergeModelClasses,
+  mergeSubModelClasses,
 } from "../../src";
 import { testDependencies } from "../dependencies";
-import { ModelDefinitionBase } from "./_base";
+import { ModelBase } from "./_base";
 
-class FooEntityModelDefinition extends ModelDefinitionBase {
+class FooEntityModel extends ModelBase {
   public override initialState() {
     return {
       foo: "foo",
@@ -43,8 +43,8 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
       fooChange: () =>
         this.nyax.store.subscribeAction(async (action) => {
           if (this.actions.setFoo.is(action)) {
-            await this.getModel(
-              MergedEntityModelDefinition
+            await this.getContainer(
+              MergedEntityModel
             ).actions.increaseFooChangeTimes({});
           }
         }),
@@ -52,7 +52,7 @@ class FooEntityModelDefinition extends ModelDefinitionBase {
   }
 }
 
-class BarEntityModelDefinition extends ModelDefinitionBase {
+class BarEntityModel extends ModelBase {
   public override initialState() {
     return {
       bar: "bar",
@@ -89,8 +89,8 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
       barChange: () =>
         this.nyax.store.subscribeAction(async (action) => {
           if (this.actions.setBar.is(action)) {
-            await this.getModel(
-              MergedSubEntityModelDefinition
+            await this.getContainer(
+              MergedSubEntityModel
             ).actions.increaseBarChangeTimes({});
           }
         }),
@@ -98,7 +98,7 @@ class BarEntityModelDefinition extends ModelDefinitionBase {
   }
 }
 
-class BazEntityModelDefinition extends ModelDefinitionBase {
+class BazEntityModel extends ModelBase {
   public override initialState() {
     return {
       baz: "baz",
@@ -131,12 +131,12 @@ class BazEntityModelDefinition extends ModelDefinitionBase {
   }
 }
 
-export const MergedEntityModelDefinition = defineModelDefinition(
+export const MergedEntityModel = defineModel(
   "mergedEntity",
-  class extends mergeModelDefinitionClasses(
-    FooEntityModelDefinition,
-    BarEntityModelDefinition,
-    BazEntityModelDefinition
+  class extends mergeModelClasses(
+    FooEntityModel,
+    BarEntityModel,
+    BazEntityModel
   ) {
     public override initialState() {
       return {
@@ -187,12 +187,12 @@ export const MergedEntityModelDefinition = defineModelDefinition(
   }
 );
 
-export const MergedSubEntityModelDefinition = defineModelDefinition(
+export const MergedSubEntityModel = defineModel(
   "mergedSubEntity",
-  class extends mergeSubModelDefinitionClasses({
-    foo: FooEntityModelDefinition,
-    bar: BarEntityModelDefinition,
-    baz: BazEntityModelDefinition,
+  class extends mergeSubModelClasses({
+    foo: FooEntityModel,
+    bar: BarEntityModel,
+    baz: BazEntityModel,
   }) {
     public override initialState() {
       return {

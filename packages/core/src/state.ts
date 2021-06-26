@@ -1,5 +1,6 @@
+import { ExtractContainerProperty } from "./container";
 import { NyaxContext } from "./context";
-import { ExtractModelProperty, ModelDefinitionClass } from "./model";
+import { NamespacedModelClass } from "./model";
 
 export interface InitialState {
   [key: string]: unknown | InitialState;
@@ -11,9 +12,9 @@ export type ConvertState<TInitialState> = TInitialState extends any
 
 export interface GetState {
   (): unknown | undefined;
-  <TModelDefinitionClass extends ModelDefinitionClass>(
-    modelDefinitionClassOrNamespace: TModelDefinitionClass | string
-  ): TModelDefinitionClass extends ModelDefinitionClass<
+  <TModelClass extends NamespacedModelClass>(
+    modelClassOrNamespace: TModelClass | string
+  ): TModelClass extends NamespacedModelClass<
     any,
     any,
     any,
@@ -22,10 +23,8 @@ export interface GetState {
     any,
     true
   >
-    ?
-        | Record<string, ExtractModelProperty<TModelDefinitionClass, "state">>
-        | undefined
-    : TModelDefinitionClass extends ModelDefinitionClass<
+    ? Record<string, ExtractContainerProperty<TModelClass, "state">> | undefined
+    : TModelClass extends NamespacedModelClass<
         any,
         any,
         any,
@@ -34,15 +33,15 @@ export interface GetState {
         any,
         false
       >
-    ? ExtractModelProperty<TModelDefinitionClass, "state"> | undefined
+    ? ExtractContainerProperty<TModelClass, "state"> | undefined
     :
-        | Record<string, ExtractModelProperty<TModelDefinitionClass, "state">>
-        | ExtractModelProperty<TModelDefinitionClass, "state">
+        | Record<string, ExtractContainerProperty<TModelClass, "state">>
+        | ExtractContainerProperty<TModelClass, "state">
         | undefined;
-  <TModelDefinitionClass extends ModelDefinitionClass>(
-    modelDefinitionClassOrNamespace: TModelDefinitionClass | string,
+  <TModelClass extends NamespacedModelClass>(
+    modelClassOrNamespace: TModelClass | string,
     key: string
-  ): TModelDefinitionClass extends ModelDefinitionClass<
+  ): TModelClass extends NamespacedModelClass<
     any,
     any,
     any,
@@ -51,8 +50,8 @@ export interface GetState {
     any,
     true
   >
-    ? ExtractModelProperty<TModelDefinitionClass, "state"> | undefined
-    : TModelDefinitionClass extends ModelDefinitionClass<
+    ? ExtractContainerProperty<TModelClass, "state"> | undefined
+    : TModelClass extends NamespacedModelClass<
         any,
         any,
         any,
@@ -62,27 +61,27 @@ export interface GetState {
         false
       >
     ? never
-    : ExtractModelProperty<TModelDefinitionClass, "state"> | never | undefined;
+    : ExtractContainerProperty<TModelClass, "state"> | never | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
   return (
-    modelDefinitionClassOrNamespace?: ModelDefinitionClass | string,
+    modelClassOrNamespace?: NamespacedModelClass | string,
     key?: string
   ): unknown => {
     let state = nyaxContext.nyax.store.getState() as any;
 
-    if (modelDefinitionClassOrNamespace === undefined) {
+    if (modelClassOrNamespace === undefined) {
       return state;
     }
 
-    const modelContext = nyaxContext.getModelContext(
-      modelDefinitionClassOrNamespace
+    const modelClassContext = nyaxContext.getModelClassContext(
+      modelClassOrNamespace
     );
-    const modelDefinitionClass = modelContext.modelDefinitionClass;
+    const modelClass = modelClassContext.modelClass;
 
-    state = state?.[modelDefinitionClass.namespace];
-    if (modelDefinitionClass.isDynamic) {
+    state = state?.[modelClass.namespace];
+    if (modelClass.isDynamic) {
       if (key !== undefined) {
         state = state?.[key];
       }

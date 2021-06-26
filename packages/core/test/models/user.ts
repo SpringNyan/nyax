@@ -1,11 +1,11 @@
-import { defineModelDefinition } from "../../src";
+import { defineModel } from "../../src";
 import { testDependencies } from "../dependencies";
 import { waitTime } from "../utils";
-import { ModelDefinitionBase } from "./_base";
+import { ModelBase } from "./_base";
 
-export const UserModelDefinition = defineModelDefinition(
+export const UserModel = defineModel(
   "user",
-  class extends ModelDefinitionBase {
+  class extends ModelBase {
     public override initialState() {
       return {
         name: "nyan",

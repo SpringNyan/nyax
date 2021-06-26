@@ -3,7 +3,7 @@ import {
   AnyAction,
   CreateStore,
   Effect,
-  ModelDefinition,
+  Model,
   Reducer,
   RegisterActionPayload,
   registerActionType,
@@ -46,7 +46,7 @@ function setSubState(
 }
 
 interface ModelContext {
-  modelDefinition: ModelDefinition;
+  model: Model;
   isRegistered: boolean;
 
   subscriptionDisposables: (() => void)[];
@@ -58,38 +58,38 @@ interface ModelContext {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types
 export function createNyaxCreateStore(_options: {}): CreateStore {
-  return ({ getModelDefinition, deleteModelDefinition }) => {
+  return ({ getModel, deleteModel }) => {
     const modelContextByModelPath = new Map<string, ModelContext>();
 
     function getModelContext(modelPath: string) {
       let modelContext = modelContextByModelPath.get(modelPath);
       if (!modelContext) {
-        let modelDefinition = getModelDefinition(modelPath, undefined);
-        if (!modelDefinition) {
+        let model = getModel(modelPath, undefined);
+        if (!model) {
           const [namespace, key] = splitLastString(modelPath);
-          modelDefinition = getModelDefinition(namespace, key);
+          model = getModel(namespace, key);
         }
-        if (!modelDefinition) {
+        if (!model) {
           return null;
         }
 
         modelContext = {
-          modelDefinition,
+          model,
           isRegistered: false,
 
           subscriptionDisposables: [],
 
           flattenedReducers: mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.reducers()),
+            flattenObject<any>(model.reducers()),
             (item: Reducer, key, parent) => {
               parent[key] = action(item);
             }
           ),
-          flattenedEffects: flattenObject(modelDefinition.effects()),
+          flattenedEffects: flattenObject(model.effects()),
           flattenedGetters: mergeObjects(
             {},
-            flattenObject<any>(modelDefinition.selectors()),
+            flattenObject<any>(model.selectors()),
             (item: Selector, key, parent) => {
               const computedValue = computed(item);
               parent[key] = () => computedValue.get();
@@ -120,27 +120,20 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
 
         modelContext.isRegistered = true;
 
-        const modelDefinition = modelContext.modelDefinition;
+        const model = modelContext.model;
 
         if (rootState === undefined) {
           const state =
-            item.state !== undefined
-              ? item.state
-              : modelDefinition.initialState();
+            item.state !== undefined ? item.state : model.initialState();
 
           runInAction(() => {
-            setSubState(
-              observableRootState,
-              state,
-              modelDefinition.namespace,
-              modelDefinition.key
-            );
+            setSubState(observableRootState, state, model.namespace, model.key);
           });
         }
 
         mergeObjects(
           {},
-          flattenObject<any>(modelDefinition.subscriptions()),
+          flattenObject<any>(model.subscriptions()),
           (item: Subscription) => {
             const disposable = item();
             if (disposable) {
@@ -161,30 +154,29 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         );
 
         modelContextByModelPath.delete(modelPath);
-        deleteModelDefinition(item.namespace, item.key);
+        deleteModel(item.namespace, item.key);
 
         if (modelContext) {
-          const modelDefinition = modelContext.modelDefinition;
+          const model = modelContext.model;
           runInAction(() => {
             setSubState(
               observableRootState,
               NOTHING,
-              modelDefinition.namespace,
-              modelDefinition.key
+              model.namespace,
+              model.key
             );
           });
 
           if (
-            modelDefinition.key !== undefined &&
-            Object.keys(
-              (observableRootState as any)?.[modelDefinition.namespace] ?? {}
-            ).length === 0
+            model.key !== undefined &&
+            Object.keys((observableRootState as any)?.[model.namespace] ?? {})
+              .length === 0
           ) {
             runInAction(() => {
               setSubState(
                 observableRootState,
                 NOTHING,
-                modelDefinition.namespace,
+                model.namespace,
                 undefined
               );
             });
@@ -198,18 +190,18 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
 
       unregister(
         modelContexts.map((e) => ({
-          namespace: e.modelDefinition.namespace,
-          key: e.modelDefinition.key,
+          namespace: e.model.namespace,
+          key: e.model.key,
         }))
       );
 
       const registerActionPayload: RegisterActionPayload = [];
       if (payload.state === undefined) {
         modelContexts
-          .filter((e) => e.modelDefinition.key === undefined)
+          .filter((e) => e.model.key === undefined)
           .forEach((e) => {
             registerActionPayload.push({
-              namespace: e.modelDefinition.namespace,
+              namespace: e.model.namespace,
             });
           });
       } else {
@@ -221,7 +213,7 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
               return;
             }
             const [namespace, key] = paths;
-            if (namespace && getModelDefinition(namespace, key)) {
+            if (namespace && getModel(namespace, key)) {
               registerActionPayload.push({ namespace, key });
             }
           }
@@ -262,8 +254,8 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
           type: registerActionType,
           payload: [
             {
-              namespace: modelContext.modelDefinition.namespace,
-              key: modelContext.modelDefinition.key,
+              namespace: modelContext.model.namespace,
+              key: modelContext.model.key,
             },
           ],
         });
@@ -310,7 +302,7 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         } else {
           return getModelContext(
             concatLastString(namespace, key)
-          )?.modelDefinition.initialState();
+          )?.model.initialState();
         }
       },
       getModelComputed(namespace, key, getterPath) {

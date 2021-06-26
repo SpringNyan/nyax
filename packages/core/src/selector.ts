@@ -1,4 +1,5 @@
-import { ExtractModelProperty, ModelDefinitionConstructor } from "./model";
+import { ExtractContainerProperty } from "./container";
+import { ModelClass } from "./model";
 import { Nyax } from "./store";
 import { defineGetter, mergeObjects } from "./util";
 
@@ -16,31 +17,18 @@ export type ConvertGetters<TSelectors> = TSelectors extends any
     }
   : never;
 
-export function createGetters<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor
->(
+export function createGetters<TModelClass extends ModelClass>(
   nyax: Nyax,
-  modelDefinition: InstanceType<TModelDefinitionConstructor>
-): ExtractModelProperty<TModelDefinitionConstructor, "getters"> {
+  model: InstanceType<TModelClass>
+): ExtractContainerProperty<TModelClass, "getters"> {
   const getters: Record<string, unknown> = {};
 
-  mergeObjects(
-    getters,
-    modelDefinition.selectors(),
-    (_item, key, parent, paths) => {
-      const getterPath = paths.join(".");
-      defineGetter(parent, key, () =>
-        nyax.store.getModelComputed(
-          modelDefinition.namespace,
-          modelDefinition.key,
-          getterPath
-        )
-      );
-    }
-  );
+  mergeObjects(getters, model.selectors(), (_item, key, parent, paths) => {
+    const getterPath = paths.join(".");
+    defineGetter(parent, key, () =>
+      nyax.store.getModelComputed(model.namespace, model.key, getterPath)
+    );
+  });
 
-  return getters as ExtractModelProperty<
-    TModelDefinitionConstructor,
-    "getters"
-  >;
+  return getters as ExtractContainerProperty<TModelClass, "getters">;
 }

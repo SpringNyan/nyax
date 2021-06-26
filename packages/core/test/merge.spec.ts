@@ -1,15 +1,12 @@
 import { expect } from "chai";
-import { createNyax, CreateStore, createSubModel } from "../src";
+import { createNyax, CreateStore, createSubContainer } from "../src";
 import {
   CreateSelector,
   defaultCreateSelector,
   Dependencies,
   testDependencies,
 } from "./dependencies";
-import {
-  MergedEntityModelDefinition,
-  MergedSubEntityModelDefinition,
-} from "./models/entity";
+import { MergedEntityModel, MergedSubEntityModel } from "./models/entity";
 
 export function test(options: {
   packageName: string;
@@ -27,73 +24,70 @@ export function test(options: {
       dependencies,
       createStore: options.createStore,
     });
-    const { getModel, registerModelDefinitionClasses } = nyax;
+    const { getContainer, registerModelClasses } = nyax;
 
-    registerModelDefinitionClasses(
-      MergedEntityModelDefinition,
-      MergedSubEntityModelDefinition
-    );
+    registerModelClasses(MergedEntityModel, MergedSubEntityModel);
 
-    const mergedEntityModel = getModel(MergedEntityModelDefinition);
-    const mergedSubEntityModel = getModel(MergedSubEntityModelDefinition);
+    const mergedEntityContainer = getContainer(MergedEntityModel);
+    const mergedSubEntityContainer = getContainer(MergedSubEntityModel);
 
-    expect(mergedEntityModel.isRegistered).eq(true);
+    expect(mergedEntityContainer.isRegistered).eq(true);
 
-    expect(mergedEntityModel.state.foo).eq("foo");
-    expect(mergedEntityModel.state.bar).eq("bar");
-    expect(mergedEntityModel.state.baz).eq("baz");
-    expect(mergedEntityModel.state.fooChangeTimes).eq(0);
+    expect(mergedEntityContainer.state.foo).eq("foo");
+    expect(mergedEntityContainer.state.bar).eq("bar");
+    expect(mergedEntityContainer.state.baz).eq("baz");
+    expect(mergedEntityContainer.state.fooChangeTimes).eq(0);
 
-    await mergedEntityModel.actions.setFooUpper("abc");
-    expect(mergedEntityModel.state.foo).eq("ABC");
-    expect(mergedEntityModel.getters.foo$foo).eq("ABC$ABC");
-    expect(mergedEntityModel.state.fooChangeTimes).eq(1);
+    await mergedEntityContainer.actions.setFooUpper("abc");
+    expect(mergedEntityContainer.state.foo).eq("ABC");
+    expect(mergedEntityContainer.getters.foo$foo).eq("ABC$ABC");
+    expect(mergedEntityContainer.state.fooChangeTimes).eq(1);
 
-    await mergedEntityModel.actions.setBarLower("Orz");
-    expect(mergedEntityModel.state.bar).eq("orz");
-    expect(mergedEntityModel.getters.bar_bar).eq("orz_orz");
-    expect(mergedEntityModel.state.fooChangeTimes).eq(1);
+    await mergedEntityContainer.actions.setBarLower("Orz");
+    expect(mergedEntityContainer.state.bar).eq("orz");
+    expect(mergedEntityContainer.getters.bar_bar).eq("orz_orz");
+    expect(mergedEntityContainer.state.fooChangeTimes).eq(1);
 
-    await mergedEntityModel.actions.setFooBarBaz({
+    await mergedEntityContainer.actions.setFooBarBaz({
       foo: "oof",
       bar: "rab",
       baz: "zab",
     });
-    expect(mergedEntityModel.getters.fooBarBaz).eq("oofrabzab");
-    expect(mergedEntityModel.state.fooChangeTimes).eq(2);
+    expect(mergedEntityContainer.getters.fooBarBaz).eq("oofrabzab");
+    expect(mergedEntityContainer.state.fooChangeTimes).eq(2);
 
-    expect(mergedSubEntityModel.isRegistered).eq(true);
+    expect(mergedSubEntityContainer.isRegistered).eq(true);
 
-    expect(mergedSubEntityModel.state.foo.foo).eq("foo");
-    expect(mergedSubEntityModel.state.bar.bar).eq("bar");
-    expect(mergedSubEntityModel.state.baz.baz).eq("baz");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(2);
+    expect(mergedSubEntityContainer.state.foo.foo).eq("foo");
+    expect(mergedSubEntityContainer.state.bar.bar).eq("bar");
+    expect(mergedSubEntityContainer.state.baz.baz).eq("baz");
+    expect(mergedSubEntityContainer.state.barChangeTimes).eq(2);
 
-    await mergedSubEntityModel.actions.baz.setBazTrim(" xyz ");
-    expect(mergedSubEntityModel.state.baz.baz).eq("xyz");
-    expect(mergedSubEntityModel.getters.baz.baz0baz).eq("xyz0xyz");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(2);
+    await mergedSubEntityContainer.actions.baz.setBazTrim(" xyz ");
+    expect(mergedSubEntityContainer.state.baz.baz).eq("xyz");
+    expect(mergedSubEntityContainer.getters.baz.baz0baz).eq("xyz0xyz");
+    expect(mergedSubEntityContainer.state.barChangeTimes).eq(2);
 
-    await mergedSubEntityModel.actions.bar.setBarLower("NYAN");
-    expect(mergedSubEntityModel.state.bar.bar).eq("nyan");
-    expect(mergedSubEntityModel.getters.bar.bar_bar).eq("nyan_nyan");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(3);
+    await mergedSubEntityContainer.actions.bar.setBarLower("NYAN");
+    expect(mergedSubEntityContainer.state.bar.bar).eq("nyan");
+    expect(mergedSubEntityContainer.getters.bar.bar_bar).eq("nyan_nyan");
+    expect(mergedSubEntityContainer.state.barChangeTimes).eq(3);
 
-    await mergedSubEntityModel.actions.setFooBarBaz({
+    await mergedSubEntityContainer.actions.setFooBarBaz({
       foo: "FOO",
       bar: "BAR",
       baz: "BAZ",
     });
-    expect(mergedSubEntityModel.getters.fooBarBaz).eq("FOOBARBAZ");
-    expect(mergedSubEntityModel.state.barChangeTimes).eq(4);
+    expect(mergedSubEntityContainer.getters.fooBarBaz).eq("FOOBARBAZ");
+    expect(mergedSubEntityContainer.state.barChangeTimes).eq(4);
 
-    const bazModel = createSubModel(mergedSubEntityModel, "baz");
-    expect(bazModel.state.baz).eq(mergedSubEntityModel.state.baz.baz);
-    expect(bazModel.getters.baz0baz).eq(
-      mergedSubEntityModel.getters.baz.baz0baz
+    const bazContainer = createSubContainer(mergedSubEntityContainer, "baz");
+    expect(bazContainer.state.baz).eq(mergedSubEntityContainer.state.baz.baz);
+    expect(bazContainer.getters.baz0baz).eq(
+      mergedSubEntityContainer.getters.baz.baz0baz
     );
-    await bazModel.actions.setBazTrim.dispatch("  Orz  ");
-    expect(bazModel.getters.baz0baz).eq("Orz0Orz");
-    expect(mergedSubEntityModel.getters.fooBarBaz).eq("FOOBAROrz");
+    await bazContainer.actions.setBazTrim.dispatch("  Orz  ");
+    expect(bazContainer.getters.baz0baz).eq("Orz0Orz");
+    expect(mergedSubEntityContainer.getters.fooBarBaz).eq("FOOBAROrz");
   });
 }

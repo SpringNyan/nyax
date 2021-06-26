@@ -6,14 +6,11 @@ import {
   Dependencies,
   testDependencies,
 } from "./dependencies";
-import { AppModelDefinition } from "./models/app";
-import {
-  MergedEntityModelDefinition,
-  MergedSubEntityModelDefinition,
-} from "./models/entity";
-import { TodoItemModelDefinition } from "./models/todoItem";
-import { TodoListModelDefinition } from "./models/todoList";
-import { UserModelDefinition } from "./models/user";
+import { AppModel } from "./models/app";
+import { MergedEntityModel, MergedSubEntityModel } from "./models/entity";
+import { TodoItemModel } from "./models/todoItem";
+import { TodoListModel } from "./models/todoList";
+import { UserModel } from "./models/user";
 
 function clone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
@@ -35,48 +32,48 @@ export function test(options: {
       dependencies,
       createStore: options.createStore,
     });
-    const { getState, getModel, registerModelDefinitionClasses, reload } = nyax;
+    const { getState, getContainer, registerModelClasses, reload } = nyax;
 
-    registerModelDefinitionClasses(
-      AppModelDefinition,
-      UserModelDefinition,
-      TodoListModelDefinition,
-      TodoItemModelDefinition,
-      MergedEntityModelDefinition,
-      MergedSubEntityModelDefinition
+    registerModelClasses(
+      AppModel,
+      UserModel,
+      TodoListModel,
+      TodoItemModel,
+      MergedEntityModel,
+      MergedSubEntityModel
     );
     const initialRootState: any = clone(getState());
 
-    const appModel = getModel(AppModelDefinition);
-    const userModel = getModel(UserModelDefinition);
-    const todoListModel = getModel(TodoListModelDefinition);
-    const mergedEntityModel = getModel(MergedEntityModelDefinition);
-    const mergedSubEntityModel = getModel(MergedSubEntityModelDefinition);
+    const appContainer = getContainer(AppModel);
+    const userContainer = getContainer(UserModel);
+    const todoListContainer = getContainer(TodoListModel);
+    const mergedEntityContainer = getContainer(MergedEntityModel);
+    const mergedSubEntityContainer = getContainer(MergedSubEntityModel);
 
-    expect(appModel.isRegistered).eq(true);
-    expect(userModel.isRegistered).eq(true);
-    expect(todoListModel.isRegistered).eq(true);
-    expect(mergedEntityModel.isRegistered).eq(true);
-    expect(mergedSubEntityModel.isRegistered).eq(true);
-    expect(getModel(TodoItemModelDefinition, "1").isRegistered).eq(false);
-    expect(getModel(TodoItemModelDefinition, "2").isRegistered).eq(false);
-    expect(getModel(TodoItemModelDefinition, "3").isRegistered).eq(false);
+    expect(appContainer.isRegistered).eq(true);
+    expect(userContainer.isRegistered).eq(true);
+    expect(todoListContainer.isRegistered).eq(true);
+    expect(mergedEntityContainer.isRegistered).eq(true);
+    expect(mergedSubEntityContainer.isRegistered).eq(true);
+    expect(getContainer(TodoItemModel, "1").isRegistered).eq(false);
+    expect(getContainer(TodoItemModel, "2").isRegistered).eq(false);
+    expect(getContainer(TodoItemModel, "3").isRegistered).eq(false);
 
-    await appModel.actions.initialize({});
+    await appContainer.actions.initialize({});
 
-    userModel.unregister();
+    userContainer.unregister();
 
-    await todoListModel.actions.add({ title: "123", description: "321" });
-    await todoListModel.actions.add({ title: "456", description: "654" });
-    await getModel(TodoItemModelDefinition, "1").actions.setIsDone(true);
+    await todoListContainer.actions.add({ title: "123", description: "321" });
+    await todoListContainer.actions.add({ title: "456", description: "654" });
+    await getContainer(TodoItemModel, "1").actions.setIsDone(true);
 
-    await mergedEntityModel.actions.setFooBarBaz({
+    await mergedEntityContainer.actions.setFooBarBaz({
       foo: "F",
       bar: "B",
       baz: "B",
     });
 
-    await mergedSubEntityModel.actions.foo.setFooUpper("o_o");
+    await mergedSubEntityContainer.actions.foo.setFooUpper("o_o");
 
     const snapshotRootState: any = clone(getState());
     expect(snapshotRootState).not.deep.eq(initialRootState);
@@ -86,25 +83,25 @@ export function test(options: {
     const expectedInitialRootState = { ...initialRootState };
     delete expectedInitialRootState["user"];
     expect(clone(getState())).deep.eq(expectedInitialRootState);
-    expect(userModel.isRegistered).eq(false);
+    expect(userContainer.isRegistered).eq(false);
 
-    expect(appModel.isRegistered).eq(true);
-    expect(todoListModel.isRegistered).eq(true);
-    expect(mergedEntityModel.isRegistered).eq(true);
-    expect(mergedSubEntityModel.isRegistered).eq(true);
-    expect(getModel(TodoItemModelDefinition, "1").isRegistered).eq(false);
-    expect(getModel(TodoItemModelDefinition, "2").isRegistered).eq(false);
-    expect(getModel(TodoItemModelDefinition, "3").isRegistered).eq(false);
+    expect(appContainer.isRegistered).eq(true);
+    expect(todoListContainer.isRegistered).eq(true);
+    expect(mergedEntityContainer.isRegistered).eq(true);
+    expect(mergedSubEntityContainer.isRegistered).eq(true);
+    expect(getContainer(TodoItemModel, "1").isRegistered).eq(false);
+    expect(getContainer(TodoItemModel, "2").isRegistered).eq(false);
+    expect(getContainer(TodoItemModel, "3").isRegistered).eq(false);
 
     reload(snapshotRootState);
     expect(clone(getState())).deep.eq(snapshotRootState);
-    expect(appModel.isRegistered).eq(true);
-    expect(userModel.isRegistered).eq(false);
-    expect(todoListModel.isRegistered).eq(true);
-    expect(mergedEntityModel.isRegistered).eq(true);
-    expect(mergedSubEntityModel.isRegistered).eq(true);
-    expect(getModel(TodoItemModelDefinition, "1").isRegistered).eq(true);
-    expect(getModel(TodoItemModelDefinition, "2").isRegistered).eq(true);
-    expect(getModel(TodoItemModelDefinition, "3").isRegistered).eq(false);
+    expect(appContainer.isRegistered).eq(true);
+    expect(userContainer.isRegistered).eq(false);
+    expect(todoListContainer.isRegistered).eq(true);
+    expect(mergedEntityContainer.isRegistered).eq(true);
+    expect(mergedSubEntityContainer.isRegistered).eq(true);
+    expect(getContainer(TodoItemModel, "1").isRegistered).eq(true);
+    expect(getContainer(TodoItemModel, "2").isRegistered).eq(true);
+    expect(getContainer(TodoItemModel, "3").isRegistered).eq(false);
   });
 }

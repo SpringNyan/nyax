@@ -1,5 +1,6 @@
+import { ExtractContainerProperty } from "./container";
 import { ConvertActionHelperTypeParamsObjectFromEffects } from "./effect";
-import { ExtractModelProperty, ModelDefinitionConstructor } from "./model";
+import { ModelClass } from "./model";
 import { ConvertActionHelperTypeParamsObjectFromReducers } from "./reducer";
 import { Nyax } from "./store";
 import { concatLastString, mergeObjects } from "./util";
@@ -87,29 +88,24 @@ export function createActionHelper<TPayload, TResult>(
   return actionHelper;
 }
 
-export function createActionHelpers<
-  TModelDefinitionConstructor extends ModelDefinitionConstructor
->(
+export function createActionHelpers<TModelClass extends ModelClass>(
   nyax: Nyax,
-  modelDefinition: InstanceType<TModelDefinitionConstructor>
-): ExtractModelProperty<TModelDefinitionConstructor, "actions"> {
+  model: InstanceType<TModelClass>
+): ExtractContainerProperty<TModelClass, "actions"> {
   const actionHelpers: Record<string, unknown> = {};
 
   const obj: Record<string, unknown> = {};
-  mergeObjects(obj, modelDefinition.reducers());
-  mergeObjects(obj, modelDefinition.effects());
+  mergeObjects(obj, model.reducers());
+  mergeObjects(obj, model.effects());
 
   mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
     parent[key] = createActionHelper(
       nyax,
-      modelDefinition.namespace,
-      modelDefinition.key,
+      model.namespace,
+      model.key,
       paths.join(".")
     );
   });
 
-  return actionHelpers as ExtractModelProperty<
-    TModelDefinitionConstructor,
-    "actions"
-  >;
+  return actionHelpers as ExtractContainerProperty<TModelClass, "actions">;
 }

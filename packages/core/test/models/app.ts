@@ -1,10 +1,10 @@
-import { defineModelDefinition } from "../../src";
-import { UserModelDefinition } from "./user";
-import { ModelDefinitionBase } from "./_base";
+import { defineModel } from "../../src";
+import { UserModel } from "./user";
+import { ModelBase } from "./_base";
 
-export const AppModelDefinition = defineModelDefinition(
+export const AppModel = defineModel(
   "app",
-  class extends ModelDefinitionBase {
+  class extends ModelBase {
     public override initialState() {
       return {
         isInitialized: false,
@@ -25,10 +25,10 @@ export const AppModelDefinition = defineModelDefinition(
           return this.dependencies.packageName;
         },
         userSummary: () => {
-          return this.getModel(UserModelDefinition).getters.summary;
+          return this.getContainer(UserModel).getters.summary;
         },
         userName: () => {
-          return this.nyax.getState(UserModelDefinition)?.name;
+          return this.nyax.getState(UserModel)?.name;
         },
       };
     }
@@ -92,7 +92,7 @@ export const AppModelDefinition = defineModelDefinition(
         },
         userAgeChange: () => {
           return this.nyax.store.subscribeAction(async (action) => {
-            if (this.getModel(UserModelDefinition).actions.setAge.is(action)) {
+            if (this.getContainer(UserModel).actions.setAge.is(action)) {
               await this.actions.increaseUserAgeChangeTimes({});
             }
           });

@@ -1,11 +1,11 @@
-import { defineModelDefinition } from "../../src";
+import { defineModel } from "../../src";
 import { testDependencies } from "../dependencies";
-import { TodoItemModelDefinition } from "./todoItem";
-import { ModelDefinitionBase } from "./_base";
+import { TodoItemModel } from "./todoItem";
+import { ModelBase } from "./_base";
 
-export const TodoListModelDefinition = defineModelDefinition(
+export const TodoListModel = defineModel(
   "todo.list",
-  class extends ModelDefinitionBase {
+  class extends ModelBase {
     public override initialState() {
       return {
         ids: [] as string[],
@@ -18,7 +18,7 @@ export const TodoListModelDefinition = defineModelDefinition(
       return {
         items: testDependencies.createSelector(
           () => this.state.ids,
-          () => this.nyax.getState(TodoItemModelDefinition),
+          () => this.nyax.getState(TodoItemModel),
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
           (ids, state) => ids.map((id) => state?.[id]!).filter(Boolean)
         ),
@@ -46,7 +46,7 @@ export const TodoListModelDefinition = defineModelDefinition(
           const id = this.state.nextId + "";
           await this.actions.increaseNextId({});
 
-          await this.getModel(TodoItemModelDefinition, id).actions.load({
+          await this.getContainer(TodoItemModel, id).actions.load({
             ...item,
             isDone: false,
           });
@@ -56,7 +56,7 @@ export const TodoListModelDefinition = defineModelDefinition(
         },
         remove: async (id: string) => {
           await this.actions.removeId(id);
-          this.getModel(TodoItemModelDefinition, id).unregister();
+          this.getContainer(TodoItemModel, id).unregister();
         },
 
         requestAllDone: async () => {

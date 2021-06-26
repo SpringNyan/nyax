@@ -1,11 +1,11 @@
-import { defineModelDefinition } from "../../src";
+import { defineModel } from "../../src";
 import { testDependencies } from "../dependencies";
-import { TodoListModelDefinition } from "./todoList";
-import { ModelDefinitionBase } from "./_base";
+import { TodoListModel } from "./todoList";
+import { ModelBase } from "./_base";
 
-export const TodoItemModelDefinition = defineModelDefinition(
+export const TodoItemModel = defineModel(
   "todo.item",
-  class extends ModelDefinitionBase {
+  class extends ModelBase {
     public override initialState() {
       return {
         title: "",
@@ -62,9 +62,7 @@ export const TodoItemModelDefinition = defineModelDefinition(
         allDone: () =>
           this.nyax.store.subscribeAction(async (action) => {
             if (
-              this.getModel(TodoListModelDefinition).actions.requestAllDone.is(
-                action
-              )
+              this.getContainer(TodoListModel).actions.requestAllDone.is(action)
             ) {
               await this.actions.setIsDone(true);
             }
