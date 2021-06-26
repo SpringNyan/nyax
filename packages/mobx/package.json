@@ -1,6 +1,6 @@
 {
   "name": "@nyax/mobx",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "MobX bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
@@ -13,7 +13,7 @@
   "module": "dist/nyax-mobx.esm.js",
   "types": "types/index.d.ts",
   "peerDependencies": {
-    "@nyax/core": "^0.0.6",
+    "@nyax/core": "^0.0.7",
     "mobx": "^6.0.0"
   },
   "devDependencies": {
