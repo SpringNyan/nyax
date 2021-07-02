@@ -15,7 +15,16 @@ import {
   unregisterActionType,
   utils,
 } from "@nyax/core";
-import { action, computed, observable, runInAction } from "mobx";
+import {
+  action,
+  computed,
+  get,
+  keys,
+  observable,
+  remove,
+  runInAction,
+  set,
+} from "mobx";
 
 const { concatLastString, flattenObject, mergeObjects, splitLastString } =
   utils;
@@ -29,18 +38,22 @@ function setSubState(
   key: string | undefined
 ): any {
   if (state === undefined) {
-    state = {};
+    state = observable({});
   }
 
   if (key === undefined) {
     if (value === NOTHING) {
-      delete state[namespace];
+      remove(state, namespace);
     } else {
-      state[namespace] = value;
+      set(state, namespace, value);
     }
     return state;
   } else {
-    state[namespace] = setSubState(state[namespace], value, key, undefined);
+    set(
+      state,
+      namespace,
+      setSubState(get(state, namespace), value, key, undefined)
+    );
     return state;
   }
 }
@@ -102,7 +115,7 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
       return modelContext;
     }
 
-    let observableRootState: unknown = observable({});
+    let observableRootState: Record<string, unknown> = observable({});
     let subscribers: (() => void)[] = [];
     let actionSubscribers: ActionSubscriber[] = [];
 
@@ -167,19 +180,18 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
             );
           });
 
-          if (
-            model.key !== undefined &&
-            Object.keys((observableRootState as any)?.[model.namespace] ?? {})
-              .length === 0
-          ) {
-            runInAction(() => {
-              setSubState(
-                observableRootState,
-                NOTHING,
-                model.namespace,
-                undefined
-              );
-            });
+          if (model.key !== undefined) {
+            const namespacedState = get(observableRootState, model.namespace);
+            if (namespacedState && keys(namespacedState).length === 0) {
+              runInAction(() => {
+                setSubState(
+                  observableRootState,
+                  NOTHING,
+                  model.namespace,
+                  undefined
+                );
+              });
+            }
           }
         }
       });
@@ -291,10 +303,10 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
       },
 
       getModelState(namespace, key) {
-        let state = observableRootState as any;
-        state = state?.[namespace];
+        let state = observableRootState;
+        state = get(state, namespace);
         if (key !== undefined) {
-          state = state?.[key];
+          state = state != null ? get(state, key) : undefined;
         }
 
         if (state !== undefined) {
