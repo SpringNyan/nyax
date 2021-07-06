@@ -67,6 +67,8 @@ interface ModelContext {
   flattenedReducers: Record<string, Reducer>;
   flattenedEffects: Record<string, Effect>;
   flattenedGetters: Record<string, () => unknown>;
+
+  observableInitialState: unknown;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types
@@ -108,6 +110,8 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
               parent[key] = () => computedValue.get();
             }
           ),
+
+          observableInitialState: observable(model.initialState()),
         };
         modelContextByModelPath.set(modelPath, modelContext);
       }
@@ -312,9 +316,8 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         if (state !== undefined) {
           return state;
         } else {
-          return getModelContext(
-            concatLastString(namespace, key)
-          )?.model.initialState();
+          return getModelContext(concatLastString(namespace, key))
+            ?.observableInitialState;
         }
       },
       getModelComputed(namespace, key, getterPath) {
