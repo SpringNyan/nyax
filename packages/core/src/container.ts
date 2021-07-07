@@ -9,13 +9,15 @@ export type ExtractContainerProperty<
   TPropertyKey extends ContainerPropertyKey
 > = InstanceType<TModelClass>[TPropertyKey];
 
-export interface Container<
-  TModelClass extends NamespacedModelClass = NamespacedModelClass
-> {
+export interface ContainerLite<TModelClass extends ModelClass = ModelClass> {
   state: ExtractContainerProperty<TModelClass, "state">;
   getters: ExtractContainerProperty<TModelClass, "getters">;
   actions: ExtractContainerProperty<TModelClass, "actions">;
+}
 
+export interface Container<
+  TModelClass extends NamespacedModelClass = NamespacedModelClass
+> extends ContainerLite<TModelClass> {
   modelClass: TModelClass;
 
   namespace: string;
