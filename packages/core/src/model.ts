@@ -98,13 +98,15 @@ export type ExtractModelDependencies<TModelClass extends ModelClass> =
 export type MergeModelsProperty<
   TModelClasses extends ModelClass[],
   TPropertyKey extends ModelPropertyKey
-> = UnionToIntersection<
-  {
-    [K in keyof TModelClasses & number]: ExtractModelProperty<
-      TModelClasses[K],
-      TPropertyKey
-    >;
-  }[number]
+> = Resolved<
+  UnionToIntersection<
+    {
+      [K in keyof TModelClasses & number]: ExtractModelProperty<
+        TModelClasses[K],
+        TPropertyKey
+      >;
+    }[number]
+  >
 >;
 
 export type MergeSubModelsProperty<

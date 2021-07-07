@@ -14,6 +14,7 @@ export type {
 export { createSubContainer } from "./container";
 export type {
   Container,
+  ContainerLite,
   ContainerPropertyKey,
   ExtractContainerProperty,
   GetContainer,
