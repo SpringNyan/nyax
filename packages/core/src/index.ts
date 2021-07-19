@@ -34,7 +34,6 @@ export type {
   ModelClass,
   ModelPropertyKey,
   NamespacedModelClass,
-  RegisterModelClasses,
 } from "./model";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
