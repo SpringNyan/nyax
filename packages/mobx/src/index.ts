@@ -21,6 +21,7 @@ import {
   get,
   keys,
   observable,
+  observe,
   remove,
   runInAction,
   set,
@@ -69,6 +70,7 @@ interface ModelContext {
   flattenedGetters: Record<string, () => unknown>;
 
   observableInitialState: unknown;
+  computedObserveDisposerByKey: Map<string, () => void>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types
@@ -107,11 +109,25 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
             flattenObject<any>(model.selectors()),
             (item: Selector, key, parent) => {
               const computedValue = computed(item);
-              parent[key] = () => computedValue.get();
+              parent[key] = () => {
+                if (
+                  modelContext &&
+                  !modelContext.computedObserveDisposerByKey.has(key)
+                ) {
+                  modelContext.computedObserveDisposerByKey.set(
+                    key,
+                    observe(computedValue, () => {
+                      // noop
+                    })
+                  );
+                }
+                return computedValue.get();
+              };
             }
           ),
 
           observableInitialState: observable(model.initialState()),
+          computedObserveDisposerByKey: new Map(),
         };
         modelContextByModelPath.set(modelPath, modelContext);
       }
@@ -168,6 +184,9 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
 
         modelContext?.subscriptionDisposables.forEach((disposable) =>
           disposable()
+        );
+        modelContext?.computedObserveDisposerByKey.forEach((disposer) =>
+          disposer()
         );
 
         modelContextByModelPath.delete(modelPath);
