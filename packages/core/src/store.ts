@@ -1,5 +1,10 @@
 import { AnyAction, reloadActionType } from "./action";
-import { createGetContainer, GetContainer } from "./container";
+import {
+  createGetContainer,
+  createGetContainers,
+  GetContainer,
+  GetContainers,
+} from "./container";
 import { createNyaxContext } from "./context";
 import {
   createRegisterModelClasses,
@@ -48,6 +53,7 @@ export interface Nyax {
   store: Store;
   getState: GetState;
   getContainer: GetContainer;
+  getContainers: GetContainers;
   registerModelClasses: RegisterModelClasses;
   reload: (state?: unknown) => void;
 }
@@ -62,6 +68,7 @@ export function createNyax(options: NyaxOptions): Nyax {
     }),
     getState: createGetState(nyaxContext),
     getContainer: createGetContainer(nyaxContext),
+    getContainers: createGetContainers(nyaxContext),
     registerModelClasses: createRegisterModelClasses(nyaxContext),
     reload: (state) => {
       nyaxContext.nyax.store.dispatch({

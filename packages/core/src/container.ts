@@ -188,3 +188,26 @@ export function createSubContainer<
     },
   };
 }
+
+export type GetContainers = (namespace?: string) => Container[];
+
+export function createGetContainers(nyaxContext: NyaxContext): GetContainers {
+  return (namespace) => {
+    const containers: Container[] = [];
+    if (namespace) {
+      nyaxContext.modelClassContextByNamespace
+        .get(namespace)
+        ?.containerByKey.forEach((container) => {
+          containers.push(container);
+        });
+    } else {
+      nyaxContext.modelClassContextByNamespace.forEach((context) =>
+        context.containerByKey.forEach((container) => {
+          containers.push(container);
+        })
+      );
+    }
+
+    return containers;
+  };
+}

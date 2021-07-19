@@ -26,7 +26,13 @@ export function test(options: {
       dependencies,
       createStore: options.createStore,
     });
-    const { store, getState, getContainer, registerModelClasses } = nyax;
+    const {
+      store,
+      getState,
+      getContainer,
+      getContainers,
+      registerModelClasses,
+    } = nyax;
 
     expect(() => getContainer("app")).throw();
 
@@ -149,5 +155,16 @@ export function test(options: {
     expect(appContainer.state.userAgeChangeTimes).eq(0);
     userContainer.actions.setAge(666);
     expect(appContainer.state.userAgeChangeTimes).eq(1);
+
+    expect(getContainers()).deep.eq([userContainer]);
+    expect(getContainers("app")).deep.eq([]);
+    expect(getContainers("user")).deep.eq([userContainer]);
+    expect(getContainers("Orz")).deep.eq([]);
+
+    const newAppContainer = getContainer(AppModel);
+    expect(getContainers("app")).deep.eq([newAppContainer]);
+    expect(getContainers()).deep.eq([newAppContainer, userContainer]);
+    newAppContainer.unregister();
+    expect(getContainers("app")).deep.eq([]);
   });
 }
