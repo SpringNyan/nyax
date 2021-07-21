@@ -1,10 +1,14 @@
 {
   "name": "@nyax/vuex",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Vuex bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
   "repository": "github:SpringNyan/nyax",
+  "keywords": [
+    "nyax",
+    "vuex"
+  ],
   "files": [
     "dist",
     "types"
@@ -12,6 +16,7 @@
   "main": "dist/nyax-vuex.js",
   "module": "dist/nyax-vuex.esm.js",
   "types": "types/index.d.ts",
+  "sideEffects": false,
   "peerDependencies": {
     "@nyax/core": "^0.10.0",
     "vue": "^3.0.0",

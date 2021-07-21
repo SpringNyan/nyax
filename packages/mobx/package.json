@@ -1,10 +1,14 @@
 {
   "name": "@nyax/mobx",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "MobX bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
   "repository": "github:SpringNyan/nyax",
+  "keywords": [
+    "nyax",
+    "mobx"
+  ],
   "files": [
     "dist",
     "types"
@@ -12,6 +16,7 @@
   "main": "dist/nyax-mobx.js",
   "module": "dist/nyax-mobx.esm.js",
   "types": "types/index.d.ts",
+  "sideEffects": false,
   "peerDependencies": {
     "@nyax/core": "^0.10.0",
     "mobx": "^6.0.0"

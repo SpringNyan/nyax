@@ -1,10 +1,14 @@
 {
   "name": "@nyax/redux",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Redux bindings for Nyax",
   "authors": "SpringNyan",
   "license": "MIT",
   "repository": "github:SpringNyan/nyax",
+  "keywords": [
+    "nyax",
+    "redux"
+  ],
   "files": [
     "dist",
     "types"
@@ -12,6 +16,7 @@
   "main": "dist/nyax-redux.js",
   "module": "dist/nyax-redux.esm.js",
   "types": "types/index.d.ts",
+  "sideEffects": false,
   "peerDependencies": {
     "@nyax/core": "^0.10.0",
     "immer": "^9.0.0",

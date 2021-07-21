@@ -1,10 +1,13 @@
 {
   "name": "@nyax/core",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "A State Management Framework",
   "authors": "SpringNyan",
   "license": "MIT",
   "repository": "github:SpringNyan/nyax",
+  "keywords": [
+    "nyax"
+  ],
   "files": [
     "dist",
     "types"
@@ -12,6 +15,7 @@
   "main": "dist/nyax-core.js",
   "module": "dist/nyax-core.esm.js",
   "types": "types/index.d.ts",
+  "sideEffects": false,
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.3",
     "@types/chai": "^4.2.21",
