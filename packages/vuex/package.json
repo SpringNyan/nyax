@@ -19,7 +19,7 @@
   "sideEffects": false,
   "peerDependencies": {
     "@nyax/core": "^0.10.0",
-    "vue": "^3.0.0",
+    "vue": "^3.2.0",
     "vuex": "^4.0.0"
   },
   "devDependencies": {
