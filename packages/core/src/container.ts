@@ -25,7 +25,7 @@ export interface Container<
 
   isRegistered: boolean;
 
-  register(): void;
+  register(state?: ExtractContainerProperty<TModelClass, "state">): void;
   unregister(): void;
 }
 
@@ -70,14 +70,16 @@ export class ContainerImpl<
     return this._model.actions;
   }
 
-  public register(): void {
+  public register(
+    state?: ExtractContainerProperty<TModelClass, "state">
+  ): void {
     if (this.isRegistered) {
       throw new Error("Model is already registered.");
     }
 
     this._nyaxContext.nyax.store.dispatch({
       type: registerActionType,
-      payload: [{ namespace: this.namespace, key: this.key }],
+      payload: [{ namespace: this.namespace, key: this.key, state }],
     });
   }
 

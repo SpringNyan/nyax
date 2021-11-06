@@ -116,5 +116,20 @@ export function test(options: {
         isDone: false,
       },
     ]);
+
+    const todoItemRegisterStateContainer = getContainer(
+      TodoItemModel,
+      "registerState"
+    );
+    todoItemRegisterStateContainer.register({
+      title: "0_0",
+      description: "T_T",
+
+      isDone: true,
+    });
+    expect(todoItemRegisterStateContainer.isRegistered).eq(true);
+    expect(todoItemRegisterStateContainer.getters.summary).eq(
+      "[DONE] 0_0: T_T"
+    );
   });
 }

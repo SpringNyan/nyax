@@ -320,7 +320,7 @@ export function createNyaxCreateStore(options: {
       }.bind(store);
 
       const _dispatch = store.dispatch;
-      store.dispatch = function (...args: [any, any?, any?]) {
+      store.dispatch = function (...args: [any, any?]) {
         const type = isAction(args[0]) ? args[0].type : args[0];
 
         const [modelPath, actionType] = splitLastString(type);
