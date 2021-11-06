@@ -2,10 +2,6 @@ import { ExtractContainerProperty } from "./container";
 import { NyaxContext } from "./context";
 import { NamespacedModelClass } from "./model";
 
-export interface InitialState {
-  [key: string]: unknown | InitialState;
-}
-
 export type ConvertState<TInitialState> = TInitialState extends any
   ? TInitialState
   : never;

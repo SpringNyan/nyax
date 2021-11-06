@@ -4,7 +4,7 @@ import { NyaxContext } from "./context";
 import { Effects } from "./effect";
 import { Reducers } from "./reducer";
 import { ConvertGetters, Selectors } from "./selector";
-import { ConvertState, InitialState } from "./state";
+import { ConvertState } from "./state";
 import { Nyax } from "./store";
 import { Subscriptions } from "./subscription";
 import { mergeObjects, Resolved, UnionToIntersection } from "./util";
@@ -112,14 +112,12 @@ export type MergeModelsProperty<
 export type MergeSubModelsProperty<
   TSubModelClasses extends Record<string, ModelClass>,
   TPropertyKey extends ModelPropertyKey
-> = Resolved<
-  {
-    [K in keyof TSubModelClasses]: ExtractModelProperty<
-      TSubModelClasses[K],
-      TPropertyKey
-    >;
-  }
->;
+> = Resolved<{
+  [K in keyof TSubModelClasses]: ExtractModelProperty<
+    TSubModelClasses[K],
+    TPropertyKey
+  >;
+}>;
 
 export type MergeModelsDependencies<TModelClasses extends ModelClass[]> =
   UnionToIntersection<
@@ -376,7 +374,7 @@ export function createBaseModelClass<TDependencies>(): ModelClass<
 
 export function defineModel<
   TDependencies,
-  TInitialState extends InitialState,
+  TInitialState,
   TSelectors extends Selectors,
   TReducers extends Reducers,
   TEffects extends Effects,
