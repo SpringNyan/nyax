@@ -15,7 +15,7 @@ import {
   unregisterActionType,
   utils,
 } from "@nyax/core";
-import { ComputedRef } from "vue";
+import { computed, ComputedRef, effectScope, EffectScope } from "vue";
 import {
   createStore as vuexCreateStore,
   Plugin as VuexPlugin,
@@ -39,6 +39,7 @@ interface ModelContext {
   flattenedReducerKeySet: Set<string>;
   flattenedEffectKeySet: Set<string>;
 
+  computedEffectScope: EffectScope;
   computedRefByGetterPath: Record<string, ComputedRef>;
 }
 
@@ -80,24 +81,21 @@ export function createNyaxCreateStore(options: {
             Object.keys(flattenObject(model.effects()))
           ),
 
+          computedEffectScope: effectScope(),
           get computedRefByGetterPath() {
             if (_computedRefByGetterPath === undefined) {
-              _computedRefByGetterPath = mergeObjects(
-                {},
-                flattenObject<any>(model?.selectors() ?? {}),
-                (item: Selector, key, parent) => {
-                  // TODO: https://github.com/vuejs/vuex/pull/1884
-                  // parent[key] = computed(item);
-
-                  parent[key] = {
-                    get value() {
-                      return item();
-                    },
-                  };
-                }
-              );
+              this.computedEffectScope.run(() => {
+                _computedRefByGetterPath = mergeObjects(
+                  {},
+                  flattenObject<any>(model?.selectors() ?? {}),
+                  (item: Selector, key, parent) => {
+                    parent[key] = computed(item);
+                  }
+                );
+              });
             }
-            return _computedRefByGetterPath;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return _computedRefByGetterPath!;
           },
         };
         modelContextByModelPath.set(modelPath, modelContext);
@@ -207,6 +205,7 @@ export function createNyaxCreateStore(options: {
           modelContext?.subscriptionDisposables.forEach((disposable) =>
             disposable()
           );
+          modelContext?.computedEffectScope.stop();
 
           modelContextByModelPath.delete(modelPath);
           deleteModel(item.namespace, item.key);
