@@ -1,12 +1,12 @@
 import { Reducer, Store } from "redux";
-import { ActionsObservable, Epic, StateObservable } from "redux-observable";
+import { Epic, StateObservable } from "redux-observable";
 import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
 import {
   ContainerImpl,
   createGetContainer,
-  GetContainerInternal,
+  GetContainerInternal
 } from "./container";
 import { Model } from "./model";
 import { createRootReducer } from "./reducer";
@@ -19,7 +19,7 @@ export interface NyaxContext {
   store: Store;
   options: NyaxOptions;
 
-  rootAction$: ActionsObservable<AnyAction>;
+  rootAction$: Observable<AnyAction>;
   rootState$: StateObservable<unknown>;
 
   getContainer: GetContainerInternal;

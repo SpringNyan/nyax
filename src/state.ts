@@ -13,9 +13,9 @@ export interface ModelInitialState {
   [key: string]: unknown | ModelInitialState;
 }
 
-export type ConvertState<
-  TInitialState
-> = TInitialState extends infer TInitialState ? TInitialState : never;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ConvertState<TInitialState> =
+  TInitialState extends infer TInitialState ? TInitialState : never;
 
 export function getSubState(
   state: unknown,

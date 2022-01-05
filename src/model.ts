@@ -1,14 +1,15 @@
-import { ActionsObservable, StateObservable } from "redux-observable";
+import { StateObservable } from "redux-observable";
+import { Observable } from "rxjs";
 import {
   AnyAction,
   ConvertActionHelpers,
-  RegisterActionPayload,
+  RegisterActionPayload
 } from "./action";
 import {
   ConvertArgs,
   ModelDefaultArgs,
   ModelInnerDefaultArgs,
-  NYAX_DEFAULT_ARGS,
+  NYAX_DEFAULT_ARGS
 } from "./arg";
 import { NYAX_NOTHING } from "./common";
 import { ContainerImpl, GetContainer } from "./container";
@@ -26,7 +27,7 @@ import {
   mergeObjects,
   Spread,
   traverseObject,
-  UnionToIntersection,
+  UnionToIntersection
 } from "./util";
 
 export interface ModelInstance<
@@ -56,7 +57,7 @@ export interface ModelInstance<
     ReturnType<this["effects"]>
   >;
 
-  rootAction$: ActionsObservable<AnyAction>;
+  rootAction$: Observable<AnyAction>;
   rootState$: StateObservable<unknown>;
 
   modelNamespace: string;

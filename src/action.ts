@@ -28,20 +28,20 @@ export type ConvertActionHelpersFromPayloadResultPairs<T> = {
     : ConvertActionHelpersFromPayloadResultPairs<T[K]>;
 };
 
-export type ConvertActionHelpers<
-  TReducers,
-  TEffects
-> = TReducers extends infer TReducers
-  ? TEffects extends infer TEffects
-    ? ConvertActionHelpersFromPayloadResultPairs<
-        ConvertPayloadResultPairsFromModelReducers<TReducers> &
-          ConvertPayloadResultPairsFromModelEffects<TEffects>
-      >
-    : never
-  : never;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ConvertActionHelpers<TReducers, TEffects> =
+  TReducers extends infer TReducers
+    ? TEffects extends infer TEffects
+      ? ConvertActionHelpersFromPayloadResultPairs<
+          ConvertPayloadResultPairsFromModelReducers<TReducers> &
+            ConvertPayloadResultPairsFromModelEffects<TEffects>
+        >
+      : never
+    : never;
 
 export class ActionHelperBaseImpl<TPayload>
-  implements Omit<ActionHelper<TPayload, never>, "dispatch"> {
+  implements Omit<ActionHelper<TPayload, never>, "dispatch">
+{
   constructor(public readonly type: string) {}
 
   public is(action: unknown): action is Action<TPayload> {
@@ -58,7 +58,8 @@ export class ActionHelperBaseImpl<TPayload>
 
 export class ActionHelperImpl<TPayload, TResult>
   extends ActionHelperBaseImpl<TPayload>
-  implements ActionHelper<TPayload, TResult> {
+  implements ActionHelper<TPayload, TResult>
+{
   constructor(private readonly _nyaxContext: NyaxContext, type: string) {
     super(type);
   }
