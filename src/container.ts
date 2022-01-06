@@ -59,7 +59,8 @@ export interface Container<TModel extends Model = Model>
 }
 
 export class ContainerImpl<TModel extends Model = Model>
-  implements Container<TModel> {
+  implements Container<TModel>
+{
   public readonly modelContext: ModelContext;
 
   public readonly modelNamespace: string;
@@ -76,9 +77,8 @@ export class ContainerImpl<TModel extends Model = Model>
   public readonly effectByPath: Record<string, ModelEffect>;
 
   public args: ExtractModelArgs<TModel> | typeof NYAX_NOTHING = NYAX_NOTHING;
-  public draftState:
-    | ExtractModelState<TModel>
-    | typeof NYAX_NOTHING = NYAX_NOTHING;
+  public draftState: ExtractModelState<TModel> | typeof NYAX_NOTHING =
+    NYAX_NOTHING;
 
   private _lastRootState: unknown;
   private _lastState: unknown;
@@ -104,12 +104,10 @@ export class ContainerImpl<TModel extends Model = Model>
 
     this.modelInstance = this._createModelInstance();
 
-    this.selectors = this.modelInstance.selectors() as ExtractModelSelectors<
-      TModel
-    >;
-    this.reducers = this.modelInstance.reducers() as ExtractModelReducers<
-      TModel
-    >;
+    this.selectors =
+      this.modelInstance.selectors() as ExtractModelSelectors<TModel>;
+    this.reducers =
+      this.modelInstance.reducers() as ExtractModelReducers<TModel>;
     this.effects = this.modelInstance.effects() as ExtractModelEffects<TModel>;
     this.epics = this.modelInstance.epics() as ExtractModelEpics<TModel>;
 

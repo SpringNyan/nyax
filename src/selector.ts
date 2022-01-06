@@ -8,6 +8,7 @@ export interface ModelSelectors {
   [key: string]: ModelSelector | ModelSelectors;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type ConvertGetters<TSelectors> = TSelectors extends infer TSelectors
   ? {
       [K in keyof TSelectors]: TSelectors[K] extends ModelSelector<
@@ -166,9 +167,9 @@ export function createSelector<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
 ): OutputSelector<TResult>;
 export function createSelector(...args: unknown[]): OutputSelector<unknown> {
   const arrayMode = Array.isArray(args[0]);
-  const selectors = (arrayMode
-    ? args[0]
-    : args.slice(0, args.length - 1)) as InputSelector<unknown>[];
+  const selectors = (
+    arrayMode ? args[0] : args.slice(0, args.length - 1)
+  ) as InputSelector<unknown>[];
   const combiner = args[args.length - 1] as (...args: unknown[]) => unknown;
 
   let defaultCache: SelectorCache | undefined;

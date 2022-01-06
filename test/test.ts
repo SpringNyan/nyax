@@ -95,15 +95,10 @@ describe("nyax", () => {
       }
     );
 
-    const {
-      store,
-      getContainer,
-      getState,
-      registerModels,
-      reload,
-    } = createNyax({
-      dependencies,
-    });
+    const { store, getContainer, getState, registerModels, reload } =
+      createNyax({
+        dependencies,
+      });
 
     expect(() => {
       getContainer(FooModel);

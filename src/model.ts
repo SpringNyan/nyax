@@ -1,4 +1,5 @@
-import { ActionsObservable, StateObservable } from "redux-observable";
+import { StateObservable } from "redux-observable";
+import { Observable } from "rxjs";
 import {
   AnyAction,
   ConvertActionHelpers,
@@ -56,7 +57,7 @@ export interface ModelInstance<
     ReturnType<this["effects"]>
   >;
 
-  rootAction$: ActionsObservable<AnyAction>;
+  rootAction$: Observable<AnyAction>;
   rootState$: StateObservable<unknown>;
 
   modelNamespace: string;
@@ -101,8 +102,7 @@ export interface Model<
   TEffects = {},
   TEpics = {}
   /* eslint-enable @typescript-eslint/ban-types */
->
-  extends ModelInstanceConstructor<
+> extends ModelInstanceConstructor<
       TDependencies,
       TDefaultArgs,
       TInitialState,
@@ -141,33 +141,29 @@ export type ExtractModelEpics<TModel extends Model> = ReturnType<
   InstanceType<TModel>["epics"]
 >;
 
-export type ExtractModelDependencies<TModel extends Model> = InstanceType<
-  TModel
->["dependencies"];
+export type ExtractModelDependencies<TModel extends Model> =
+  InstanceType<TModel>["dependencies"];
 
-export type ExtractModelArgs<TModel extends Model> = InstanceType<
-  TModel
->["args"];
+export type ExtractModelArgs<TModel extends Model> =
+  InstanceType<TModel>["args"];
 
-export type ExtractModelState<TModel extends Model> = InstanceType<
-  TModel
->["state"];
+export type ExtractModelState<TModel extends Model> =
+  InstanceType<TModel>["state"];
 
-export type ExtractModelGetters<TModel extends Model> = InstanceType<
-  TModel
->["getters"];
+export type ExtractModelGetters<TModel extends Model> =
+  InstanceType<TModel>["getters"];
 
-export type ExtractModelActionHelpers<TModel extends Model> = InstanceType<
-  TModel
->["actions"];
+export type ExtractModelActionHelpers<TModel extends Model> =
+  InstanceType<TModel>["actions"];
 
-export type MergeModelsDependencies<
-  TModels extends Model[]
-> = UnionToIntersection<
-  {
-    [K in Extract<keyof TModels, number>]: ExtractModelDependencies<TModels[K]>;
-  }[number]
->;
+export type MergeModelsDependencies<TModels extends Model[]> =
+  UnionToIntersection<
+    {
+      [K in Extract<keyof TModels, number>]: ExtractModelDependencies<
+        TModels[K]
+      >;
+    }[number]
+  >;
 
 export type MergeSubModelsDependencies<
   TSubModels extends Record<string, Model>
@@ -185,23 +181,22 @@ export type ModelPropertyKey =
   | "effects"
   | "epics";
 
-export type MergeModelsDefaultArgs<
-  TModels extends Model[]
-> = UnionToIntersection<
-  {
-    [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<TModels[K]>;
-  }[number]
->;
+export type MergeModelsDefaultArgs<TModels extends Model[]> =
+  UnionToIntersection<
+    {
+      [K in Extract<keyof TModels, number>]: ExtractModelDefaultArgs<
+        TModels[K]
+      >;
+    }[number]
+  >;
 
 export type MergeSubModelsDefaultArgs<
   TSubModels extends Record<string, Model>
-> = Spread<
-  {
-    [K in keyof TSubModels]: ModelInnerDefaultArgs<
-      ExtractModelDefaultArgs<TSubModels[K]>
-    >;
-  }
->;
+> = Spread<{
+  [K in keyof TSubModels]: ModelInnerDefaultArgs<
+    ExtractModelDefaultArgs<TSubModels[K]>
+  >;
+}>;
 
 export type MergeModelsProperty<
   TModels extends Model[],
@@ -217,13 +212,11 @@ export type MergeModelsProperty<
 export type MergeSubModelsProperty<
   TSubModels extends Record<string, Model>,
   TPropertyKey extends Exclude<ModelPropertyKey, "defaultArgs">
-> = Spread<
-  {
-    [K in keyof TSubModels]: ReturnType<
-      InstanceType<TSubModels[K]>[TPropertyKey]
-    >;
-  }
->;
+> = Spread<{
+  [K in keyof TSubModels]: ReturnType<
+    InstanceType<TSubModels[K]>[TPropertyKey]
+  >;
+}>;
 
 export class ModelBase<TDependencies = unknown>
   implements
@@ -237,7 +230,8 @@ export class ModelBase<TDependencies = unknown>
       {},
       {}
       /* eslint-enable @typescript-eslint/ban-types */
-    > {
+    >
+{
   public __nyax_nyaxContext!: NyaxContext;
   public __nyax_container!: Pick<
     ContainerImpl<any>,
