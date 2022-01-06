@@ -23,29 +23,32 @@ export type ModelInnerDefaultArgs<
   TInnerDefaultArgs extends ModelDefaultArgs = ModelDefaultArgs
 > = ModelInnerDefaultArgsBase & TInnerDefaultArgs;
 
-export type ConvertRegisterArgs<
-  TDefaultArgs
-> = TDefaultArgs extends infer TDefaultArgs
-  ? {
-      [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<any>
-        ? K
-        : never;
-    }[keyof TDefaultArgs] extends infer TRequiredKey
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ConvertRegisterArgs<TDefaultArgs> =
+  TDefaultArgs extends infer TDefaultArgs
     ? {
-        [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
-          ? T
-          : TDefaultArgs[K] extends ModelInnerDefaultArgs<
-              infer TInnerDefaultArgs
-            >
-          ? ConvertRegisterArgs<TInnerDefaultArgs>
-          : TDefaultArgs[K];
-      } extends infer TArgs
-      ? Pick<TArgs, Extract<keyof TArgs, TRequiredKey>> &
-          Partial<Pick<TArgs, Exclude<keyof TArgs, TRequiredKey>>>
+        [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<any>
+          ? K
+          : never;
+      }[keyof TDefaultArgs] extends infer TRequiredKey
+      ? {
+          [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<
+            infer T
+          >
+            ? T
+            : TDefaultArgs[K] extends ModelInnerDefaultArgs<
+                infer TInnerDefaultArgs
+              >
+            ? ConvertRegisterArgs<TInnerDefaultArgs>
+            : TDefaultArgs[K];
+        } extends infer TArgs
+        ? Pick<TArgs, Extract<keyof TArgs, TRequiredKey>> &
+            Partial<Pick<TArgs, Exclude<keyof TArgs, TRequiredKey>>>
+        : never
       : never
-    : never
-  : never;
+    : never;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type ConvertArgs<TDefaultArgs> = TDefaultArgs extends infer TDefaultArgs
   ? {
       [K in keyof TDefaultArgs]: TDefaultArgs[K] extends RequiredArg<infer T>
