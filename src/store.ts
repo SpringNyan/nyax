@@ -14,7 +14,7 @@ import {
   reloadActionHelper,
 } from "./action";
 import { Container, GetContainer } from "./container";
-import { createNyaxContext } from "./context";
+import { createNyaxContext, ErrorContext } from "./context";
 import { createMiddleware } from "./middleware";
 import { Models, registerModels } from "./model";
 import { GetState } from "./state";
@@ -30,11 +30,13 @@ export interface NyaxOptions {
 
   onUnhandledEffectError?: (
     error: unknown,
-    promise: Promise<unknown> | undefined
+    promise: Promise<unknown> | undefined,
+    context?: ErrorContext
   ) => void;
   onUnhandledEpicError?: (
     error: unknown,
-    caught: Observable<AnyAction>
+    caught: Observable<AnyAction>,
+    context?: ErrorContext
   ) => Observable<AnyAction>;
 }
 

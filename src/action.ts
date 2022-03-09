@@ -70,11 +70,15 @@ export class ActionHelperImpl<TPayload, TResult>
     const promise = new NyaxPromise<TResult>((resolve, reject) => {
       this._nyaxContext.dispatchDeferredByAction.set(action, {
         resolve,
-        reject: (reason) => {
+        reject: (reason, context) => {
           reject(reason);
           Promise.resolve().then(() => {
             if (!promise.hasRejectionHandler) {
-              this._nyaxContext.onUnhandledEffectError(reason, promise);
+              this._nyaxContext.onUnhandledEffectError(
+                reason,
+                promise,
+                context
+              );
             }
           });
         },
