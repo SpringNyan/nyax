@@ -774,15 +774,18 @@ describe("nyax", () => {
 
     const { getContainer, registerModels } = createNyax({
       dependencies,
-      onUnhandledEffectError: (error, promise) => {
+      onUnhandledEffectError: (error, promise, context) => {
         promise?.catch(() => {
           // noop
         });
         expect((error as Error).message).eq("effect error");
+        expect(context?.container?.modelNamespace).eq("err");
+        expect(!!context?.action?.type).eq(true);
         effectErrorCounter += 1;
       },
-      onUnhandledEpicError: (error, caught) => {
+      onUnhandledEpicError: (error, caught, context) => {
         expect((error as Error).message).eq("epic error");
+        expect(context?.container?.modelNamespace).eq("err");
         epicErrorCounter += 1;
         return caught;
       },

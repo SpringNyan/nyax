@@ -22,7 +22,9 @@ export function createEpic(
       outputObservables.push(
         epic().pipe(
           catchError((error, caught) => {
-            return nyaxContext.onUnhandledEpicError(error, caught);
+            return nyaxContext.onUnhandledEpicError(error, caught, {
+              container,
+            });
           })
         )
       );

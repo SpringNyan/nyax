@@ -4,6 +4,7 @@ import { Observable, Subject } from "rxjs";
 import { AnyAction } from "./action";
 import { NYAX_NOTHING } from "./common";
 import {
+  Container,
   ContainerImpl,
   createGetContainer,
   GetContainerInternal,
@@ -12,6 +13,11 @@ import { Model } from "./model";
 import { createRootReducer } from "./reducer";
 import { createGetState, GetState } from "./state";
 import { Nyax, NyaxOptions } from "./store";
+
+export interface ErrorContext {
+  container?: Container;
+  action?: AnyAction;
+}
 
 export interface NyaxContext {
   nyax: Nyax;
@@ -40,18 +46,20 @@ export interface NyaxContext {
     AnyAction,
     {
       resolve(value: unknown): void;
-      reject(error: unknown): void;
+      reject(error: unknown, context?: ErrorContext): void;
     }
   >;
 
   dependencies: unknown;
   onUnhandledEffectError: (
     error: unknown,
-    promise: Promise<unknown> | undefined
+    promise: Promise<unknown> | undefined,
+    context?: ErrorContext
   ) => void;
   onUnhandledEpicError: (
     error: unknown,
-    caught: Observable<AnyAction>
+    caught: Observable<AnyAction>,
+    context?: ErrorContext
   ) => Observable<AnyAction>;
 
   getRootState: () => unknown;
@@ -101,9 +109,13 @@ export function createNyaxContext(): NyaxContext {
     get dependencies() {
       return nyaxContext.options.dependencies;
     },
-    onUnhandledEffectError: (error, promise) => {
+    onUnhandledEffectError: (error, promise, context) => {
       if (nyaxContext.options.onUnhandledEffectError) {
-        return nyaxContext.options.onUnhandledEffectError(error, promise);
+        return nyaxContext.options.onUnhandledEffectError(
+          error,
+          promise,
+          context
+        );
       } else {
         if (promise) {
           promise.then(undefined, () => {
@@ -113,9 +125,9 @@ export function createNyaxContext(): NyaxContext {
         console.error(error);
       }
     },
-    onUnhandledEpicError: (error, caught) => {
+    onUnhandledEpicError: (error, caught, context) => {
       if (nyaxContext.options.onUnhandledEpicError) {
-        return nyaxContext.options.onUnhandledEpicError(error, caught);
+        return nyaxContext.options.onUnhandledEpicError(error, caught, context);
       } else {
         console.error(error);
         return caught;
