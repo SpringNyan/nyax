@@ -1,16 +1,14 @@
-export type Effect<TPayload = unknown, TResult = unknown> = {
-  bivarianceHack(payload: TPayload): Promise<TResult>;
-}["bivarianceHack"];
+export type Effect<TPayload = unknown, TResult = unknown> = (
+  payload: TPayload
+) => TResult;
 
-export interface Effects {
-  [key: string]: Effect | Effects;
-}
-
-export type ConvertActionHelperTypeParamsObjectFromEffects<TEffects> = {
+export type ConvertEffectsTypeParams<TEffects> = {
   [K in keyof TEffects]: TEffects[K] extends Effect<
     infer TPayload,
     infer TResult
   >
-    ? [TPayload, TResult]
-    : ConvertActionHelperTypeParamsObjectFromEffects<TEffects[K]>;
+    ? [{ payload: TPayload; result: TResult }]
+    : ConvertEffectsTypeParams<TEffects[K]>;
 };
+
+// ok

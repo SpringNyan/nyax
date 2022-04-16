@@ -1,13 +1,9 @@
-export type Reducer<TPayload = unknown> = {
-  bivarianceHack(payload: TPayload): void;
-}["bivarianceHack"];
+export type Reducer<TPayload = unknown> = (payload: TPayload) => void;
 
-export interface Reducers {
-  [key: string]: Reducer | Reducers;
-}
-
-export type ConvertActionHelperTypeParamsObjectFromReducers<TReducers> = {
+export type ConvertReducersTypeParams<TReducers> = {
   [K in keyof TReducers]: TReducers[K] extends Reducer<infer TPayload>
-    ? [TPayload, unknown]
-    : ConvertActionHelperTypeParamsObjectFromReducers<TReducers[K]>;
+    ? [{ payload: TPayload }]
+    : ConvertReducersTypeParams<TReducers[K]>;
 };
+
+// ok

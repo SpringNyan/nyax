@@ -10,6 +10,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "isolatedModules": true,
+    "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,

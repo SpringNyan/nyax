@@ -1,14 +1,11 @@
-import { ExtractContainerProperty } from "./container";
-import { ConvertActionHelperTypeParamsObjectFromEffects } from "./effect";
-import { ModelClass } from "./model";
-import { ConvertActionHelperTypeParamsObjectFromReducers } from "./reducer";
+import { ConvertEffectsTypeParams } from "./effect";
+import {
+  ConvertModelDefinitionActionHelpers,
+  ModelDefinition,
+} from "./modelDefinition";
+import { ConvertReducersTypeParams } from "./reducer";
 import { Nyax } from "./store";
-import { concatLastString, mergeObjects } from "./util";
-
-export interface AnyAction {
-  type: string;
-  payload?: unknown;
-}
+import { concatLastString, defineGetter, mergeObjects } from "./util";
 
 export interface Action<TPayload = unknown> {
   type: string;
@@ -16,52 +13,47 @@ export interface Action<TPayload = unknown> {
 }
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
-  (payload: TPayload): Promise<TResult>;
+  (payload: TPayload): TResult;
 
   type: string;
   is(action: unknown): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
-  dispatch(payload: TPayload): Promise<TResult>;
+  dispatch(payload: TPayload): TResult;
 }
 
 export interface ActionHelpers {
   [key: string]: ActionHelper | ActionHelpers;
 }
 
-export type ConvertActionHelpersFromTypeParamsObject<T> = {
-  [K in keyof T]: T[K] extends [any, any]
-    ? ActionHelper<T[K][0], T[K][1]>
-    : ConvertActionHelpersFromTypeParamsObject<T[K]>;
+type ConvertTypeParamsActionHelpers<TTypeParams> = {
+  [K in keyof TTypeParams]: TTypeParams[K] extends [infer TTypeParam]
+    ? "payload" extends keyof TTypeParam
+      ? ActionHelper<
+          TTypeParam["payload"],
+          "result" extends keyof TTypeParam ? TTypeParam["result"] : void
+        >
+      : never
+    : ConvertTypeParamsActionHelpers<TTypeParams[K]>;
 };
 
-export type ConvertActionHelpers<TReducers, TEffects> = TReducers extends any
-  ? TEffects extends any
-    ? ConvertActionHelpersFromTypeParamsObject<
-        ConvertActionHelperTypeParamsObjectFromReducers<TReducers> &
-          ConvertActionHelperTypeParamsObjectFromEffects<TEffects>
-      >
-    : never
-  : never;
+export type ConvertActionHelpers<TReducers, TEffects> =
+  ConvertTypeParamsActionHelpers<
+    ConvertReducersTypeParams<TReducers> & ConvertEffectsTypeParams<TEffects>
+  >;
 
-export const registerActionType = "@@nyax/register";
-export type RegisterActionPayload = RegisterActionPayloadItem[];
-export interface RegisterActionPayloadItem {
-  namespace: string;
-  key?: string;
-  state?: unknown;
-}
-
-export const unregisterActionType = "@@nyax/unregister";
-export type UnregisterActionPayload = UnregisterActionPayloadItem[];
-export interface UnregisterActionPayloadItem {
-  namespace: string;
-  key?: string;
-}
-
-export const reloadActionType = "@@nyax/reload";
-export interface ReloadActionPayload {
-  state?: unknown;
-}
+const actionHelperPrototype: ActionHelper = function () {
+  throw new Error();
+};
+actionHelperPrototype.type = "";
+actionHelperPrototype.is = function (action): action is Action {
+  return (action as Action | undefined)?.type === this.type;
+};
+actionHelperPrototype.create = function (payload) {
+  return { type: this.type, payload };
+};
+actionHelperPrototype.dispatch = function (payload) {
+  return this(payload);
+};
 
 export function createActionHelper<TPayload, TResult>(
   nyax: Nyax,
@@ -69,43 +61,55 @@ export function createActionHelper<TPayload, TResult>(
   key: string | undefined,
   actionType: string
 ): ActionHelper<TPayload, TResult> {
-  const actionHelper: ActionHelper<TPayload, TResult> = (payload) =>
-    nyax.store.dispatchModelAction(
+  const actionHelper = function (payload: TPayload) {
+    return nyax.store.dispatchModelAction(
       namespace,
       key,
       actionType,
       payload
-    ) as Promise<TResult>;
+    ) as TResult;
+  } as ActionHelper<TPayload, TResult>;
   actionHelper.type = concatLastString(
     concatLastString(namespace, key),
     actionType
   );
-  actionHelper.is = (action): action is Action<TPayload> =>
-    (action as Action<TPayload> | undefined)?.type === actionHelper.type;
-  actionHelper.create = (payload) => ({ type: actionHelper.type, payload });
-  actionHelper.dispatch = actionHelper;
-
+  Object.setPrototypeOf(actionHelper, actionHelperPrototype);
   return actionHelper;
 }
 
-export function createActionHelpers<TModelClass extends ModelClass>(
+export function createActionHelpers<TModelDefinition extends ModelDefinition>(
   nyax: Nyax,
-  model: InstanceType<TModelClass>
-): ExtractContainerProperty<TModelClass, "actions"> {
-  const actionHelpers: Record<string, unknown> = {};
+  modelDefinition: TModelDefinition,
+  namespace: string,
+  key: string | undefined
+): ConvertModelDefinitionActionHelpers<TModelDefinition> {
+  const actionHelpers =
+    {} as ConvertModelDefinitionActionHelpers<TModelDefinition>;
 
-  const obj: Record<string, unknown> = {};
-  mergeObjects(obj, model.reducers());
-  mergeObjects(obj, model.effects());
+  function handle(
+    _item: unknown,
+    k: string,
+    target: Record<string, unknown>,
+    paths: readonly string[]
+  ) {
+    if (!(k in target)) {
+      const actionType = paths.join(".");
+      defineGetter(target, k, function () {
+        delete target[k];
+        return (target[k] = createActionHelper(
+          nyax,
+          namespace,
+          key,
+          actionType
+        ));
+      });
+    }
+  }
 
-  mergeObjects(actionHelpers, obj, (_item, key, parent, paths) => {
-    parent[key] = createActionHelper(
-      nyax,
-      model.namespace,
-      model.key,
-      paths.join(".")
-    );
-  });
+  mergeObjects(actionHelpers, modelDefinition.reducers, handle);
+  mergeObjects(actionHelpers, modelDefinition.effects, handle);
 
-  return actionHelpers as ExtractContainerProperty<TModelClass, "actions">;
+  return actionHelpers;
 }
+
+// ok

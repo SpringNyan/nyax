@@ -1,4 +1,4 @@
-export type Resolved<T> = {
+export type Simplify<T> = {
   "0": { [K in keyof T]: T[K] };
 }["0"];
 
@@ -7,14 +7,6 @@ export type UnionToIntersection<U> = (
 ) extends (k: infer I) => void
   ? I
   : never;
-
-export interface DeepRecord<T> {
-  [key: string]: T | DeepRecord<T>;
-}
-
-export function last<T>(arr: T[]): T | undefined {
-  return arr[arr.length - 1];
-}
 
 export function is(x: unknown, y: unknown): boolean {
   if (x === y) {
@@ -28,17 +20,17 @@ export function isPlainObject(obj: unknown): obj is Record<string, unknown> {
   return obj != null && typeof obj === "object" && !Array.isArray(obj);
 }
 
-export function mergeObjects<T>(
-  target: DeepRecord<T>,
-  source: DeepRecord<T>,
+export function mergeObjects(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
   fn?: (
-    item: T,
+    item: unknown,
     key: string,
-    parent: DeepRecord<T>,
+    target: Record<string, unknown>,
     paths: readonly string[]
   ) => void,
   paths: string[] = []
-): DeepRecord<T> {
+): Record<string, unknown> {
   if (!isPlainObject(target)) {
     throw new Error("`target` is not an object.");
   }
@@ -47,17 +39,16 @@ export function mergeObjects<T>(
     throw new Error("`source` is not an object.");
   }
 
-  Object.keys(source).forEach((key) => {
+  Object.keys(source).forEach(function (key) {
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return;
     }
 
     paths.push(key);
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const sourceItem = source[key]!;
+    const sourceItem = source[key];
     if (isPlainObject(sourceItem)) {
-      if (target[key] === undefined) {
+      if (!(key in target)) {
         target[key] = {};
       }
 
@@ -81,17 +72,13 @@ export function mergeObjects<T>(
   return target;
 }
 
-export function flattenObject<T>(
-  obj: DeepRecord<T>,
+export function flattenObject(
+  obj: Record<string, unknown>,
   separator = "."
-): Record<string, T> {
-  const result: Record<string, T> = {};
-
-  mergeObjects({}, obj, (item, _key, _parent, paths) => {
-    result[paths.join(separator)] = item;
+): Record<string, unknown> {
+  return mergeObjects({}, obj, function (item, _key, target, paths) {
+    target[paths.join(separator)] = item;
   });
-
-  return result;
 }
 
 export function concatLastString(
@@ -120,14 +107,16 @@ export function splitLastString(
     : ["", str];
 }
 
-export function defineGetter<TObject, TKey extends keyof TObject>(
-  obj: TObject,
-  p: TKey,
-  get: () => TObject[TKey]
-): void {
-  Object.defineProperty(obj, p, {
+export function defineGetter(o: object, p: string, get: () => unknown): void {
+  Object.defineProperty(o, p, {
     get,
     enumerable: false,
     configurable: true,
   });
 }
+
+export function asType<T>(_value: unknown): asserts _value is T {
+  return;
+}
+
+// ok
