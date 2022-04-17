@@ -1,8 +1,9 @@
+import { Model } from "./model";
 import {
   ConvertModelDefinitionGetters,
   ModelDefinition,
 } from "./modelDefinition";
-import { Nyax } from "./store";
+import { Store } from "./store";
 import { defineGetter, mergeObjects } from "./util";
 
 export type Selector<TResult = unknown, TValue = never> = [TValue] extends [
@@ -20,25 +21,23 @@ export type ConvertGetters<TSelectors> = {
 };
 
 export function createGetters<TModelDefinition extends ModelDefinition>(
-  nyax: Nyax,
-  modelDefinition: TModelDefinition,
-  namespace: string,
-  key: string | undefined
+  store: Store,
+  model: Model
 ): ConvertModelDefinitionGetters<TModelDefinition> {
   const getters = {} as ConvertModelDefinitionGetters<TModelDefinition>;
 
   mergeObjects(
     getters,
-    modelDefinition.selectors,
+    model.modelDefinition.selectors,
     function (item, k, target, paths) {
       const getterPath = paths.join(".");
       if (typeof item === "function" && item.length === 1) {
         target[k] = function (value: unknown) {
-          return nyax.store.getModelComputed(namespace, key, getterPath, value);
+          return store.getModelComputed(model, getterPath, value);
         };
       } else {
         defineGetter(target, k, function () {
-          return nyax.store.getModelComputed(namespace, key, getterPath);
+          return store.getModelComputed(model, getterPath);
         });
       }
     }
@@ -46,5 +45,3 @@ export function createGetters<TModelDefinition extends ModelDefinition>(
 
   return getters;
 }
-
-// ok

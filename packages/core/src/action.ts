@@ -1,10 +1,11 @@
 import { ConvertEffectsTypeParams } from "./effect";
+import { Model } from "./model";
 import {
   ConvertModelDefinitionActionHelpers,
   ModelDefinition,
 } from "./modelDefinition";
 import { ConvertReducersTypeParams } from "./reducer";
-import { Nyax } from "./store";
+import { Store } from "./store";
 import { concatLastString, defineGetter, mergeObjects } from "./util";
 
 export interface Action<TPayload = unknown> {
@@ -56,21 +57,15 @@ actionHelperPrototype.dispatch = function (payload) {
 };
 
 export function createActionHelper<TPayload, TResult>(
-  nyax: Nyax,
-  namespace: string,
-  key: string | undefined,
+  store: Store,
+  model: Model,
   actionType: string
 ): ActionHelper<TPayload, TResult> {
   const actionHelper = function (payload: TPayload) {
-    return nyax.store.dispatchModelAction(
-      namespace,
-      key,
-      actionType,
-      payload
-    ) as TResult;
+    return store.dispatchModelAction(model, actionType, payload) as TResult;
   } as ActionHelper<TPayload, TResult>;
   actionHelper.type = concatLastString(
-    concatLastString(namespace, key),
+    concatLastString(model.namespace, model.key),
     actionType
   );
   Object.setPrototypeOf(actionHelper, actionHelperPrototype);
@@ -78,10 +73,8 @@ export function createActionHelper<TPayload, TResult>(
 }
 
 export function createActionHelpers<TModelDefinition extends ModelDefinition>(
-  nyax: Nyax,
-  modelDefinition: TModelDefinition,
-  namespace: string,
-  key: string | undefined
+  store: Store,
+  model: Model
 ): ConvertModelDefinitionActionHelpers<TModelDefinition> {
   const actionHelpers =
     {} as ConvertModelDefinitionActionHelpers<TModelDefinition>;
@@ -96,20 +89,13 @@ export function createActionHelpers<TModelDefinition extends ModelDefinition>(
       const actionType = paths.join(".");
       defineGetter(target, k, function () {
         delete target[k];
-        return (target[k] = createActionHelper(
-          nyax,
-          namespace,
-          key,
-          actionType
-        ));
+        return (target[k] = createActionHelper(store, model, actionType));
       });
     }
   }
 
-  mergeObjects(actionHelpers, modelDefinition.reducers, handle);
-  mergeObjects(actionHelpers, modelDefinition.effects, handle);
+  mergeObjects(actionHelpers, model.modelDefinition.reducers, handle);
+  mergeObjects(actionHelpers, model.modelDefinition.effects, handle);
 
   return actionHelpers;
 }
-
-// ok

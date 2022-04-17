@@ -10,5 +10,3 @@ export type ConvertEffectsTypeParams<TEffects> = {
     ? [{ payload: TPayload; result: TResult }]
     : ConvertEffectsTypeParams<TEffects[K]>;
 };
-
-// ok

@@ -118,5 +118,3 @@ export function defineGetter(o: object, p: string, get: () => unknown): void {
 export function asType<T>(_value: unknown): asserts _value is T {
   return;
 }
-
-// ok

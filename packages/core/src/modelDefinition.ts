@@ -24,7 +24,7 @@ export interface NamespacedModelDefinition<
   TReducers = {},
   TEffects = {},
   TSubscriptions = {},
-  TDynamic = boolean
+  TDynamic extends boolean = boolean
 > extends ModelDefinition<
     TState,
     TSelectors,

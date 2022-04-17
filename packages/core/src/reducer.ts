@@ -5,5 +5,3 @@ export type ConvertReducersTypeParams<TReducers> = {
     ? [{ payload: TPayload }]
     : ConvertReducersTypeParams<TReducers[K]>;
 };
-
-// ok
