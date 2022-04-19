@@ -104,7 +104,11 @@ export function createActionHelpers<TModel extends Model>(
   mergeObjects(actionHelpers, obj, (item, key, parent, paths) => {
     parent[key] = new ActionHelperImpl(
       nyaxContext,
-      joinLastString(container.namespace, paths.join("."))
+      joinLastString(
+        container.namespace,
+        paths.join(nyaxContext.options.subModelSeparator ?? "."),
+        nyaxContext.options.namespaceSeparator
+      )
     );
   });
 

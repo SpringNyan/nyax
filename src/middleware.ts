@@ -31,7 +31,8 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
     payloads.forEach((payload) => {
       const namespace = joinLastString(
         payload.modelNamespace,
-        payload.containerKey
+        payload.containerKey,
+        nyaxContext.options.namespaceSeparator
       );
 
       const container = nyaxContext.containerByNamespace.get(namespace);
@@ -99,7 +100,10 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
         reload(action.payload);
       }
 
-      const [namespace, actionName] = splitLastString(action.type);
+      const [namespace, actionName] = splitLastString(
+        action.type,
+        nyaxContext.options.namespaceSeparator
+      );
       let container = nyaxContext.containerByNamespace.get(namespace);
       if (!container) {
         let modelNamespace = namespace;
@@ -107,7 +111,10 @@ export function createMiddleware(nyaxContext: NyaxContext): Middleware {
 
         let model = nyaxContext.modelByModelNamespace.get(modelNamespace);
         if (!model) {
-          [modelNamespace, containerKey] = splitLastString(modelNamespace);
+          [modelNamespace, containerKey] = splitLastString(
+            modelNamespace,
+            nyaxContext.options.namespaceSeparator
+          );
           model = nyaxContext.modelByModelNamespace.get(modelNamespace);
         }
         if (model?.isLazy) {

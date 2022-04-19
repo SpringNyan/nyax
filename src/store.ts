@@ -22,6 +22,9 @@ import { GetState } from "./state";
 export interface NyaxOptions {
   dependencies: unknown;
 
+  namespaceSeparator?: string;
+  subModelSeparator?: string;
+
   createStore?: (params: {
     reducer: Reducer;
     epic: Epic;
