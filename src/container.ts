@@ -100,7 +100,11 @@ export class ContainerImpl<TModel extends Model = Model>
     this.modelContext = modelContext;
 
     this.modelNamespace = this.modelContext.modelNamespace;
-    this.namespace = joinLastString(this.modelNamespace, this.containerKey);
+    this.namespace = joinLastString(
+      this.modelNamespace,
+      this.containerKey,
+      this._nyaxContext.options.namespaceSeparator
+    );
 
     this.modelInstance = this._createModelInstance();
 
@@ -111,8 +115,14 @@ export class ContainerImpl<TModel extends Model = Model>
     this.effects = this.modelInstance.effects() as ExtractModelEffects<TModel>;
     this.epics = this.modelInstance.epics() as ExtractModelEpics<TModel>;
 
-    this.reducerByPath = flattenObject<ModelReducer>(this.reducers);
-    this.effectByPath = flattenObject<ModelEffect>(this.effects);
+    this.reducerByPath = flattenObject<ModelReducer>(
+      this.reducers,
+      this._nyaxContext.options.subModelSeparator
+    );
+    this.effectByPath = flattenObject<ModelEffect>(
+      this.effects,
+      this._nyaxContext.options.subModelSeparator
+    );
   }
 
   public get state(): ExtractModelState<TModel> {

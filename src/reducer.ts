@@ -120,7 +120,10 @@ export function createRootReducer(nyaxContext: NyaxContext): Reducer {
       return reload(rootState, action.payload);
     }
 
-    const [namespace, actionName] = splitLastString(action.type);
+    const [namespace, actionName] = splitLastString(
+      action.type,
+      nyaxContext.options.namespaceSeparator
+    );
 
     const container = nyaxContext.containerByNamespace.get(namespace);
     if (!container?.isRegistered) {

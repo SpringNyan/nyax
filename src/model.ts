@@ -608,7 +608,9 @@ export function registerModels(
   const registerActionPayloads: RegisterActionPayload[] = [];
 
   traverseObject(models, (item, key, parent, paths) => {
-    const modelNamespace = paths.join("/");
+    const modelNamespace = paths.join(
+      nyaxContext.options.namespaceSeparator ?? "/"
+    );
     const model = item as Exclude<typeof item, Models>;
 
     registerModel(nyaxContext, modelNamespace, model);
@@ -622,6 +624,9 @@ export function registerModels(
   return registerActionPayloads;
 }
 
-export function flattenModels(models: Models): Record<string, Model> {
-  return flattenObject(models, "/") as Record<string, Model>;
+export function flattenModels(
+  models: Models,
+  namespaceSeparator = "/"
+): Record<string, Model> {
+  return flattenObject(models, namespaceSeparator) as Record<string, Model>;
 }
