@@ -13,7 +13,7 @@ export interface Store {
   mountModel(model: Model, state?: unknown): void;
   unmountModel(model: Model): void;
   getModelState(model: Model): unknown;
-  getModelComputed(model: Model, getterPath: string, value?: unknown): unknown;
+  getModelGetter(model: Model, getterPath: string, value?: unknown): unknown;
   dispatchModelAction(
     model: Model,
     actionType: string,
@@ -28,11 +28,17 @@ export interface Nyax {
 }
 
 export interface NyaxOptions {
-  createStore(): Store;
+  namespaceSeparator?: string;
+  pathSeparator?: string;
 }
 
-export function createNyax(options: NyaxOptions): Nyax {
-  const nyaxContext = createNyaxContext(options);
+export type CreateStore = (options?: NyaxOptions) => Store;
+
+export function createNyax(
+  createStore: CreateStore,
+  options?: NyaxOptions
+): Nyax {
+  const nyaxContext = createNyaxContext(createStore, options);
   return {
     store: nyaxContext.store,
     getModel: createGetModel(nyaxContext),

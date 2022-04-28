@@ -33,11 +33,11 @@ export function createGetters<TModelDefinition extends ModelDefinition>(
       const getterPath = paths.join(".");
       if (typeof item === "function" && item.length === 1) {
         target[k] = function (value: unknown) {
-          return store.getModelComputed(model, getterPath, value);
+          return store.getModelGetter(model, getterPath, value);
         };
       } else {
         defineGetter(target, k, function () {
-          return store.getModelComputed(model, getterPath);
+          return store.getModelGetter(model, getterPath);
         });
       }
     }

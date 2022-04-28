@@ -1,6 +1,6 @@
 import { Model } from "./model";
 import { NamespacedModelDefinition } from "./modelDefinition";
-import { NyaxOptions, Store } from "./store";
+import { CreateStore, NyaxOptions, Store } from "./store";
 
 export interface NyaxContext {
   options: NyaxOptions;
@@ -20,11 +20,14 @@ export interface NamespaceContext {
   modelByKey: Map<string | undefined, Model>;
 }
 
-export function createNyaxContext(options: NyaxOptions): NyaxContext {
+export function createNyaxContext(
+  createStore: CreateStore,
+  options?: NyaxOptions
+): NyaxContext {
   const nyaxContext: NyaxContext = {
-    options,
+    options: options ?? {},
 
-    store: options.createStore(),
+    store: createStore(options),
 
     namespaceContextMap: new Map(),
     getNamespaceContext(modelDefinitionOrNamespace) {
