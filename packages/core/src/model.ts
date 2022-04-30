@@ -1,4 +1,10 @@
-import { createActionHelpers } from "./action";
+import {
+  createActionHelpers,
+  MountActionPayload,
+  MountActionType,
+  UnmountActionPayload,
+  UnmountActionType,
+} from "./action";
 import { NyaxContext } from "./context";
 import {
   ConvertModelDefinitionActionHelpers,
@@ -8,7 +14,7 @@ import {
   NamespacedModelDefinition,
 } from "./modelDefinition";
 import { createGetters } from "./selector";
-import { Store } from "./store";
+import { concatLastString } from "./util";
 
 export interface ModelBase<TState = {}, TGetters = {}, TActionHelpers = {}> {
   state: TState;
@@ -27,6 +33,7 @@ export interface Model<
 
   namespace: string;
   key: string | undefined;
+  fullNamespace: string;
 
   isMounted: boolean;
 
@@ -62,53 +69,62 @@ export interface GetModel {
     : Model<TModelDefinition>;
 }
 
-export function createModel<TModelDefinition extends ModelDefinition>(
-  store: Store,
-  modelDefinition: TModelDefinition,
+export function createModel(
+  nyaxContext: NyaxContext,
+  modelDefinition: NamespacedModelDefinition,
   namespace: string,
   key: string | undefined
-): Model<TModelDefinition> {
-  let initialState: unknown;
-
+): Model {
   const model: Model = {
     get state() {
-      let state = store.getModelState(this);
-      if (state === undefined) {
-        if (initialState === undefined) {
-          initialState = modelDefinition.state();
-        }
-        state = initialState;
-      }
-      // TODO
-      return state as {};
+      return nyaxContext.store.getModelState(this.namespace, this.key) as {};
     },
     get getters() {
       delete (this as Partial<Model>).getters;
-      return (this.getters = createGetters(store, this));
+      return (this.getters = createGetters(nyaxContext, this));
     },
     get actions() {
       delete (this as Partial<Model>).actions;
-      return (this.actions = createActionHelpers(store, this));
+      return (this.actions = createActionHelpers(nyaxContext, this));
     },
 
     modelDefinition,
 
     namespace,
     key,
+    fullNamespace: concatLastString(
+      namespace,
+      key,
+      nyaxContext.options.namespaceSeparator
+    ),
 
     get isMounted() {
-      return store.getModelState(this) !== undefined;
+      return nyaxContext
+        .getNamespaceContext(modelDefinition)
+        .modelByKey.has(key);
     },
 
     mount(state) {
-      store.mountModel(this, state);
+      const payload: MountActionPayload = state !== undefined ? { state } : {};
+      nyaxContext.store.dispatchModelAction(
+        this.namespace,
+        this.key,
+        MountActionType,
+        payload
+      );
     },
     unmount() {
-      store.unmountModel(this);
+      const payload: UnmountActionPayload = {};
+      nyaxContext.store.dispatchModelAction(
+        this.namespace,
+        this.key,
+        UnmountActionType,
+        payload
+      );
     },
   };
 
-  return model as Model<TModelDefinition>;
+  return model;
 }
 
 export function createGetModel(nyaxContext: NyaxContext): GetModel {
@@ -132,7 +148,7 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     let model = namespaceContext.modelByKey.get(key);
     if (!model) {
       model = createModel(
-        nyaxContext.store,
+        nyaxContext,
         modelDefinition,
         namespaceContext.namespace,
         key

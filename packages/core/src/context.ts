@@ -1,5 +1,6 @@
-import { Model } from "./model";
+import { createGetModel, GetModel, Model } from "./model";
 import { NamespacedModelDefinition } from "./modelDefinition";
+import { createGetState, GetState } from "./state";
 import { CreateStore, NyaxOptions, Store } from "./store";
 
 export interface NyaxContext {
@@ -7,10 +8,13 @@ export interface NyaxContext {
 
   store: Store;
 
-  namespaceContextMap: Map<string, NamespaceContext>;
+  contextByNamespace: Map<string, NamespaceContext>;
   getNamespaceContext(
     modelDefinitionOrNamespace: NamespacedModelDefinition | string
   ): NamespaceContext;
+
+  getModel: GetModel;
+  getState: GetState;
 }
 
 export interface NamespaceContext {
@@ -22,21 +26,38 @@ export interface NamespaceContext {
 
 export function createNyaxContext(
   createStore: CreateStore,
-  options?: NyaxOptions
+  options: NyaxOptions
 ): NyaxContext {
   const nyaxContext: NyaxContext = {
-    options: options ?? {},
+    options,
 
-    store: createStore(options),
+    store: createStore(
+      {
+        getModel(namespace, key) {
+          return nyaxContext.getModel(namespace, key as any);
+        },
+        mountModel(model) {
+          nyaxContext
+            .getNamespaceContext(model.namespace)
+            .modelByKey.set(model.key, model);
+        },
+        unmountModel(model) {
+          nyaxContext
+            .getNamespaceContext(model.namespace)
+            .modelByKey.delete(model.key);
+        },
+      },
+      options
+    ),
 
-    namespaceContextMap: new Map(),
+    contextByNamespace: new Map(),
     getNamespaceContext(modelDefinitionOrNamespace) {
       const namespace =
         typeof modelDefinitionOrNamespace === "string"
           ? modelDefinitionOrNamespace
           : modelDefinitionOrNamespace.namespace;
 
-      let namespaceContext = this.namespaceContextMap.get(namespace);
+      let namespaceContext = this.contextByNamespace.get(namespace);
       if (!namespaceContext) {
         if (typeof modelDefinitionOrNamespace === "string") {
           throw new Error("Model definition is not registered.");
@@ -47,10 +68,19 @@ export function createNyaxContext(
 
           modelByKey: new Map(),
         };
-        this.namespaceContextMap.set(namespace, namespaceContext);
+        this.contextByNamespace.set(namespace, namespaceContext);
       }
 
       return namespaceContext;
+    },
+
+    get getModel() {
+      delete (this as Partial<NyaxContext>).getModel;
+      return (this.getModel = createGetModel(this));
+    },
+    get getState() {
+      delete (this as Partial<NyaxContext>).getState;
+      return (this.getState = createGetState(this));
     },
   };
 

@@ -1,7 +1,7 @@
 import { Action } from "./action";
 import { createNyaxContext } from "./context";
-import { createGetModel, GetModel, Model } from "./model";
-import { createGetState, GetState } from "./state";
+import { GetModel, Model } from "./model";
+import { GetState } from "./state";
 
 export interface Store {
   getState(): Record<string, unknown>;
@@ -10,12 +10,16 @@ export interface Store {
 
   subscribeAction(fn: (action: Action) => void): () => void;
 
-  mountModel(model: Model, state?: unknown): void;
-  unmountModel(model: Model): void;
-  getModelState(model: Model): unknown;
-  getModelGetter(model: Model, getterPath: string, value?: unknown): unknown;
+  getModelState(namespace: string, key: string | undefined): unknown;
+  getModelGetter(
+    namespace: string,
+    key: string | undefined,
+    getterPath: string,
+    value?: unknown
+  ): unknown;
   dispatchModelAction(
-    model: Model,
+    namespace: string,
+    key: string | undefined,
     actionType: string,
     payload: unknown
   ): unknown;
@@ -32,16 +36,28 @@ export interface NyaxOptions {
   pathSeparator?: string;
 }
 
-export type CreateStore = (options?: NyaxOptions) => Store;
+export type CreateStore = (
+  context: {
+    getModel(namespace: string, key: string | undefined): Model;
+    mountModel(model: Model): void;
+    unmountModel(model: Model): void;
+  },
+  options: NyaxOptions
+) => Store;
 
 export function createNyax(
   createStore: CreateStore,
   options?: NyaxOptions
 ): Nyax {
+  options = {
+    namespaceSeparator: options?.namespaceSeparator ?? "/",
+    pathSeparator: options?.pathSeparator ?? ".",
+  };
+
   const nyaxContext = createNyaxContext(createStore, options);
   return {
     store: nyaxContext.store,
-    getModel: createGetModel(nyaxContext),
-    getState: createGetState(nyaxContext),
+    getModel: nyaxContext.getModel,
+    getState: nyaxContext.getState,
   };
 }

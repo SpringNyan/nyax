@@ -87,6 +87,7 @@ interface DefineModelContext<
 
   namespace: string;
   key: string | undefined;
+  fullNamespace: string;
 
   isMounted: boolean;
 

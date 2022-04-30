@@ -1,3 +1,4 @@
+import { NyaxContext } from "./context";
 import { ConvertEffectsTypeParams } from "./effect";
 import { Model } from "./model";
 import {
@@ -5,7 +6,6 @@ import {
   ModelDefinition,
 } from "./modelDefinition";
 import { ConvertReducersTypeParams } from "./reducer";
-import { Store } from "./store";
 import { concatLastString, defineGetter, mergeObjects } from "./util";
 
 export interface Action<TPayload = unknown> {
@@ -65,23 +65,29 @@ actionHelperPrototype.dispatch = function (payload) {
 };
 
 export function createActionHelper<TPayload, TResult>(
-  store: Store,
+  nyaxContext: NyaxContext,
   model: Model,
   actionType: string
 ): ActionHelper<TPayload, TResult> {
   const actionHelper = function (payload: TPayload) {
-    return store.dispatchModelAction(model, actionType, payload) as TResult;
+    return nyaxContext.store.dispatchModelAction(
+      model.namespace,
+      model.key,
+      actionType,
+      payload
+    ) as TResult;
   } as ActionHelper<TPayload, TResult>;
   actionHelper.type = concatLastString(
-    concatLastString(model.namespace, model.key),
-    actionType
+    model.fullNamespace,
+    actionType,
+    nyaxContext.options.namespaceSeparator
   );
   Object.setPrototypeOf(actionHelper, actionHelperPrototype);
   return actionHelper;
 }
 
 export function createActionHelpers<TModelDefinition extends ModelDefinition>(
-  store: Store,
+  nyaxContext: NyaxContext,
   model: Model
 ): ConvertModelDefinitionActionHelpers<TModelDefinition> {
   const actionHelpers =
@@ -94,10 +100,10 @@ export function createActionHelpers<TModelDefinition extends ModelDefinition>(
     paths: readonly string[]
   ) {
     if (!(k in target)) {
-      const actionType = paths.join(".");
+      const actionType = paths.join(nyaxContext.options.pathSeparator);
       defineGetter(target, k, function () {
         delete target[k];
-        return (target[k] = createActionHelper(store, model, actionType));
+        return (target[k] = createActionHelper(nyaxContext, model, actionType));
       });
     }
   }
