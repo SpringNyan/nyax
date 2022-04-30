@@ -1,4 +1,10 @@
-export type { Action, ActionHelper } from "./action";
+export { MountActionType, UnmountActionType } from "./action";
+export type {
+  Action,
+  ActionHelper,
+  MountActionPayload,
+  UnmountActionPayload,
+} from "./action";
 export type { Effect } from "./effect";
 export { createSubModel } from "./model";
 export type { GetModel, Model, ModelBase } from "./model";
@@ -22,6 +28,6 @@ export type {
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
 export { createNyax } from "./store";
-export type { Nyax, NyaxOptions, Store } from "./store";
+export type { CreateStore, Nyax, NyaxOptions, Store } from "./store";
 export type { Subscription } from "./subscription";
 export * as utils from "./util";

@@ -13,6 +13,14 @@ export interface Action<TPayload = unknown> {
   payload: TPayload;
 }
 
+export const MountActionType = "@@mount";
+export interface MountActionPayload {
+  state?: unknown;
+}
+
+export const UnmountActionType = "@@unmount";
+export interface UnmountActionPayload {}
+
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   (payload: TPayload): TResult;
 
