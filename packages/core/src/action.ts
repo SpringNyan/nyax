@@ -13,13 +13,22 @@ export interface Action<TPayload = unknown> {
   payload: TPayload;
 }
 
-export const MountActionType = "@@mount";
-export interface MountActionPayload {
+export const ModelMountActionType = "@@mount";
+export interface ModelMountActionPayload {
   state?: unknown;
 }
 
-export const UnmountActionType = "@@unmount";
-export interface UnmountActionPayload {}
+export const ModelUnmountActionType = "@@unmount";
+export interface ModelUnmountActionPayload {}
+
+export const ModelSetActionType = "@@set";
+
+export const ModelPatchActionType = "@@patch";
+
+export const ReloadActionType = "@@nyax/reload";
+export interface ReloadActionPayload {
+  state?: unknown;
+}
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   (payload: TPayload): TResult;

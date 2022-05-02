@@ -1,9 +1,9 @@
 import {
   createActionHelpers,
-  MountActionPayload,
-  MountActionType,
-  UnmountActionPayload,
-  UnmountActionType,
+  ModelMountActionPayload,
+  ModelMountActionType,
+  ModelUnmountActionPayload,
+  ModelUnmountActionType,
 } from "./action";
 import { NyaxContext } from "./context";
 import {
@@ -71,7 +71,6 @@ export interface GetModel {
 
 export function createModel(
   nyaxContext: NyaxContext,
-  modelDefinition: NamespacedModelDefinition,
   namespace: string,
   key: string | undefined
 ): Model {
@@ -88,7 +87,9 @@ export function createModel(
       return (this.actions = createActionHelpers(nyaxContext, this));
     },
 
-    modelDefinition,
+    get modelDefinition() {
+      return nyaxContext.getNamespaceContext(namespace).modelDefinition;
+    },
 
     namespace,
     key,
@@ -99,26 +100,25 @@ export function createModel(
     ),
 
     get isMounted() {
-      return nyaxContext
-        .getNamespaceContext(modelDefinition)
-        .modelByKey.has(key);
+      return nyaxContext.getState(namespace, key as any) !== undefined;
     },
 
     mount(state) {
-      const payload: MountActionPayload = state !== undefined ? { state } : {};
+      const payload: ModelMountActionPayload =
+        state !== undefined ? { state } : {};
       nyaxContext.store.dispatchModelAction(
         this.namespace,
         this.key,
-        MountActionType,
+        ModelMountActionType,
         payload
       );
     },
     unmount() {
-      const payload: UnmountActionPayload = {};
+      const payload: ModelUnmountActionPayload = {};
       nyaxContext.store.dispatchModelAction(
         this.namespace,
         this.key,
-        UnmountActionType,
+        ModelUnmountActionType,
         payload
       );
     },
@@ -147,12 +147,9 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
 
     let model = namespaceContext.modelByKey.get(key);
     if (!model) {
-      model = createModel(
-        nyaxContext,
-        modelDefinition,
-        namespaceContext.namespace,
-        key
-      );
+      model = createModel(nyaxContext, namespaceContext.namespace, key);
+      namespaceContext.modelByKey.set(key, model);
+      // TODO: auto delete unmounted model.
     }
 
     return model;

@@ -1,9 +1,16 @@
-export { MountActionType, UnmountActionType } from "./action";
+export {
+  ModelMountActionType,
+  ModelPatchActionType,
+  ModelSetActionType,
+  ModelUnmountActionType,
+  ReloadActionType,
+} from "./action";
 export type {
   Action,
   ActionHelper,
-  MountActionPayload,
-  UnmountActionPayload,
+  ModelMountActionPayload,
+  ModelUnmountActionPayload,
+  ReloadActionPayload,
 } from "./action";
 export type { Effect } from "./effect";
 export { createSubModel } from "./model";
