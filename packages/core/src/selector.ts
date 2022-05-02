@@ -33,20 +33,11 @@ export function createGetters<TModelDefinition extends ModelDefinition>(
       const getterPath = paths.join(nyaxContext.options.pathSeparator);
       if (typeof item === "function" && item.length === 1) {
         target[k] = function (value: unknown) {
-          return nyaxContext.store.getModelGetter(
-            model.namespace,
-            model.key,
-            getterPath,
-            value
-          );
+          return nyaxContext.store.getModelGetter(model, getterPath, value);
         };
       } else {
         defineGetter(target, k, function () {
-          return nyaxContext.store.getModelGetter(
-            model.namespace,
-            model.key,
-            getterPath
-          );
+          return nyaxContext.store.getModelGetter(model, getterPath);
         });
       }
     }

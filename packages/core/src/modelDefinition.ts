@@ -1,4 +1,15 @@
-import { ConvertActionHelpers } from "./action";
+import {
+  ActionHelper,
+  ConvertActionHelpers,
+  ModelMountActionPayload,
+  ModelMountActionType,
+  ModelPatchActionPayload,
+  ModelPatchActionType,
+  ModelSetActionPayload,
+  ModelSetActionType,
+  ModelUnmountActionPayload,
+  ModelUnmountActionType,
+} from "./action";
 import { GetModel } from "./model";
 import { ConvertGetters } from "./selector";
 import { Nyax } from "./store";
@@ -73,9 +84,20 @@ export type ConvertModelDefinitionActionHelpers<
 > = ConvertActionHelpers<
   ExtractModelDefinitionReducers<TModelDefinition>,
   ExtractModelDefinitionEffects<TModelDefinition>
->;
+> & {
+  [ModelMountActionType]: ActionHelper<
+    ModelMountActionPayload<ConvertModelDefinitionState<TModelDefinition>>
+  >;
+  [ModelUnmountActionType]: ActionHelper<ModelUnmountActionPayload>;
+  [ModelSetActionType]: ActionHelper<
+    ModelSetActionPayload<ConvertModelDefinitionState<TModelDefinition>>
+  >;
+  [ModelPatchActionType]: ActionHelper<
+    ModelPatchActionPayload<ConvertModelDefinitionState<TModelDefinition>>
+  >;
+};
 
-interface DefineModelContext<
+export interface DefineModelContext<
   TState = {},
   TSelectors = {},
   TReducers = {},

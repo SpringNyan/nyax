@@ -13,21 +13,23 @@ export interface Action<TPayload = unknown> {
   payload: TPayload;
 }
 
-export const ModelMountActionType = "@@mount";
-export interface ModelMountActionPayload {
-  state?: unknown;
-}
+export const ModelMountActionType = "$mount";
+export type ModelMountActionPayload<TState = {}> = {
+  state?: TState;
+};
 
-export const ModelUnmountActionType = "@@unmount";
-export interface ModelUnmountActionPayload {}
+export const ModelUnmountActionType = "$unmount";
+export type ModelUnmountActionPayload = {};
 
-export const ModelSetActionType = "@@set";
+export const ModelSetActionType = "$set";
+export type ModelSetActionPayload<TState = {}> = TState;
 
-export const ModelPatchActionType = "@@patch";
+export const ModelPatchActionType = "$patch";
+export type ModelPatchActionPayload<TState = {}> = Partial<TState>;
 
 export const ReloadActionType = "@@nyax/reload";
 export interface ReloadActionPayload {
-  state?: unknown;
+  state?: Record<string, unknown>;
 }
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
@@ -37,10 +39,6 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   is(action: unknown): action is Action<TPayload>;
   create(payload: TPayload): Action<TPayload>;
   dispatch(payload: TPayload): TResult;
-}
-
-export interface ActionHelpers {
-  [key: string]: ActionHelper | ActionHelpers;
 }
 
 type ConvertTypeParamsActionHelpers<TTypeParams> = {
@@ -80,8 +78,7 @@ export function createActionHelper<TPayload, TResult>(
 ): ActionHelper<TPayload, TResult> {
   const actionHelper = function (payload: TPayload) {
     return nyaxContext.store.dispatchModelAction(
-      model.namespace,
-      model.key,
+      model,
       actionType,
       payload
     ) as TResult;
@@ -95,6 +92,20 @@ export function createActionHelper<TPayload, TResult>(
   return actionHelper;
 }
 
+const mockModelBuildInActions = {
+  [ModelMountActionType]: function () {
+    return;
+  },
+  [ModelUnmountActionType]: function () {
+    return;
+  },
+  [ModelSetActionType]: function () {
+    return;
+  },
+  [ModelPatchActionType]: function () {
+    return;
+  },
+};
 export function createActionHelpers<TModelDefinition extends ModelDefinition>(
   nyaxContext: NyaxContext,
   model: Model
@@ -119,6 +130,7 @@ export function createActionHelpers<TModelDefinition extends ModelDefinition>(
 
   mergeObjects(actionHelpers, model.modelDefinition.reducers, handle);
   mergeObjects(actionHelpers, model.modelDefinition.effects, handle);
+  mergeObjects(actionHelpers, mockModelBuildInActions, handle);
 
   return actionHelpers;
 }

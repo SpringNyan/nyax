@@ -1,14 +1,15 @@
 import { createGetModel, GetModel, Model } from "./model";
 import { NamespacedModelDefinition } from "./modelDefinition";
 import { createGetState, GetState } from "./state";
-import { CreateStore, NyaxOptions, Store } from "./store";
+import { CreateStore, Nyax, NyaxOptions, Store } from "./store";
 
 export interface NyaxContext {
+  nyax: Nyax;
   options: NyaxOptions;
 
   store: Store;
 
-  contextByNamespace: Map<string, NamespaceContext>;
+  namespaceContextByNamespace: Map<string, NamespaceContext>;
   getNamespaceContext(
     modelDefinitionOrNamespace: NamespacedModelDefinition | string
   ): NamespaceContext;
@@ -29,6 +30,8 @@ export function createNyaxContext(
   options: NyaxOptions
 ): NyaxContext {
   const nyaxContext: NyaxContext = {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    nyax: undefined!,
     options,
 
     store: createStore(
@@ -50,14 +53,14 @@ export function createNyaxContext(
       options
     ),
 
-    contextByNamespace: new Map(),
+    namespaceContextByNamespace: new Map(),
     getNamespaceContext(modelDefinitionOrNamespace) {
       const namespace =
         typeof modelDefinitionOrNamespace === "string"
           ? modelDefinitionOrNamespace
           : modelDefinitionOrNamespace.namespace;
 
-      let namespaceContext = this.contextByNamespace.get(namespace);
+      let namespaceContext = this.namespaceContextByNamespace.get(namespace);
       if (!namespaceContext) {
         if (typeof modelDefinitionOrNamespace === "string") {
           throw new Error("Model definition is not registered.");
@@ -68,7 +71,7 @@ export function createNyaxContext(
 
           modelByKey: new Map(),
         };
-        this.contextByNamespace.set(namespace, namespaceContext);
+        this.namespaceContextByNamespace.set(namespace, namespaceContext);
       }
 
       return namespaceContext;

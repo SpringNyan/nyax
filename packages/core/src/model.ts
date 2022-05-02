@@ -10,6 +10,7 @@ import {
   ConvertModelDefinitionActionHelpers,
   ConvertModelDefinitionGetters,
   ConvertModelDefinitionState,
+  DefineModelContext,
   ModelDefinition,
   NamespacedModelDefinition,
 } from "./modelDefinition";
@@ -74,9 +75,9 @@ export function createModel(
   namespace: string,
   key: string | undefined
 ): Model {
-  const model: Model = {
+  const model: Model & DefineModelContext = {
     get state() {
-      return nyaxContext.store.getModelState(this.namespace, this.key) as {};
+      return nyaxContext.store.getModelState(this) as {};
     },
     get getters() {
       delete (this as Partial<Model>).getters;
@@ -107,8 +108,7 @@ export function createModel(
       const payload: ModelMountActionPayload =
         state !== undefined ? { state } : {};
       nyaxContext.store.dispatchModelAction(
-        this.namespace,
-        this.key,
+        this,
         ModelMountActionType,
         payload
       );
@@ -116,12 +116,14 @@ export function createModel(
     unmount() {
       const payload: ModelUnmountActionPayload = {};
       nyaxContext.store.dispatchModelAction(
-        this.namespace,
-        this.key,
+        this,
         ModelUnmountActionType,
         payload
       );
     },
+
+    getModel: nyaxContext.getModel,
+    nyax: nyaxContext.nyax,
   };
 
   return model;
@@ -148,8 +150,6 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     let model = namespaceContext.modelByKey.get(key);
     if (!model) {
       model = createModel(nyaxContext, namespaceContext.namespace, key);
-      namespaceContext.modelByKey.set(key, model);
-      // TODO: auto delete unmounted model.
     }
 
     return model;

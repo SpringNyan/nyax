@@ -9,6 +9,8 @@ export type {
   Action,
   ActionHelper,
   ModelMountActionPayload,
+  ModelPatchActionPayload,
+  ModelSetActionPayload,
   ModelUnmountActionPayload,
   ReloadActionPayload,
 } from "./action";

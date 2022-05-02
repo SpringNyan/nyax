@@ -1,4 +1,4 @@
-import { Action } from "./action";
+import { Action, ReloadActionPayload, ReloadActionType } from "./action";
 import { createNyaxContext } from "./context";
 import { GetModel, Model } from "./model";
 import { GetState } from "./state";
@@ -10,16 +10,10 @@ export interface Store {
 
   subscribeAction(fn: (action: Action) => void): () => void;
 
-  getModelState(namespace: string, key: string | undefined): unknown;
-  getModelGetter(
-    namespace: string,
-    key: string | undefined,
-    getterPath: string,
-    value?: unknown
-  ): unknown;
+  getModelState(model: Model): unknown;
+  getModelGetter(model: Model, getterPath: string, value?: unknown): unknown;
   dispatchModelAction(
-    namespace: string,
-    key: string | undefined,
+    model: Model,
     actionType: string,
     payload: unknown
   ): unknown;
@@ -29,6 +23,7 @@ export interface Nyax {
   store: Store;
   getModel: GetModel;
   getState: GetState;
+  reload: (state?: Record<string, unknown>) => void;
 }
 
 export interface NyaxOptions {
@@ -55,9 +50,17 @@ export function createNyax(
   };
 
   const nyaxContext = createNyaxContext(createStore, options);
-  return {
+  nyaxContext.nyax = {
     store: nyaxContext.store,
     getModel: nyaxContext.getModel,
     getState: nyaxContext.getState,
+    reload(state) {
+      const payload: ReloadActionPayload = state !== undefined ? { state } : {};
+      this.store.dispatch({
+        type: ReloadActionType,
+        payload,
+      });
+    },
   };
+  return nyaxContext.nyax;
 }
