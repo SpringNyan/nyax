@@ -1,6 +1,7 @@
 import { Action, ReloadActionPayload, ReloadActionType } from "./action";
 import { createNyaxContext } from "./context";
 import { GetModel, Model } from "./model";
+import { ModelDefinition, NamespacedModelDefinition } from "./modelDefinition";
 import { GetState } from "./state";
 
 export interface Store {
@@ -23,7 +24,8 @@ export interface Nyax {
   store: Store;
   getModel: GetModel;
   getState: GetState;
-  reload: (state?: Record<string, unknown>) => void;
+  reload(state?: Record<string, unknown>): void;
+  registerModelDefinitions(modelDefinitions: NamespacedModelDefinition[]): void;
 }
 
 export interface NyaxOptions {
@@ -33,6 +35,7 @@ export interface NyaxOptions {
 
 export type CreateStore = (
   context: {
+    getModelDefinition(namespace: string): ModelDefinition | null;
     getModel(namespace: string, key: string | undefined): Model;
     mountModel(model: Model): void;
     unmountModel(model: Model): void;
@@ -59,6 +62,11 @@ export function createNyax(
       this.store.dispatch({
         type: ReloadActionType,
         payload,
+      });
+    },
+    registerModelDefinitions(modelDefinitions) {
+      modelDefinitions.forEach((modelDefinition) => {
+        nyaxContext.getNamespaceContext(modelDefinition);
       });
     },
   };

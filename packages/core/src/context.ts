@@ -36,6 +36,9 @@ export function createNyaxContext(
 
     store: createStore(
       {
+        getModelDefinition(namespace) {
+          return nyaxContext.getNamespaceContext(namespace).modelDefinition;
+        },
         getModel(namespace, key) {
           return nyaxContext.getModel(namespace, key as any);
         },

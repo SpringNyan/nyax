@@ -101,7 +101,8 @@ export function createModel(
     ),
 
     get isMounted() {
-      return nyaxContext.getState(namespace, key as any) !== undefined;
+      // return nyaxContext.getState(namespace, key as any) !== undefined;
+      return nyaxContext.getNamespaceContext(namespace).modelByKey.has(key);
     },
 
     mount(state) {
