@@ -32,7 +32,7 @@ export type {
   ExtractModelDefinitionState,
   ExtractModelDefinitionSubscriptions,
   ModelDefinition,
-  NamespacedModelDefinition,
+  ModelDefinitionBase,
 } from "./modelDefinition";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";

@@ -2,7 +2,7 @@ import { NyaxContext } from "./context";
 import { Model } from "./model";
 import {
   ConvertModelDefinitionGetters,
-  ModelDefinition,
+  ModelDefinitionBase,
 } from "./modelDefinition";
 import { defineGetter, mergeObjects } from "./util";
 
@@ -20,7 +20,7 @@ export type ConvertGetters<TSelectors> = {
     : ConvertGetters<TSelectors[K]>;
 };
 
-export function createGetters<TModelDefinition extends ModelDefinition>(
+export function createGetters<TModelDefinition extends ModelDefinitionBase>(
   nyaxContext: NyaxContext,
   model: Model
 ): ConvertModelDefinitionGetters<TModelDefinition> {

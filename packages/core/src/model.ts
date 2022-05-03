@@ -12,7 +12,6 @@ import {
   ConvertModelDefinitionState,
   DefineModelContext,
   ModelDefinition,
-  NamespacedModelDefinition,
 } from "./modelDefinition";
 import { createGetters } from "./selector";
 import { concatLastString } from "./util";
@@ -45,27 +44,13 @@ export interface Model<
 export interface GetModel {
   <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string
-  ): TModelDefinition extends NamespacedModelDefinition<
-    any,
-    any,
-    any,
-    any,
-    any,
-    true
-  >
+  ): TModelDefinition extends ModelDefinition<any, any, any, any, any, true>
     ? never
     : Model<TModelDefinition>;
   <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string,
     key: string
-  ): TModelDefinition extends NamespacedModelDefinition<
-    any,
-    any,
-    any,
-    any,
-    any,
-    false
-  >
+  ): TModelDefinition extends ModelDefinition<any, any, any, any, any, false>
     ? never
     : Model<TModelDefinition>;
 }
@@ -132,7 +117,7 @@ export function createModel(
 
 export function createGetModel(nyaxContext: NyaxContext): GetModel {
   return function (
-    modelDefinitionOrNamespace: NamespacedModelDefinition | string,
+    modelDefinitionOrNamespace: ModelDefinition | string,
     key?: string
   ): Model {
     const namespaceContext = nyaxContext.getNamespaceContext(

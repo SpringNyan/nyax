@@ -15,7 +15,7 @@ import { ConvertGetters } from "./selector";
 import { Nyax } from "./store";
 import { asType, mergeObjects } from "./util";
 
-export interface ModelDefinition<
+export interface ModelDefinitionBase<
   TState = {},
   TSelectors = {},
   TReducers = {},
@@ -29,14 +29,14 @@ export interface ModelDefinition<
   subscriptions: TSubscriptions;
 }
 
-export interface NamespacedModelDefinition<
+export interface ModelDefinition<
   TState = {},
   TSelectors = {},
   TReducers = {},
   TEffects = {},
   TSubscriptions = {},
   TDynamic extends boolean = boolean
-> extends ModelDefinition<
+> extends ModelDefinitionBase<
     TState,
     TSelectors,
     TReducers,
@@ -48,39 +48,39 @@ export interface NamespacedModelDefinition<
 }
 
 export type ExtractModelDefinitionState<
-  TModelDefinition extends ModelDefinition
-> = TModelDefinition extends ModelDefinition<infer T, any, any, any, any>
+  TModelDefinition extends ModelDefinitionBase
+> = TModelDefinition extends ModelDefinitionBase<infer T, any, any, any, any>
   ? T
   : never;
 export type ExtractModelDefinitionSelectors<
-  TModelDefinition extends ModelDefinition
-> = TModelDefinition extends ModelDefinition<any, infer T, any, any, any>
+  TModelDefinition extends ModelDefinitionBase
+> = TModelDefinition extends ModelDefinitionBase<any, infer T, any, any, any>
   ? T
   : never;
 export type ExtractModelDefinitionReducers<
-  TModelDefinition extends ModelDefinition
-> = TModelDefinition extends ModelDefinition<any, any, infer T, any, any>
+  TModelDefinition extends ModelDefinitionBase
+> = TModelDefinition extends ModelDefinitionBase<any, any, infer T, any, any>
   ? T
   : never;
 export type ExtractModelDefinitionEffects<
-  TModelDefinition extends ModelDefinition
-> = TModelDefinition extends ModelDefinition<any, any, any, infer T, any>
+  TModelDefinition extends ModelDefinitionBase
+> = TModelDefinition extends ModelDefinitionBase<any, any, any, infer T, any>
   ? T
   : never;
 export type ExtractModelDefinitionSubscriptions<
-  TModelDefinition extends ModelDefinition
-> = TModelDefinition extends ModelDefinition<any, any, any, any, infer T>
+  TModelDefinition extends ModelDefinitionBase
+> = TModelDefinition extends ModelDefinitionBase<any, any, any, any, infer T>
   ? T
   : never;
 
 export type ConvertModelDefinitionState<
-  TModelDefinition extends ModelDefinition
+  TModelDefinition extends ModelDefinitionBase
 > = ExtractModelDefinitionState<TModelDefinition>;
 export type ConvertModelDefinitionGetters<
-  TModelDefinition extends ModelDefinition
+  TModelDefinition extends ModelDefinitionBase
 > = ConvertGetters<ExtractModelDefinitionSelectors<TModelDefinition>>;
 export type ConvertModelDefinitionActionHelpers<
-  TModelDefinition extends ModelDefinition
+  TModelDefinition extends ModelDefinitionBase
 > = ConvertActionHelpers<
   ExtractModelDefinitionReducers<TModelDefinition>,
   ExtractModelDefinitionEffects<TModelDefinition>
@@ -132,7 +132,7 @@ type CreateModelDefinitionOptions<
 } & ThisType<DefineModelContext<TState, TSelectors, TReducers, TEffects>>;
 
 type ExtendModelDefinitionOptions<
-  TBaseModelDefinition extends ModelDefinition = ModelDefinition,
+  TBaseModelDefinition extends ModelDefinitionBase = ModelDefinitionBase,
   TState = {},
   TSelectors = {},
   TReducers = {},
@@ -167,7 +167,7 @@ export function createModelDefinition<
     TEffects,
     TSubscriptions
   >
-): ModelDefinition<TState, TSelectors, TReducers, TEffects, TSubscriptions>;
+): ModelDefinitionBase<TState, TSelectors, TReducers, TEffects, TSubscriptions>;
 export function createModelDefinition<
   TState = {},
   TSelectors = {},
@@ -185,14 +185,21 @@ export function createModelDefinition<
     TSubscriptions
   >,
   isDynamic?: TDynamic
-): ModelDefinition<TState, TSelectors, TReducers, TEffects, TSubscriptions>;
-export function createModelDefinition(...args: unknown[]): ModelDefinition {
+): ModelDefinition<
+  TState,
+  TSelectors,
+  TReducers,
+  TEffects,
+  TSubscriptions,
+  TDynamic
+>;
+export function createModelDefinition(...args: unknown[]): ModelDefinitionBase {
   const hasNamespace = typeof args[0] === "string";
 
   const options = (
     hasNamespace ? args[1] : args[0]
   ) as CreateModelDefinitionOptions;
-  const modelDefinition: ModelDefinition = {
+  const modelDefinition: ModelDefinitionBase = {
     state: options.state,
     selectors: options.selectors ?? {},
     reducers: options.reducers ?? {},
@@ -201,7 +208,7 @@ export function createModelDefinition(...args: unknown[]): ModelDefinition {
   };
 
   if (hasNamespace) {
-    asType<NamespacedModelDefinition>(modelDefinition);
+    asType<ModelDefinition>(modelDefinition);
     modelDefinition.namespace = args[0] as string;
     modelDefinition.isDynamic = (args[2] ?? false) as boolean;
   }
@@ -210,9 +217,9 @@ export function createModelDefinition(...args: unknown[]): ModelDefinition {
 }
 
 export function extendModelDefinition<
-  TBaseModelDefinition extends ModelDefinition<
+  TBaseModelDefinition extends ModelDefinitionBase<
     Record<string, unknown>
-  > = ModelDefinition,
+  > = ModelDefinitionBase,
   TState extends Record<string, unknown> = {},
   TSelectors = {},
   TReducers = {},
@@ -228,14 +235,14 @@ export function extendModelDefinition<
     TEffects,
     TSubscriptions
   >
-): ModelDefinition<
+): ModelDefinitionBase<
   ExtractModelDefinitionState<TBaseModelDefinition> & TState,
   ExtractModelDefinitionSelectors<TBaseModelDefinition> & TSelectors,
   ExtractModelDefinitionReducers<TBaseModelDefinition> & TReducers,
   ExtractModelDefinitionEffects<TBaseModelDefinition> & TEffects,
   ExtractModelDefinitionSubscriptions<TBaseModelDefinition> & TSubscriptions
 > {
-  const modelDefinition: ModelDefinition = {
+  const modelDefinition: ModelDefinitionBase = {
     state() {
       return {
         ...baseModelDefinition.state.call(this),
@@ -307,11 +314,11 @@ function convertSubModelDefinitionProperty(
 
 export function mergeModelDefinitions<
   TModelDefinitions extends
-    | ModelDefinition<Record<string, unknown>>[]
-    | [ModelDefinition<Record<string, unknown>>]
+    | ModelDefinitionBase<Record<string, unknown>>[]
+    | [ModelDefinitionBase<Record<string, unknown>>]
 >(
   modelDefinitions: TModelDefinitions
-): ModelDefinition<
+): ModelDefinitionBase<
   {
     [K in keyof TModelDefinitions & number]: ExtractModelDefinitionState<
       TModelDefinitions[K]
@@ -338,10 +345,10 @@ export function mergeModelDefinitions<
   }[number]
 >;
 export function mergeModelDefinitions<
-  TModelDefinitions extends Record<string, ModelDefinition>
+  TModelDefinitions extends Record<string, ModelDefinitionBase>
 >(
   modelDefinitions: TModelDefinitions
-): ModelDefinition<
+): ModelDefinitionBase<
   {
     [K in keyof TModelDefinitions]: ExtractModelDefinitionState<
       TModelDefinitions[K]
@@ -370,9 +377,9 @@ export function mergeModelDefinitions<
 >;
 export function mergeModelDefinitions(
   modelDefinitions:
-    | ModelDefinition<Record<string, unknown>>[]
-    | Record<string, ModelDefinition>
-): ModelDefinition {
+    | ModelDefinitionBase<Record<string, unknown>>[]
+    | Record<string, ModelDefinitionBase>
+): ModelDefinitionBase {
   if (Array.isArray(modelDefinitions)) {
     return {
       state() {

@@ -1,5 +1,5 @@
 import { createGetModel, GetModel, Model } from "./model";
-import { NamespacedModelDefinition } from "./modelDefinition";
+import { ModelDefinition } from "./modelDefinition";
 import { createGetState, GetState } from "./state";
 import { CreateStore, Nyax, NyaxOptions, Store } from "./store";
 
@@ -11,7 +11,7 @@ export interface NyaxContext {
 
   namespaceContextByNamespace: Map<string, NamespaceContext>;
   getNamespaceContext(
-    modelDefinitionOrNamespace: NamespacedModelDefinition | string
+    modelDefinitionOrNamespace: ModelDefinition | string
   ): NamespaceContext;
 
   getModel: GetModel;
@@ -20,7 +20,7 @@ export interface NyaxContext {
 
 export interface NamespaceContext {
   namespace: string;
-  modelDefinition: NamespacedModelDefinition;
+  modelDefinition: ModelDefinition;
 
   modelByKey: Map<string | undefined, Model>;
 }

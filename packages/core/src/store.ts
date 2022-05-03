@@ -1,7 +1,7 @@
 import { Action, ReloadActionPayload, ReloadActionType } from "./action";
 import { createNyaxContext } from "./context";
 import { GetModel, Model } from "./model";
-import { ModelDefinition, NamespacedModelDefinition } from "./modelDefinition";
+import { ModelDefinition } from "./modelDefinition";
 import { GetState } from "./state";
 
 export interface Store {
@@ -25,7 +25,7 @@ export interface Nyax {
   getModel: GetModel;
   getState: GetState;
   reload(state?: Record<string, unknown>): void;
-  registerModelDefinitions(modelDefinitions: NamespacedModelDefinition[]): void;
+  registerModelDefinitions(modelDefinitions: ModelDefinition[]): void;
 }
 
 export interface NyaxOptions {

@@ -1,62 +1,34 @@
 import { NyaxContext } from "./context";
 import {
   ConvertModelDefinitionState,
-  NamespacedModelDefinition,
+  ModelDefinition,
 } from "./modelDefinition";
 
 export interface GetState {
   (): Record<string, unknown>;
-  <TModelDefinition extends NamespacedModelDefinition>(
+  <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string
-  ): TModelDefinition extends NamespacedModelDefinition<
-    any,
-    any,
-    any,
-    any,
-    any,
-    true
-  >
+  ): TModelDefinition extends ModelDefinition<any, any, any, any, any, true>
     ? Record<string, ConvertModelDefinitionState<TModelDefinition>> | undefined
-    : TModelDefinition extends NamespacedModelDefinition<
-        any,
-        any,
-        any,
-        any,
-        any,
-        false
-      >
+    : TModelDefinition extends ModelDefinition<any, any, any, any, any, false>
     ? ConvertModelDefinitionState<TModelDefinition> | undefined
     :
         | Record<string, ConvertModelDefinitionState<TModelDefinition>>
         | ConvertModelDefinitionState<TModelDefinition>
         | undefined;
-  <TModelDefinition extends NamespacedModelDefinition>(
+  <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string,
     key: string
-  ): TModelDefinition extends NamespacedModelDefinition<
-    any,
-    any,
-    any,
-    any,
-    any,
-    true
-  >
+  ): TModelDefinition extends ModelDefinition<any, any, any, any, any, true>
     ? ConvertModelDefinitionState<TModelDefinition> | undefined
-    : TModelDefinition extends NamespacedModelDefinition<
-        any,
-        any,
-        any,
-        any,
-        any,
-        false
-      >
+    : TModelDefinition extends ModelDefinition<any, any, any, any, any, false>
     ? never
     : ConvertModelDefinitionState<TModelDefinition> | never | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
   return function (
-    modelDefinitionOrNamespace?: NamespacedModelDefinition | string,
+    modelDefinitionOrNamespace?: ModelDefinition | string,
     key?: string
   ) {
     const rootState = nyaxContext.store.getState();

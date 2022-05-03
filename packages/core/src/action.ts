@@ -3,7 +3,7 @@ import { ConvertEffectsTypeParams } from "./effect";
 import { Model } from "./model";
 import {
   ConvertModelDefinitionActionHelpers,
-  ModelDefinition,
+  ModelDefinitionBase,
 } from "./modelDefinition";
 import { ConvertReducersTypeParams } from "./reducer";
 import { concatLastString, defineGetter, mergeObjects } from "./util";
@@ -106,7 +106,9 @@ const mockModelBuildInActions = {
     return;
   },
 };
-export function createActionHelpers<TModelDefinition extends ModelDefinition>(
+export function createActionHelpers<
+  TModelDefinition extends ModelDefinitionBase
+>(
   nyaxContext: NyaxContext,
   model: Model
 ): ConvertModelDefinitionActionHelpers<TModelDefinition> {
