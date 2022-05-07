@@ -1,24 +1,27 @@
 import {
-  ActionSubscriber,
-  AnyAction,
+  Action,
   CreateStore,
   Effect,
   Model,
+  ModelDefinition,
+  ModelMountActionPayload,
+  ModelMountActionType,
+  ModelPatchActionType,
+  ModelSetActionType,
+  ModelUnmountActionPayload,
+  ModelUnmountActionType,
   Reducer,
-  RegisterActionPayload,
-  registerActionType,
   ReloadActionPayload,
-  reloadActionType,
+  ReloadActionType,
   Selector,
   Subscription,
-  UnregisterActionPayload,
-  unregisterActionType,
   utils,
 } from "@nyax/core";
 import {
-  action,
   computed,
+  entries,
   get,
+  IComputedValue,
   keys,
   observable,
   observe,
@@ -27,8 +30,7 @@ import {
   set,
 } from "mobx";
 
-const { concatLastString, flattenObject, mergeObjects, splitLastString } =
-  utils;
+const { concatLastString, flattenObject, splitLastString } = utils;
 
 const NOTHING = {};
 
@@ -59,141 +61,157 @@ function setSubState(
   }
 }
 
-interface ModelContext {
-  model: Model;
-  isRegistered: boolean;
+interface ModelDefinitionContext {
+  modelDefinition: ModelDefinition;
 
-  subscriptionDisposables: (() => void)[];
-
+  flattenedSelectors: Record<string, Selector>;
   flattenedReducers: Record<string, Reducer>;
   flattenedEffects: Record<string, Effect>;
-  flattenedGetters: Record<string, () => unknown>;
-
-  observableInitialState: unknown;
-  computedObserveDisposerByKey: Map<string, () => void>;
+  flattenedSubscriptions: Record<string, Subscription>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types
-export function createNyaxCreateStore(_options: {}): CreateStore {
-  return ({ getModel, deleteModel }) => {
-    const modelContextByModelPath = new Map<string, ModelContext>();
+interface ModelContext {
+  model: Model;
 
-    function getModelContext(modelPath: string) {
-      let modelContext = modelContextByModelPath.get(modelPath);
-      if (!modelContext) {
-        let model = getModel(modelPath, undefined);
-        if (!model) {
-          const [namespace, key] = splitLastString(modelPath);
-          model = getModel(namespace, key);
-        }
-        if (!model) {
+  flattenedComputeds: Record<string, IComputedValue<unknown>>;
+  computedObserveDisposers: (() => void)[];
+
+  subscriptionDisposables: (() => void)[];
+}
+
+export function generateCreateStore(options: {}): CreateStore {
+  options;
+
+  return (
+    { getModelDefinition, getModel, mountModel, unmountModel },
+    options
+  ) => {
+    const modelDefinitionContextByNamespace = new Map<
+      string,
+      ModelDefinitionContext
+    >();
+    const modelContextByFullNamespace = new Map<string, ModelContext>();
+
+    const observableRootState: Record<string, unknown> = observable({});
+    let subscribers: (() => void)[] = [];
+    let actionSubscribers: ((action: Action) => void)[] = [];
+
+    function getModelDefinitionContext(
+      namespace: string
+    ): ModelDefinitionContext | null {
+      let context = modelDefinitionContextByNamespace.get(namespace);
+      if (!context) {
+        const modelDefinition = getModelDefinition(namespace);
+        if (!modelDefinition) {
           return null;
         }
 
-        modelContext = {
-          model,
-          isRegistered: false,
+        context = {
+          modelDefinition,
 
-          subscriptionDisposables: [],
-
-          flattenedReducers: mergeObjects(
-            {},
-            flattenObject<any>(model.reducers()),
-            (item: Reducer, key, parent) => {
-              parent[key] = action(item);
-            }
-          ),
-          flattenedEffects: flattenObject(model.effects()),
-          flattenedGetters: mergeObjects(
-            {},
-            flattenObject<any>(model.selectors()),
-            (item: Selector, key, parent) => {
-              const computedValue = computed(item);
-              parent[key] = () => {
-                if (
-                  modelContext &&
-                  !modelContext.computedObserveDisposerByKey.has(key)
-                ) {
-                  modelContext.computedObserveDisposerByKey.set(
-                    key,
-                    observe(computedValue, () => {
-                      // noop
-                    })
-                  );
-                }
-                return computedValue.get();
-              };
-            }
-          ),
-
-          observableInitialState: observable(model.initialState()),
-          computedObserveDisposerByKey: new Map(),
+          flattenedSelectors: flattenObject(
+            modelDefinition.selectors,
+            options.pathSeparator
+          ) as any,
+          flattenedReducers: flattenObject(
+            modelDefinition.reducers,
+            options.pathSeparator
+          ) as any,
+          flattenedEffects: flattenObject(
+            modelDefinition.effects,
+            options.pathSeparator
+          ) as any,
+          flattenedSubscriptions: flattenObject(
+            modelDefinition.subscriptions,
+            options.pathSeparator
+          ) as any,
         };
-        modelContextByModelPath.set(modelPath, modelContext);
+        modelDefinitionContextByNamespace.set(namespace, context);
       }
-
-      return modelContext;
+      return context;
     }
 
-    let observableRootState: Record<string, unknown> = observable({});
-    let subscribers: (() => void)[] = [];
-    let actionSubscribers: ActionSubscriber[] = [];
-
-    function register(payload: RegisterActionPayload, rootState?: unknown) {
-      if (rootState !== undefined) {
-        observableRootState = observable(rootState as Record<string, unknown>);
+    function handleMountModel(
+      model: Model,
+      payload: ModelMountActionPayload | null
+    ) {
+      const modelDefinitionContext = getModelDefinitionContext(model.namespace);
+      if (!modelDefinitionContext) {
+        throw new Error("Model definition is not registered.");
       }
 
-      payload.forEach((item) => {
-        const modelPath = concatLastString(item.namespace, item.key);
-        const modelContext = getModelContext(modelPath);
-        if (!modelContext) {
-          throw new Error("Model definition is not found.");
+      if (modelContextByFullNamespace.has(model.fullNamespace)) {
+        throw new Error("Model is already mounted.");
+      }
+
+      if (payload) {
+        const state =
+          payload.state !== undefined
+            ? payload.state
+            : model.modelDefinition.state();
+        runInAction(() => {
+          setSubState(observableRootState, state, model.namespace, model.key);
+        });
+      }
+
+      const modelContext: ModelContext = {
+        model,
+
+        flattenedComputeds: {},
+        computedObserveDisposers: [],
+
+        subscriptionDisposables: [],
+      };
+      modelContextByFullNamespace.set(model.fullNamespace, modelContext);
+      mountModel(model);
+
+      Object.values(modelDefinitionContext.flattenedSubscriptions).forEach(
+        (subscription) => {
+          const disposable = subscription.call(model);
+          if (disposable) {
+            modelContext.subscriptionDisposables.push(disposable);
+          }
         }
+      );
+    }
 
-        modelContext.isRegistered = true;
+    function handleUnmountModel(
+      model: Model,
+      payload: ModelUnmountActionPayload
+    ) {
+      payload;
 
-        const model = modelContext.model;
+      const modelContext = modelContextByFullNamespace.get(model.fullNamespace);
+      if (modelContext) {
+        modelContext.subscriptionDisposables.forEach((disposable) => {
+          disposable();
+        });
+        modelContext.computedObserveDisposers.forEach((disposer) => {
+          disposer();
+        });
 
-        if (rootState === undefined) {
-          const state =
-            item.state !== undefined ? item.state : model.initialState();
+        unmountModel(model);
+        modelContextByFullNamespace.delete(model.fullNamespace);
 
-          runInAction(() => {
-            setSubState(observableRootState, state, model.namespace, model.key);
-          });
-        }
-
-        mergeObjects(
-          {},
-          flattenObject<any>(model.subscriptions()),
-          (item: Subscription) => {
-            const disposable = item();
-            if (disposable) {
-              modelContext.subscriptionDisposables.push(disposable);
+        do {
+          if (model.key !== undefined) {
+            const state = get(observableRootState, model.namespace);
+            if (state) {
+              const stateKeys = keys(state);
+              if (stateKeys.length === 1 && stateKeys[0] === model.key) {
+                runInAction(() => {
+                  setSubState(
+                    observableRootState,
+                    NOTHING,
+                    model.namespace,
+                    undefined
+                  );
+                });
+                break;
+              }
             }
           }
-        );
-      });
-    }
 
-    function unregister(payload: UnregisterActionPayload) {
-      payload.forEach((item) => {
-        const modelPath = concatLastString(item.namespace, item.key);
-        const modelContext = getModelContext(modelPath);
-
-        modelContext?.subscriptionDisposables.forEach((disposable) =>
-          disposable()
-        );
-        modelContext?.computedObserveDisposerByKey.forEach((disposer) =>
-          disposer()
-        );
-
-        modelContextByModelPath.delete(modelPath);
-        deleteModel(item.namespace, item.key);
-
-        if (modelContext) {
-          const model = modelContext.model;
           runInAction(() => {
             setSubState(
               observableRootState,
@@ -202,73 +220,49 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
               model.key
             );
           });
-
-          if (model.key !== undefined) {
-            const namespacedState = get(observableRootState, model.namespace);
-            if (namespacedState && keys(namespacedState).length === 0) {
-              runInAction(() => {
-                setSubState(
-                  observableRootState,
-                  NOTHING,
-                  model.namespace,
-                  undefined
-                );
-              });
-            }
-          }
-        }
-      });
-    }
-
-    function reload(payload: ReloadActionPayload) {
-      const modelContexts = Array.from(modelContextByModelPath.values());
-
-      unregister(
-        modelContexts.map((e) => ({
-          namespace: e.model.namespace,
-          key: e.model.key,
-        }))
-      );
-
-      const registerActionPayload: RegisterActionPayload = [];
-      if (payload.state === undefined) {
-        modelContexts
-          .filter((e) => e.model.key === undefined)
-          .forEach((e) => {
-            registerActionPayload.push({
-              namespace: e.model.namespace,
-            });
-          });
-      } else {
-        mergeObjects(
-          {},
-          payload.state as Record<string, unknown>,
-          (_item, _key, _parent, paths) => {
-            if (paths.length > 2) {
-              return;
-            }
-            const [namespace, key] = paths;
-            if (namespace && getModel(namespace, key)) {
-              registerActionPayload.push({ namespace, key });
-            }
-          }
-        );
+          // eslint-disable-next-line no-constant-condition
+        } while (false);
       }
-      register(registerActionPayload, payload.state);
     }
 
-    function dispatchAction(action: AnyAction) {
-      switch (action.type) {
-        case registerActionType: {
-          register(action.payload as RegisterActionPayload);
+    function handleReload(payload: ReloadActionPayload) {
+      Array.from(modelContextByFullNamespace.values()).forEach((context) => {
+        handleUnmountModel(context.model, {});
+      });
+
+      if (payload.state !== undefined) {
+        runInAction(() => {
+          Object.assign(observableRootState, payload.state);
+        });
+        entries(observableRootState).forEach(([namespace, state]) => {
+          const modelDefinitonContext = getModelDefinitionContext(namespace);
+          if (modelDefinitonContext) {
+            if (modelDefinitonContext.modelDefinition.isDynamic && state) {
+              keys(state as any).forEach((key) => {
+                handleMountModel(getModel(namespace, key as any), null);
+              });
+            } else {
+              handleMountModel(getModel(namespace, undefined), null);
+            }
+          }
+        });
+      }
+    }
+
+    function dispatchModelAction(
+      model: Model,
+      action: Action,
+      actionType: string
+    ) {
+      const { payload } = action;
+
+      switch (actionType) {
+        case ModelMountActionType: {
+          handleMountModel(model, payload as ModelMountActionPayload);
           break;
         }
-        case unregisterActionType: {
-          unregister(action.payload as UnregisterActionPayload);
-          break;
-        }
-        case reloadActionType: {
-          reload(action.payload as ReloadActionPayload);
+        case ModelUnmountActionType: {
+          handleUnmountModel(model, payload as ModelUnmountActionPayload);
           break;
         }
         default: {
@@ -276,39 +270,82 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         }
       }
 
-      const [modelPath, actionType] = splitLastString(action.type);
-      const modelContext = getModelContext(modelPath);
-
-      if (
-        modelContext &&
-        !modelContext.isRegistered &&
-        (modelContext.flattenedReducers[actionType] ||
-          modelContext.flattenedEffects[actionType])
-      ) {
-        dispatchAction({
-          type: registerActionType,
-          payload: [
-            {
-              namespace: modelContext.model.namespace,
-              key: modelContext.model.key,
-            },
-          ],
-        });
+      const modelDefinitionContext = getModelDefinitionContext(model.namespace);
+      if (!modelDefinitionContext) {
+        throw new Error("Model definition is not registered.");
       }
 
-      modelContext?.flattenedReducers[actionType]?.(action.payload);
+      const isMounted = modelContextByFullNamespace.has(model.fullNamespace);
+      if (
+        !isMounted &&
+        (modelDefinitionContext.flattenedReducers[actionType] ||
+          modelDefinitionContext.flattenedEffects[actionType])
+      ) {
+        const mountAction: Action<ModelMountActionPayload> = {
+          type: ModelMountActionType,
+          payload: {},
+        };
+        dispatchModelAction(model, mountAction, ModelMountActionType);
+      }
+
+      switch (actionType) {
+        case ModelSetActionType: {
+          setSubState(observableRootState, payload, model.namespace, model.key);
+          break;
+        }
+        case ModelPatchActionType: {
+          // TODO
+          break;
+        }
+        default: {
+          modelDefinitionContext.flattenedReducers[actionType]?.call(
+            model,
+            payload
+          );
+          break;
+        }
+      }
 
       subscribers.forEach((fn) => fn());
       actionSubscribers.forEach((fn) => fn(action));
 
-      if (modelContext?.isRegistered) {
-        const effect = modelContext.flattenedEffects[actionType];
-        if (effect) {
-          return effect(action.payload);
+      if (isMounted) {
+        return modelDefinitionContext.flattenedEffects[actionType]?.call(
+          model,
+          payload
+        );
+      }
+    }
+
+    function dispatchAction(action: Action) {
+      if (action.type === ReloadActionType) {
+        handleReload(action.payload as ReloadActionPayload);
+        return;
+      }
+
+      const [fullNamespace, actionType] = splitLastString(
+        action.type,
+        options.namespaceSeparator
+      );
+
+      let model: Model | undefined;
+      if (getModelDefinition(fullNamespace)) {
+        model = getModel(fullNamespace, undefined);
+      } else {
+        const [namespace, key] = splitLastString(
+          fullNamespace,
+          options.namespaceSeparator
+        );
+        if (getModelDefinition(namespace)) {
+          model = getModel(namespace, key);
         }
       }
 
-      return Promise.resolve();
+      if (!model) {
+        return;
+      }
+
+      return dispatchModelAction(model, action, actionType);
     }
 
     return {
@@ -325,8 +362,19 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         };
       },
 
-      getModelState(namespace, key) {
-        let state = observableRootState;
+      subscribeAction(fn) {
+        actionSubscribers = [...actionSubscribers, fn];
+        return () => {
+          actionSubscribers = actionSubscribers.filter(
+            (subscriber) => subscriber !== fn
+          );
+        };
+      },
+
+      getModelState(model) {
+        const { namespace, key } = model;
+
+        let state: any = observableRootState;
         state = get(state, namespace);
         if (key !== undefined) {
           state = state != null ? get(state, key) : undefined;
@@ -335,29 +383,46 @@ export function createNyaxCreateStore(_options: {}): CreateStore {
         if (state !== undefined) {
           return state;
         } else {
-          return getModelContext(concatLastString(namespace, key))
-            ?.observableInitialState;
+          return model.modelDefinition.state();
         }
       },
-      getModelComputed(namespace, key, getterPath) {
-        const modelPath = concatLastString(namespace, key);
-        const modelContext = getModelContext(modelPath);
-        return modelContext?.flattenedGetters[getterPath]?.();
-      },
-      dispatchModelAction(namespace, key, actionType, payload) {
-        return dispatchAction({
-          type: concatLastString(concatLastString(namespace, key), actionType),
-          payload,
-        });
-      },
+      getModelGetter(model, getterPath) {
+        const modelContext = modelContextByFullNamespace.get(
+          model.fullNamespace
+        );
+        if (modelContext) {
+          let computedValue = modelContext.flattenedComputeds[getterPath];
+          if (!computedValue) {
+            computedValue = computed(() =>
+              getModelDefinitionContext(model.namespace)?.flattenedSelectors[
+                getterPath
+              ]?.call(model)
+            );
+            modelContext.flattenedComputeds[getterPath] = computedValue;
 
-      subscribeAction: (fn) => {
-        actionSubscribers = [...actionSubscribers, fn];
-        return () => {
-          actionSubscribers = actionSubscribers.filter(
-            (subscriber) => subscriber !== fn
-          );
+            modelContext.computedObserveDisposers.push(
+              observe(computedValue, () => {
+                return;
+              })
+            );
+          }
+          return computedValue.get();
+        } else {
+          return getModelDefinitionContext(model.namespace)?.flattenedSelectors[
+            getterPath
+          ]?.call(model);
+        }
+      },
+      dispatchModelAction(model, actionType, payload) {
+        const action: Action = {
+          type: concatLastString(
+            model.fullNamespace,
+            actionType,
+            options.namespaceSeparator
+          ),
+          payload,
         };
+        return dispatchModelAction(model, action, actionType);
       },
     };
   };

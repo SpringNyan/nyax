@@ -154,11 +154,11 @@ type ExtendModelDefinitionOptions<
 >;
 
 export function createModelDefinition<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {}
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {}
 >(
   options: CreateModelDefinitionOptions<
     TState,
@@ -169,11 +169,11 @@ export function createModelDefinition<
   >
 ): ModelDefinitionBase<TState, TSelectors, TReducers, TEffects, TSubscriptions>;
 export function createModelDefinition<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {},
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {},
   TDynamic extends boolean = false
 >(
   namespace: string,
@@ -217,14 +217,12 @@ export function createModelDefinition(...args: unknown[]): ModelDefinitionBase {
 }
 
 export function extendModelDefinition<
-  TBaseModelDefinition extends ModelDefinitionBase<
-    Record<string, unknown>
-  > = ModelDefinitionBase,
+  TBaseModelDefinition extends ModelDefinitionBase = ModelDefinitionBase,
   TState extends Record<string, unknown> = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {}
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {}
 >(
   baseModelDefinition: TBaseModelDefinition,
   options: ExtendModelDefinitionOptions<

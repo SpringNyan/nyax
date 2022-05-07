@@ -12,7 +12,7 @@ export interface Store {
   subscribeAction(fn: (action: Action) => void): () => void;
 
   getModelState(model: Model): unknown;
-  getModelGetter(model: Model, getterPath: string, value?: unknown): unknown;
+  getModelGetter(model: Model, getterPath: string): unknown;
   dispatchModelAction(
     model: Model,
     actionType: string,
