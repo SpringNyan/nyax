@@ -4,16 +4,7 @@
       "path": "."
     },
     {
-      "path": "packages/core"
-    },
-    {
-      "path": "packages/mobx"
-    },
-    {
-      "path": "packages/redux"
-    },
-    {
-      "path": "packages/vuex"
+      "path": "packages/nyax"
     }
   ],
   "settings": {}

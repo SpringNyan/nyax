@@ -1,5 +1,5 @@
 {
-  "name": "@nyax/core",
+  "name": "nyax",
   "version": "0.20.0",
   "description": "A State Management Framework",
   "authors": "SpringNyan",
