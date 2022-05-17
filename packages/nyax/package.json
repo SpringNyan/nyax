@@ -6,35 +6,41 @@
   "license": "MIT",
   "repository": "github:SpringNyan/nyax",
   "keywords": [
-    "nyax"
+    "nyax",
+    "redux",
+    "typescript"
   ],
   "files": [
     "dist",
     "types"
   ],
-  "main": "dist/nyax-core.js",
-  "module": "dist/nyax-core.esm.js",
+  "main": "dist/nyax.js",
+  "module": "dist/nyax.esm.js",
   "types": "types/index.d.ts",
   "sideEffects": false,
+  "peerDependencies": {
+    "immer": "^9.0.0",
+    "redux": "^4.0.0"
+  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.3.2",
     "@types/chai": "^4.3.1",
-    "@types/mocha": "^9.1.0",
-    "@typescript-eslint/eslint-plugin": "^5.19.0",
-    "@typescript-eslint/parser": "^5.19.0",
+    "@types/mocha": "^9.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.24.0",
+    "@typescript-eslint/parser": "^5.24.0",
     "chai": "^4.3.6",
     "cross-env": "^7.0.3",
-    "eslint": "^8.13.0",
-    "mocha": "^9.2.2",
+    "eslint": "^8.15.0",
+    "mocha": "^10.0.0",
     "prettier": "^2.6.2",
     "rimraf": "^3.0.2",
-    "rollup": "^2.70.2",
+    "rollup": "^2.73.0",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.3"
+    "typescript": "^4.6.4"
   },
   "scripts": {
     "build": "rimraf dist types && rollup -c && tsc -p tsconfig.types.json",
-    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha --require ts-node/register test/**/*.ts",
+    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha --require ts-node/register tests/**/*.ts",
     "lint": "eslint --max-warnings=0 src/**",
     "release": "npm run lint && npm run build && npm publish --access=public"
   }
