@@ -14,7 +14,9 @@ export interface Action<TPayload = unknown> {
 }
 
 export const ModelMountActionType = "$mount";
-export type ModelMountActionPayload<TState = {}> = {
+export type ModelMountActionPayload<
+  TState extends Record<string, unknown> = {}
+> = {
   state?: TState;
 };
 
@@ -22,10 +24,13 @@ export const ModelUnmountActionType = "$unmount";
 export type ModelUnmountActionPayload = {};
 
 export const ModelSetActionType = "$set";
-export type ModelSetActionPayload<TState = {}> = TState;
+export type ModelSetActionPayload<TState extends Record<string, unknown> = {}> =
+  TState;
 
 export const ModelPatchActionType = "$patch";
-export type ModelPatchActionPayload<TState = {}> = Partial<TState>;
+export type ModelPatchActionPayload<
+  TState extends Record<string, unknown> = {}
+> = Partial<TState>;
 
 export const ReloadActionType = "@@nyax/reload";
 export interface ReloadActionPayload {
@@ -41,7 +46,7 @@ export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   dispatch(payload: TPayload): TResult;
 }
 
-type ConvertTypeParamsActionHelpers<TTypeParams> = {
+type ConvertActionHelpersFromTypeParams<TTypeParams> = {
   [K in keyof TTypeParams]: TTypeParams[K] extends [infer TTypeParam]
     ? "payload" extends keyof TTypeParam
       ? ActionHelper<
@@ -49,11 +54,11 @@ type ConvertTypeParamsActionHelpers<TTypeParams> = {
           "result" extends keyof TTypeParam ? TTypeParam["result"] : void
         >
       : never
-    : ConvertTypeParamsActionHelpers<TTypeParams[K]>;
+    : ConvertActionHelpersFromTypeParams<TTypeParams[K]>;
 };
 
 export type ConvertActionHelpers<TReducers, TEffects> =
-  ConvertTypeParamsActionHelpers<
+  ConvertActionHelpersFromTypeParams<
     ConvertReducersTypeParams<TReducers> & ConvertEffectsTypeParams<TEffects>
   >;
 
@@ -73,18 +78,18 @@ actionHelperPrototype.dispatch = function (payload) {
 
 export function createActionHelper<TPayload, TResult>(
   nyaxContext: NyaxContext,
-  model: Model,
+  fullNamespace: string,
   actionType: string
 ): ActionHelper<TPayload, TResult> {
   const actionHelper = function (payload: TPayload) {
-    return nyaxContext.store.dispatchModelAction(
-      model,
+    return nyaxContext.dispatchAction(
+      fullNamespace,
       actionType,
       payload
     ) as TResult;
   } as ActionHelper<TPayload, TResult>;
   actionHelper.type = concatLastString(
-    model.fullNamespace,
+    fullNamespace,
     actionType,
     nyaxContext.options.namespaceSeparator
   );
@@ -93,16 +98,16 @@ export function createActionHelper<TPayload, TResult>(
 }
 
 const mockModelBuildInActions = {
-  [ModelMountActionType]: function () {
+  [ModelMountActionType]() {
     return;
   },
-  [ModelUnmountActionType]: function () {
+  [ModelUnmountActionType]() {
     return;
   },
-  [ModelSetActionType]: function () {
+  [ModelSetActionType]() {
     return;
   },
-  [ModelPatchActionType]: function () {
+  [ModelPatchActionType]() {
     return;
   },
 };
@@ -123,16 +128,20 @@ export function createActionHelpers<
   ) {
     if (!(k in target)) {
       const actionType = paths.join(nyaxContext.options.pathSeparator);
-      defineGetter(target, k, function () {
+      defineGetter(target, k, () => {
         delete target[k];
-        return (target[k] = createActionHelper(nyaxContext, model, actionType));
+        return (target[k] = createActionHelper(
+          nyaxContext,
+          model.fullNamespace,
+          actionType
+        ));
       });
     }
   }
 
+  mergeObjects(actionHelpers, mockModelBuildInActions, handle);
   mergeObjects(actionHelpers, model.modelDefinition.reducers, handle);
   mergeObjects(actionHelpers, model.modelDefinition.effects, handle);
-  mergeObjects(actionHelpers, mockModelBuildInActions, handle);
 
   return actionHelpers;
 }

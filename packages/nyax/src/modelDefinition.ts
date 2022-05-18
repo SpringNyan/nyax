@@ -11,16 +11,16 @@ import {
   ModelUnmountActionType,
 } from "./action";
 import { GetModel } from "./model";
-import { ConvertGetters } from "./selector";
+import { ConvertGetters, CreateSelector } from "./selector";
 import { Nyax } from "./store";
-import { asType, mergeObjects } from "./util";
+import { mergeObjects } from "./util";
 
 export interface ModelDefinitionBase<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {}
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {}
 > {
   state(): TState;
   selectors: TSelectors;
@@ -30,11 +30,11 @@ export interface ModelDefinitionBase<
 }
 
 export interface ModelDefinition<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {},
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {},
   TDynamic extends boolean = boolean
 > extends ModelDefinitionBase<
     TState,
@@ -98,10 +98,10 @@ export type ConvertModelDefinitionActionHelpers<
 };
 
 export interface DefineModelContext<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {}
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {}
 > {
   state: TState;
   getters: ConvertGetters<TSelectors>;
@@ -114,17 +114,18 @@ export interface DefineModelContext<
   isMounted: boolean;
 
   getModel: GetModel;
+  createSelector: CreateSelector;
   nyax: Nyax;
 }
 
 type CreateModelDefinitionOptions<
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {}
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {}
 > = {
-  state(): TState;
+  state?(): TState;
   selectors?: TSelectors;
   reducers?: TReducers;
   effects?: TEffects;
@@ -133,11 +134,11 @@ type CreateModelDefinitionOptions<
 
 type ExtendModelDefinitionOptions<
   TBaseModelDefinition extends ModelDefinitionBase = ModelDefinitionBase,
-  TState = {},
-  TSelectors = {},
-  TReducers = {},
-  TEffects = {},
-  TSubscriptions = {}
+  TState extends Record<string, unknown> = {},
+  TSelectors extends Record<string, unknown> = {},
+  TReducers extends Record<string, unknown> = {},
+  TEffects extends Record<string, unknown> = {},
+  TSubscriptions extends Record<string, unknown> = {}
 > = {
   state?(): TState;
   selectors?: TSelectors;
@@ -195,12 +196,16 @@ export function createModelDefinition<
 >;
 export function createModelDefinition(...args: unknown[]): ModelDefinitionBase {
   const hasNamespace = typeof args[0] === "string";
-
   const options = (
     hasNamespace ? args[1] : args[0]
   ) as CreateModelDefinitionOptions;
-  const modelDefinition: ModelDefinitionBase = {
-    state: options.state,
+
+  const modelDefinitionBase: ModelDefinitionBase = {
+    state:
+      options.state ??
+      function () {
+        return {};
+      },
     selectors: options.selectors ?? {},
     reducers: options.reducers ?? {},
     effects: options.effects ?? {},
@@ -208,12 +213,12 @@ export function createModelDefinition(...args: unknown[]): ModelDefinitionBase {
   };
 
   if (hasNamespace) {
-    asType<ModelDefinition>(modelDefinition);
+    const modelDefinition = modelDefinitionBase as ModelDefinition;
     modelDefinition.namespace = args[0] as string;
     modelDefinition.isDynamic = (args[2] ?? false) as boolean;
   }
 
-  return modelDefinition;
+  return modelDefinitionBase;
 }
 
 export function extendModelDefinition<
@@ -267,43 +272,63 @@ export function extendModelDefinition<
   return modelDefinition as any;
 }
 
-function createSubDefineModelContext(
+const subDefineModelContextsWeakMap = new WeakMap<
+  DefineModelContext,
+  Record<string, DefineModelContext>
+>();
+function requireSubDefineModelContext(
   context: DefineModelContext,
   path: string
 ) {
-  return Object.create(context, {
-    state: {
-      get() {
-        return (context.state as Record<string, unknown> | undefined)?.[path];
+  let subContexts = subDefineModelContextsWeakMap.get(context);
+  if (!subContexts) {
+    subContexts = {};
+    subDefineModelContextsWeakMap.set(context, subContexts);
+  }
+
+  let subContext = subContexts[path];
+  if (!subContext) {
+    subContext = Object.create(context, {
+      state: {
+        get() {
+          return (context.state as Record<string, unknown> | undefined)?.[path];
+        },
+        enumerable: false,
+        configurable: true,
       },
-      enumerable: false,
-      configurable: true,
-    },
-    getters: {
-      get() {
-        return (context.getters as Record<string, unknown> | undefined)?.[path];
+      getters: {
+        get() {
+          return (context.getters as Record<string, unknown> | undefined)?.[
+            path
+          ];
+        },
+        enumerable: false,
+        configurable: true,
       },
-      enumerable: false,
-      configurable: true,
-    },
-    actions: {
-      get() {
-        return (context.actions as Record<string, unknown> | undefined)?.[path];
+      actions: {
+        get() {
+          return (context.actions as Record<string, unknown> | undefined)?.[
+            path
+          ];
+        },
+        enumerable: false,
+        configurable: true,
       },
-      enumerable: false,
-      configurable: true,
-    },
-  });
+    }) as DefineModelContext;
+    subContexts[path] = subContext;
+  }
+
+  return subContext;
 }
 
 function convertSubModelDefinitionProperty(
   property: Record<string, unknown>,
   path: string
 ) {
-  return mergeObjects({}, property, function (item, k, target) {
+  return mergeObjects({}, property, (item, k, target) => {
     target[k] = function (this: DefineModelContext, ...args: unknown[]) {
       return (item as Function).apply(
-        createSubDefineModelContext(this, path),
+        requireSubDefineModelContext(this, path),
         args
       );
     };
@@ -381,22 +406,27 @@ export function mergeModelDefinitions(
   if (Array.isArray(modelDefinitions)) {
     return {
       state() {
-        return modelDefinitions.reduce((prev, curr) => {
-          return Object.assign(prev, curr.state.call(this));
-        }, {});
+        return modelDefinitions.reduce(
+          (prev, curr) => mergeObjects(prev, curr.state.call(this)),
+          {}
+        );
       },
-      selectors: modelDefinitions.reduce(function (prev, curr) {
-        return Object.assign(prev, curr.selectors);
-      }, {}),
-      reducers: modelDefinitions.reduce(function (prev, curr) {
-        return Object.assign(prev, curr.reducers);
-      }, {}),
-      effects: modelDefinitions.reduce(function (prev, curr) {
-        return Object.assign(prev, curr.effects);
-      }, {}),
-      subscriptions: modelDefinitions.reduce(function (prev, curr) {
-        return Object.assign(prev, curr.subscriptions);
-      }, {}),
+      selectors: modelDefinitions.reduce(
+        (prev, curr) => mergeObjects(prev, curr.selectors),
+        {}
+      ),
+      reducers: modelDefinitions.reduce(
+        (prev, curr) => mergeObjects(prev, curr.reducers),
+        {}
+      ),
+      effects: modelDefinitions.reduce(
+        (prev, curr) => mergeObjects(prev, curr.effects),
+        {}
+      ),
+      subscriptions: modelDefinitions.reduce(
+        (prev, curr) => mergeObjects(prev, curr.subscriptions),
+        {}
+      ),
     };
   } else {
     return {
@@ -404,7 +434,7 @@ export function mergeModelDefinitions(
         return Object.entries(modelDefinitions).reduce<Record<string, unknown>>(
           (prev, [key, value]) => {
             prev[key] = value.state.call(
-              createSubDefineModelContext(this, key)
+              requireSubDefineModelContext(this, key)
             );
             return prev;
           },
@@ -413,18 +443,18 @@ export function mergeModelDefinitions(
       },
       selectors: Object.entries(modelDefinitions).reduce<
         Record<string, unknown>
-      >(function (prev, [key, value]) {
+      >((prev, [key, value]) => {
         prev[key] = convertSubModelDefinitionProperty(value.selectors, key);
         return prev;
       }, {}),
       reducers: Object.entries(modelDefinitions).reduce<
         Record<string, unknown>
-      >(function (prev, [key, value]) {
+      >((prev, [key, value]) => {
         prev[key] = convertSubModelDefinitionProperty(value.reducers, key);
         return prev;
       }, {}),
       effects: Object.entries(modelDefinitions).reduce<Record<string, unknown>>(
-        function (prev, [key, value]) {
+        (prev, [key, value]) => {
           prev[key] = convertSubModelDefinitionProperty(value.effects, key);
           return prev;
         },
@@ -432,7 +462,7 @@ export function mergeModelDefinitions(
       ),
       subscriptions: Object.entries(modelDefinitions).reduce<
         Record<string, unknown>
-      >(function (prev, [key, value]) {
+      >((prev, [key, value]) => {
         prev[key] = convertSubModelDefinitionProperty(value.subscriptions, key);
         return prev;
       }, {}),

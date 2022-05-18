@@ -31,15 +31,7 @@ export function mergeObjects(
   ) => void,
   paths: string[] = []
 ): Record<string, unknown> {
-  if (!isPlainObject(target)) {
-    throw new Error("`target` is not an object.");
-  }
-
-  if (!isPlainObject(source)) {
-    throw new Error("`source` is not an object.");
-  }
-
-  Object.keys(source).forEach(function (key) {
+  Object.keys(source).forEach((key) => {
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return;
     }
@@ -54,7 +46,7 @@ export function mergeObjects(
 
       const targetItem = target[key];
       if (!isPlainObject(targetItem)) {
-        throw new Error('`target["${key}"]` is not an object.');
+        throw new Error(`\`target["${key}"]\` is not an object`);
       }
 
       mergeObjects(targetItem, sourceItem, fn, paths);
@@ -76,7 +68,7 @@ export function flattenObject(
   obj: Record<string, unknown>,
   separator = "."
 ): Record<string, unknown> {
-  return mergeObjects({}, obj, function (item, _key, target, paths) {
+  return mergeObjects({}, obj, (item, _key, target, paths) => {
     target[paths.join(separator)] = item;
   });
 }
@@ -113,8 +105,4 @@ export function defineGetter(o: object, p: string, get: () => unknown): void {
     enumerable: false,
     configurable: true,
   });
-}
-
-export function asType<T>(_value: unknown): asserts _value is T {
-  return;
 }

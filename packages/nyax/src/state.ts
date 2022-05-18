@@ -12,10 +12,7 @@ export interface GetState {
     ? Record<string, ConvertModelDefinitionState<TModelDefinition>> | undefined
     : TModelDefinition extends ModelDefinition<any, any, any, any, any, false>
     ? ConvertModelDefinitionState<TModelDefinition> | undefined
-    :
-        | Record<string, ConvertModelDefinitionState<TModelDefinition>>
-        | ConvertModelDefinitionState<TModelDefinition>
-        | undefined;
+    : Record<string, unknown> | undefined;
   <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string,
     key: string
@@ -23,7 +20,7 @@ export interface GetState {
     ? ConvertModelDefinitionState<TModelDefinition> | undefined
     : TModelDefinition extends ModelDefinition<any, any, any, any, any, false>
     ? never
-    : ConvertModelDefinitionState<TModelDefinition> | never | undefined;
+    : Record<string, unknown> | undefined;
 }
 
 export function createGetState(nyaxContext: NyaxContext): GetState {
@@ -36,7 +33,7 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
       return rootState;
     }
 
-    const namespaceContext = nyaxContext.getNamespaceContext(
+    const namespaceContext = nyaxContext.requireNamespaceContext(
       modelDefinitionOrNamespace
     );
     const state = rootState[namespaceContext.namespace];
@@ -45,8 +42,10 @@ export function createGetState(nyaxContext: NyaxContext): GetState {
     }
 
     if (!namespaceContext.modelDefinition.isDynamic) {
-      throw new Error("Key is not available for static model.");
+      throw new Error(
+        `Key is not available for static model: "${namespaceContext.namespace}"`
+      );
     }
     return (state as Record<string, unknown>)?.[key];
-  } as any;
+  };
 }
