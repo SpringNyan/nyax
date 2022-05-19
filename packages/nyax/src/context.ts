@@ -1,10 +1,11 @@
 import { Action as ReduxAction } from "redux";
 import { Action, ReloadActionPayload, ReloadActionType } from "./action";
 import { Effect } from "./effect";
-import { createGetModel, Model } from "./model";
+import { createMiddleware } from "./middleware";
+import { createGetModel, Model, ModelInternal } from "./model";
 import { ModelDefinition } from "./modelDefinition";
 import { createReducer, Reducer } from "./reducer";
-import { createGetState } from "./state";
+import { createGetState, getModelState } from "./state";
 import { Nyax, NyaxOptions } from "./store";
 import { Subscription } from "./subscription";
 import { flattenObject, splitLastString } from "./util";
@@ -39,8 +40,10 @@ export interface NamespaceContext {
   flattenedEffects: Record<string, Effect>;
   flattenedSubscriptions: Record<string, Subscription>;
 
-  model: Model | undefined;
-  modelByKey: Map<string, Model>;
+  model: ModelInternal | undefined;
+  modelByKey: Map<string, ModelInternal>;
+
+  subscriptionDisposablesByKey: Map<string | undefined, (() => void)[]>;
 }
 
 export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
@@ -112,10 +115,14 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
 
           model: undefined,
           modelByKey: new Map(),
+
+          subscriptionDisposablesByKey: new Map(),
         };
         this.namespaceContextByNamespace.set(namespace, namespaceContext);
 
-        if (this.nyax.getState(namespace) !== undefined) {
+        if (
+          getModelState(this.getRootState(), namespace, undefined) !== undefined
+        ) {
           this.nyax.reload(namespace);
         }
       }
@@ -157,7 +164,10 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
     actionSubscribers: [],
   };
   nyaxContext.nyax = {
-    store: options.createStore(createReducer(nyaxContext), undefined!),
+    store: options.createStore(
+      createReducer(nyaxContext),
+      createMiddleware(nyaxContext)
+    ),
     getModel: createGetModel(nyaxContext),
     getState: createGetState(nyaxContext),
     subscribeAction(fn) {

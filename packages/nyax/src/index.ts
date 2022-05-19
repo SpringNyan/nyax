@@ -37,6 +37,5 @@ export type {
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
 export { createNyax } from "./store";
-export type { CreateStore, Nyax, NyaxOptions, Store } from "./store";
+export type { Nyax, NyaxOptions } from "./store";
 export type { Subscription } from "./subscription";
-export * as utils from "./util";

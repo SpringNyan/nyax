@@ -15,7 +15,6 @@ import {
 import { NyaxContext } from "./context";
 import { Model } from "./model";
 import { getModelState, setModelState } from "./state";
-import { splitLastString } from "./util";
 
 export type Reducer<TPayload = unknown> = (payload: TPayload) => void;
 
@@ -46,13 +45,6 @@ export function createReducer(nyaxContext: NyaxContext): ReduxReducer {
     if (nyaxContext.dispatchingAction === action) {
       model = nyaxContext.dispatchingModel;
       actionType = nyaxContext.dispatchingActionType;
-    } else {
-      let fullNamespace: string;
-      [fullNamespace, actionType] = splitLastString(
-        action.type,
-        nyaxContext.options.namespaceSeparator
-      );
-      model = nyaxContext.tryGetModel(fullNamespace) ?? undefined;
     }
 
     if (!model || !actionType) {
