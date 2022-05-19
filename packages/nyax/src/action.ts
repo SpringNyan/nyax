@@ -33,9 +33,13 @@ export type ModelPatchActionPayload<
 > = Partial<TState>;
 
 export const ReloadActionType = "@@nyax/reload";
-export interface ReloadActionPayload {
-  state?: Record<string, unknown>;
-}
+export type ReloadActionPayload =
+  | {
+      state?: Record<string, unknown>;
+    }
+  | {
+      namespace: string;
+    };
 
 export interface ActionHelper<TPayload = unknown, TResult = unknown> {
   (payload: TPayload): TResult;
@@ -78,18 +82,15 @@ actionHelperPrototype.dispatch = function (payload) {
 
 export function createActionHelper<TPayload, TResult>(
   nyaxContext: NyaxContext,
-  fullNamespace: string,
+  model: Model,
   actionType: string
 ): ActionHelper<TPayload, TResult> {
   const actionHelper = function (payload: TPayload) {
-    return nyaxContext.dispatchAction(
-      fullNamespace,
-      actionType,
-      payload
-    ) as TResult;
+    const action = actionHelper.create(payload);
+    return nyaxContext.dispatchAction(action, model, actionType);
   } as ActionHelper<TPayload, TResult>;
   actionHelper.type = concatLastString(
-    fullNamespace,
+    model.fullNamespace,
     actionType,
     nyaxContext.options.namespaceSeparator
   );
@@ -97,20 +98,6 @@ export function createActionHelper<TPayload, TResult>(
   return actionHelper;
 }
 
-const mockModelBuildInActions = {
-  [ModelMountActionType]() {
-    return;
-  },
-  [ModelUnmountActionType]() {
-    return;
-  },
-  [ModelSetActionType]() {
-    return;
-  },
-  [ModelPatchActionType]() {
-    return;
-  },
-};
 export function createActionHelpers<
   TModelDefinition extends ModelDefinitionBase
 >(
@@ -119,6 +106,27 @@ export function createActionHelpers<
 ): ConvertModelDefinitionActionHelpers<TModelDefinition> {
   const actionHelpers =
     {} as ConvertModelDefinitionActionHelpers<TModelDefinition>;
+
+  actionHelpers[ModelMountActionType] = createActionHelper(
+    nyaxContext,
+    model,
+    ModelMountActionType
+  );
+  actionHelpers[ModelUnmountActionType] = createActionHelper(
+    nyaxContext,
+    model,
+    ModelUnmountActionType
+  );
+  actionHelpers[ModelSetActionType] = createActionHelper(
+    nyaxContext,
+    model,
+    ModelSetActionType
+  );
+  actionHelpers[ModelPatchActionType] = createActionHelper(
+    nyaxContext,
+    model,
+    ModelPatchActionType
+  );
 
   function handle(
     _item: unknown,
@@ -130,16 +138,11 @@ export function createActionHelpers<
       const actionType = paths.join(nyaxContext.options.pathSeparator);
       defineGetter(target, k, () => {
         delete target[k];
-        return (target[k] = createActionHelper(
-          nyaxContext,
-          model.fullNamespace,
-          actionType
-        ));
+        return (target[k] = createActionHelper(nyaxContext, model, actionType));
       });
     }
   }
 
-  mergeObjects(actionHelpers, mockModelBuildInActions, handle);
   mergeObjects(actionHelpers, model.modelDefinition.reducers, handle);
   mergeObjects(actionHelpers, model.modelDefinition.effects, handle);
 

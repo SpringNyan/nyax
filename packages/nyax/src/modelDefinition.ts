@@ -97,7 +97,7 @@ export type ConvertModelDefinitionActionHelpers<
   >;
 };
 
-export interface DefineModelContext<
+export interface CreateModelDefinitionContext<
   TState extends Record<string, unknown> = {},
   TSelectors extends Record<string, unknown> = {},
   TReducers extends Record<string, unknown> = {},
@@ -130,7 +130,9 @@ type CreateModelDefinitionOptions<
   reducers?: TReducers;
   effects?: TEffects;
   subscriptions?: TSubscriptions;
-} & ThisType<DefineModelContext<TState, TSelectors, TReducers, TEffects>>;
+} & ThisType<
+  CreateModelDefinitionContext<TState, TSelectors, TReducers, TEffects>
+>;
 
 type ExtendModelDefinitionOptions<
   TBaseModelDefinition extends ModelDefinitionBase = ModelDefinitionBase,
@@ -146,7 +148,7 @@ type ExtendModelDefinitionOptions<
   effects?: TEffects;
   subscriptions?: TSubscriptions;
 } & ThisType<
-  DefineModelContext<
+  CreateModelDefinitionContext<
     ExtractModelDefinitionState<TBaseModelDefinition> & TState,
     ExtractModelDefinitionSelectors<TBaseModelDefinition> & TSelectors,
     ExtractModelDefinitionReducers<TBaseModelDefinition> & TReducers,
@@ -273,11 +275,11 @@ export function extendModelDefinition<
 }
 
 const subDefineModelContextsWeakMap = new WeakMap<
-  DefineModelContext,
-  Record<string, DefineModelContext>
+  CreateModelDefinitionContext,
+  Record<string, CreateModelDefinitionContext>
 >();
 function requireSubDefineModelContext(
-  context: DefineModelContext,
+  context: CreateModelDefinitionContext,
   path: string
 ) {
   let subContexts = subDefineModelContextsWeakMap.get(context);
@@ -314,7 +316,7 @@ function requireSubDefineModelContext(
         enumerable: false,
         configurable: true,
       },
-    }) as DefineModelContext;
+    }) as CreateModelDefinitionContext;
     subContexts[path] = subContext;
   }
 
@@ -326,7 +328,10 @@ function convertSubModelDefinitionProperty(
   path: string
 ) {
   return mergeObjects({}, property, (item, k, target) => {
-    target[k] = function (this: DefineModelContext, ...args: unknown[]) {
+    target[k] = function (
+      this: CreateModelDefinitionContext,
+      ...args: unknown[]
+    ) {
       return (item as Function).apply(
         requireSubDefineModelContext(this, path),
         args
@@ -430,7 +435,7 @@ export function mergeModelDefinitions(
     };
   } else {
     return {
-      state(this: DefineModelContext) {
+      state(this: CreateModelDefinitionContext) {
         return Object.entries(modelDefinitions).reduce<Record<string, unknown>>(
           (prev, [key, value]) => {
             prev[key] = value.state.call(

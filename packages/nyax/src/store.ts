@@ -17,7 +17,7 @@ export interface Nyax {
   getState: GetState;
   subscribeAction(fn: (action: ReduxAction) => void): () => void;
   registerModelDefinitions(modelDefinitions: ModelDefinition[]): void;
-  reload(state?: Record<string, unknown>): void;
+  reload(stateOrNamespace?: Record<string, unknown> | string): void;
 }
 
 export interface NyaxOptions {

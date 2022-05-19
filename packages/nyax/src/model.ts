@@ -10,13 +10,18 @@ import {
   ConvertModelDefinitionActionHelpers,
   ConvertModelDefinitionGetters,
   ConvertModelDefinitionState,
-  DefineModelContext,
+  CreateModelDefinitionContext,
   ModelDefinition,
 } from "./modelDefinition";
-import { createGetters } from "./selector";
+import { createGetters, createSelector } from "./selector";
+import { getModelState } from "./state";
 import { concatLastString } from "./util";
 
-export interface ModelBase<TState = {}, TGetters = {}, TActionHelpers = {}> {
+export interface ModelBase<
+  TState extends Record<string, unknown> = {},
+  TGetters extends Record<string, unknown> = {},
+  TActionHelpers extends Record<string, unknown> = {}
+> {
   state: TState;
   getters: TGetters;
   actions: TActionHelpers;
@@ -41,6 +46,16 @@ export interface Model<
   unmount(): void;
 }
 
+export interface ModelInternal<
+  TModelDefinition extends ModelDefinition = ModelDefinition
+> extends Model<TModelDefinition> {
+  _initialState: unknown | undefined;
+  _getters: unknown | undefined;
+  _actions: unknown | undefined;
+
+  _reset(): void;
+}
+
 export interface GetModel {
   <TModelDefinition extends ModelDefinition>(
     modelDefinitionOrNamespace: TModelDefinition | string
@@ -59,22 +74,47 @@ export function createModel(
   nyaxContext: NyaxContext,
   namespace: string,
   key: string | undefined
-): Model {
-  const model: Model & DefineModelContext = {
+): ModelInternal {
+  const model: ModelInternal & CreateModelDefinitionContext = {
+    _initialState: undefined,
+    _getters: undefined,
+    _actions: undefined,
+    _reset() {
+      this._initialState = undefined;
+      this._getters = undefined;
+      this._actions = undefined;
+    },
+
     get state() {
-      return nyaxContext.store.getModelState(this) as {};
+      const state = getModelState(
+        nyaxContext.getRootState(),
+        this.namespace,
+        this.key
+      );
+      if (state !== undefined) {
+        return state;
+      }
+
+      if (this._initialState === undefined) {
+        this._initialState = this.modelDefinition.state.call(this);
+      }
+      return this._initialState;
     },
     get getters() {
-      delete (this as Partial<Model>).getters;
-      return (this.getters = createGetters(nyaxContext, this));
+      if (this._getters === undefined) {
+        this._getters = createGetters(nyaxContext, this);
+      }
+      return this._getters as any;
     },
     get actions() {
-      delete (this as Partial<Model>).actions;
-      return (this.actions = createActionHelpers(nyaxContext, this));
+      if (this._actions === undefined) {
+        this._actions = createActionHelpers(nyaxContext, this);
+      }
+      return this._actions as any;
     },
 
     get modelDefinition() {
-      return nyaxContext.getNamespaceContext(namespace).modelDefinition;
+      return nyaxContext.requireNamespaceContext(namespace).modelDefinition;
     },
 
     namespace,
@@ -86,29 +126,32 @@ export function createModel(
     ),
 
     get isMounted() {
-      // return nyaxContext.getState(namespace, key as any) !== undefined;
-      return nyaxContext.getNamespaceContext(namespace).modelByKey.has(key);
+      return (
+        getModelState(nyaxContext.getRootState(), this.namespace, this.key) !==
+        undefined
+      );
     },
 
     mount(state) {
       const payload: ModelMountActionPayload =
         state !== undefined ? { state } : {};
-      nyaxContext.store.dispatchModelAction(
+      nyaxContext.dispatchAction(
+        { type: ModelMountActionType, payload },
         this,
-        ModelMountActionType,
-        payload
+        ModelMountActionType
       );
     },
     unmount() {
       const payload: ModelUnmountActionPayload = {};
-      nyaxContext.store.dispatchModelAction(
+      nyaxContext.dispatchAction(
+        { type: ModelUnmountActionType, payload },
         this,
-        ModelUnmountActionType,
-        payload
+        ModelUnmountActionType
       );
     },
 
-    getModel: nyaxContext.getModel,
+    getModel: nyaxContext.nyax.getModel,
+    createSelector,
     nyax: nyaxContext.nyax,
   };
 
@@ -120,48 +163,59 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
     modelDefinitionOrNamespace: ModelDefinition | string,
     key?: string
   ): Model {
-    const namespaceContext = nyaxContext.getNamespaceContext(
+    const namespaceContext = nyaxContext.requireNamespaceContext(
       modelDefinitionOrNamespace
     );
     const modelDefinition = namespaceContext.modelDefinition;
 
     if (key === undefined && modelDefinition.isDynamic) {
-      throw new Error("Key is required for dynamic model.");
+      throw new Error(
+        `Dynamic model should have a key: ${namespaceContext.namespace}`
+      );
     }
 
     if (key !== undefined && !modelDefinition.isDynamic) {
-      throw new Error("Key is not available for static model.");
+      throw new Error(
+        `Static model should not have a key: ${namespaceContext.namespace}`
+      );
     }
 
-    let model = namespaceContext.modelByKey.get(key);
+    let model =
+      key === undefined
+        ? namespaceContext.model
+        : namespaceContext.modelByKey.get(key);
     if (!model) {
       model = createModel(nyaxContext, namespaceContext.namespace, key);
+      if (key === undefined) {
+        namespaceContext.model = model;
+      } else {
+        namespaceContext.modelByKey.set(key, model);
+      }
     }
-
     return model;
   };
 }
 
 export function createSubModel<
   TModel extends ModelBase<any, any, any>,
-  TSubKey extends string
+  TPath extends string
 >(
   model: TModel,
-  subKey: TSubKey
+  path: TPath
 ): ModelBase<
-  TModel["state"][TSubKey],
-  TModel["getters"][TSubKey],
-  TModel["actions"][TSubKey]
+  TModel["state"][TPath],
+  TModel["getters"][TPath],
+  TModel["actions"][TPath]
 > {
   return {
-    get state(): TModel["state"][TSubKey] {
-      return model.state?.[subKey];
+    get state(): TModel["state"][TPath] {
+      return model.state?.[path];
     },
-    get getters(): TModel["getters"][TSubKey] {
-      return model.getters?.[subKey];
+    get getters(): TModel["getters"][TPath] {
+      return model.getters?.[path];
     },
-    get actions(): TModel["actions"][TSubKey] {
-      return model.actions?.[subKey];
+    get actions(): TModel["actions"][TPath] {
+      return model.actions?.[path];
     },
   };
 }
