@@ -1,28 +1,8 @@
-import {
-  ActionHelper,
-  ConvertActionHelpers,
-  ModelMountActionPayload,
-  ModelMountActionType,
-  ModelPatchActionPayload,
-  ModelPatchActionType,
-  ModelSetActionPayload,
-  ModelSetActionType,
-  ModelUnmountActionPayload,
-  ModelUnmountActionType,
-} from "./action";
+import { ConvertActionHelpers } from "./action";
 import { GetModel } from "./model";
 import { ConvertGetters, CreateSelector } from "./selector";
 import { Nyax } from "./store";
 import { mergeObjects } from "./util";
-
-type ModelDefinitionBuildInActionHelpers<
-  TState extends Record<string, unknown>
-> = {
-  [ModelMountActionType]: ActionHelper<ModelMountActionPayload<TState>>;
-  [ModelUnmountActionType]: ActionHelper<ModelUnmountActionPayload>;
-  [ModelSetActionType]: ActionHelper<ModelSetActionPayload<TState>>;
-  [ModelPatchActionType]: ActionHelper<ModelPatchActionPayload<TState>>;
-};
 
 export interface ModelDefinitionBase<
   TState extends Record<string, unknown> = {},
@@ -93,10 +73,7 @@ export type ConvertModelDefinitionActionHelpers<
 > = ConvertActionHelpers<
   ExtractModelDefinitionReducers<TModelDefinition>,
   ExtractModelDefinitionEffects<TModelDefinition>
-> &
-  ModelDefinitionBuildInActionHelpers<
-    ConvertModelDefinitionState<TModelDefinition>
-  >;
+>;
 
 export interface CreateModelDefinitionContext<
   TState extends Record<string, unknown> = {},
@@ -106,14 +83,16 @@ export interface CreateModelDefinitionContext<
 > {
   state: TState;
   getters: ConvertGetters<TSelectors>;
-  actions: ConvertActionHelpers<TReducers, TEffects> &
-    ModelDefinitionBuildInActionHelpers<TState>;
+  actions: ConvertActionHelpers<TReducers, TEffects>;
 
   namespace: string;
   key: string | undefined;
   fullNamespace: string;
 
   isMounted: boolean;
+
+  set(state: TState | ((state: TState) => TState)): void;
+  patch(state: Partial<TState> | ((state: TState) => Partial<TState>)): void;
 
   getModel: GetModel;
   createSelector: CreateSelector;

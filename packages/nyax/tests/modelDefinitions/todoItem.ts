@@ -48,12 +48,12 @@ export const todoItemModelDef = createModelDefinition(
       },
       fromSummaryThenDone(summary: string) {
         this.actions.fromSummary(summary);
-        this.actions.$patch({ done: true });
+        this.patch({ done: true });
         return this.getters.summary;
       },
       async doneAfterMs(ms: number) {
         await waitMs(ms);
-        this.actions.$patch({ done: true });
+        this.patch({ done: true });
         return this.getters.summary;
       },
     },
@@ -63,18 +63,18 @@ export const todoItemModelDef = createModelDefinition(
         return this.nyax.subscribeAction(() => {
           if (this.state.title !== lastTitle) {
             lastTitle = this.state.title;
-            this.actions.$patch({
-              titleChangeTimes: this.state.titleChangeTimes + 1,
-            });
+            this.patch((state) => ({
+              titleChangeTimes: state.titleChangeTimes + 1,
+            }));
           }
         });
       },
       fromSummaryTimes() {
         return this.nyax.subscribeAction((action) => {
           if (this.actions.fromSummary.is(action)) {
-            this.actions.$patch({
-              fromSummaryTimes: this.state.fromSummaryTimes + 1,
-            });
+            this.patch((state) => ({
+              fromSummaryTimes: state.fromSummaryTimes + 1,
+            }));
           }
         });
       },

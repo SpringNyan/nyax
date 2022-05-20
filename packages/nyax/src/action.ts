@@ -107,27 +107,6 @@ export function createActionHelpers<
   const actionHelpers =
     {} as ConvertModelDefinitionActionHelpers<TModelDefinition>;
 
-  actionHelpers[ModelMountActionType] = createActionHelper(
-    nyaxContext,
-    model,
-    ModelMountActionType
-  );
-  actionHelpers[ModelUnmountActionType] = createActionHelper(
-    nyaxContext,
-    model,
-    ModelUnmountActionType
-  );
-  actionHelpers[ModelSetActionType] = createActionHelper(
-    nyaxContext,
-    model,
-    ModelSetActionType
-  );
-  actionHelpers[ModelPatchActionType] = createActionHelper(
-    nyaxContext,
-    model,
-    ModelPatchActionType
-  );
-
   function handle(
     _item: unknown,
     k: string,

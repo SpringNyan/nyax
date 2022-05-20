@@ -2,6 +2,10 @@ import {
   createActionHelpers,
   ModelMountActionPayload,
   ModelMountActionType,
+  ModelPatchActionPayload,
+  ModelPatchActionType,
+  ModelSetActionPayload,
+  ModelSetActionType,
   ModelUnmountActionPayload,
   ModelUnmountActionType,
 } from "./action";
@@ -42,7 +46,14 @@ export interface Model<
 
   isMounted: boolean;
 
-  mount(state?: ConvertModelDefinitionState<TModelDefinition>): void;
+  set(state: this["state"] | ((state: this["state"]) => this["state"])): void;
+  patch(
+    state:
+      | Partial<this["state"]>
+      | ((state: this["state"]) => Partial<this["state"]>)
+  ): void;
+
+  mount(state?: this["state"]): void;
   unmount(): void;
 }
 
@@ -129,6 +140,29 @@ export function createModel(
       return (
         getModelState(nyaxContext.getRootState(), this.namespace, this.key) !==
         undefined
+      );
+    },
+
+    set(state) {
+      if (typeof state === "function") {
+        state = state(this.state);
+      }
+      const payload: ModelSetActionPayload = state;
+      nyaxContext.dispatchAction(
+        { type: ModelSetActionType, payload },
+        this,
+        ModelSetActionType
+      );
+    },
+    patch(state) {
+      if (typeof state === "function") {
+        state = state(this.state);
+      }
+      const payload: ModelPatchActionPayload = state;
+      nyaxContext.dispatchAction(
+        { type: ModelPatchActionType, payload },
+        this,
+        ModelPatchActionType
       );
     },
 

@@ -31,20 +31,20 @@ export const todoModelDef = createModelDefinition(
     },
     effects: {
       nextId() {
-        this.actions.$patch({
-          lastId: this.state.lastId + 1,
-        });
+        this.patch((state) => ({
+          lastId: state.lastId + 1,
+        }));
         return "" + this.state.lastId;
       },
       add(payload: { title: string; description: string }) {
         const id = this.actions.nextId({});
-        this.getModel(todoItemModelDef, id).actions.$patch(payload);
+        this.getModel(todoItemModelDef, id).patch(payload);
         this.actions.addId(id);
       },
       delete(id: string) {
-        this.actions.$patch({
-          allIds: this.state.allIds.filter((e) => e !== id),
-        });
+        this.patch((state) => ({
+          allIds: state.allIds.filter((e) => e !== id),
+        }));
         this.getModel(todoItemModelDef, id).unmount();
       },
     },
