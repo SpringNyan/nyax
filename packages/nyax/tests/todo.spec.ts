@@ -150,7 +150,11 @@ describe("todo", function () {
     title: "options",
     nyaxOptions: {
       createStore(reducer, middleware) {
-        return createStore(reducer, applyMiddleware(middleware));
+        return createStore((state: any, action) => {
+          state = reducer(state, action);
+          state = { ...state, $lastAction: action };
+          return state;
+        }, applyMiddleware(middleware));
       },
 
       namespaceSeparator: ".",

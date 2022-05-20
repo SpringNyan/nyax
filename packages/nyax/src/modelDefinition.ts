@@ -2,7 +2,7 @@ import { ConvertActionHelpers } from "./action";
 import { GetModel } from "./model";
 import { ConvertGetters, CreateSelector } from "./selector";
 import { Nyax } from "./store";
-import { mergeObjects } from "./util";
+import { mergeObjects, Simplify, UnionToIntersection } from "./util";
 
 export interface ModelDefinitionBase<
   TState extends Record<string, unknown> = {},
@@ -328,30 +328,49 @@ export function mergeModelDefinitions<
 >(
   modelDefinitions: TModelDefinitions
 ): ModelDefinitionBase<
-  {
-    [K in keyof TModelDefinitions & number]: ExtractModelDefinitionState<
-      TModelDefinitions[K]
-    >;
-  }[number],
-  {
-    [K in keyof TModelDefinitions & number]: ExtractModelDefinitionSelectors<
-      TModelDefinitions[K]
-    >;
-  }[number],
-  {
-    [K in keyof TModelDefinitions & number]: ExtractModelDefinitionReducers<
-      TModelDefinitions[K]
-    >;
-  }[number],
-  {
-    [K in keyof TModelDefinitions & number]: ExtractModelDefinitionEffects<
-      TModelDefinitions[K]
-    >;
-  }[number],
-  {
-    [K in keyof TModelDefinitions &
-      number]: ExtractModelDefinitionSubscriptions<TModelDefinitions[K]>;
-  }[number]
+  Simplify<
+    UnionToIntersection<
+      {
+        [K in keyof TModelDefinitions & number]: ExtractModelDefinitionState<
+          TModelDefinitions[K]
+        >;
+      }[number]
+    >
+  >,
+  Simplify<
+    UnionToIntersection<
+      {
+        [K in keyof TModelDefinitions &
+          number]: ExtractModelDefinitionSelectors<TModelDefinitions[K]>;
+      }[number]
+    >
+  >,
+  Simplify<
+    UnionToIntersection<
+      {
+        [K in keyof TModelDefinitions & number]: ExtractModelDefinitionReducers<
+          TModelDefinitions[K]
+        >;
+      }[number]
+    >
+  >,
+  Simplify<
+    UnionToIntersection<
+      {
+        [K in keyof TModelDefinitions & number]: ExtractModelDefinitionEffects<
+          TModelDefinitions[K]
+        >;
+      }[number]
+    >
+  >,
+  Simplify<
+    UnionToIntersection<
+      {
+        [K in keyof TModelDefinitions &
+          number]: ExtractModelDefinitionSubscriptions<TModelDefinitions[K]>;
+      }[number]
+    >
+  >
 >;
 export function mergeModelDefinitions<
   TModelDefinitions extends Record<string, ModelDefinitionBase>

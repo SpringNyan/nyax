@@ -68,9 +68,11 @@ export function flattenObject(
   obj: Record<string, unknown>,
   separator = "."
 ): Record<string, unknown> {
-  return mergeObjects({}, obj, (item, _key, target, paths) => {
-    target[paths.join(separator)] = item;
+  const result: Record<string, unknown> = {};
+  mergeObjects({}, obj, (item, _key, _target, paths) => {
+    result[paths.join(separator)] = item;
   });
+  return result;
 }
 
 export function concatLastString(
