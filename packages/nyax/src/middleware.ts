@@ -11,7 +11,7 @@ import {
   ReloadActionType,
 } from "./action";
 import { NamespaceContext, NyaxContext } from "./context";
-import { Model, ModelInternal } from "./model";
+import { Model } from "./model";
 import { getModelState } from "./state";
 import { splitLastString } from "./util";
 
@@ -36,7 +36,7 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
   function unmountModel(
     namespaceContext: NamespaceContext,
     model: Model,
-    clear: boolean
+    skipDelete?: boolean
   ) {
     const disposables = namespaceContext.subscriptionDisposablesByKey.get(
       model.key
@@ -49,9 +49,7 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
       }
     });
 
-    (model as ModelInternal)._reset();
-
-    if (clear) {
+    if (!skipDelete) {
       namespaceContext.subscriptionDisposablesByKey.delete(model.key);
 
       if (model.key !== undefined) {
@@ -87,11 +85,13 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
 
   function unmountNamespaceContext(namespaceContext: NamespaceContext) {
     if (namespaceContext.model) {
-      unmountModel(namespaceContext, namespaceContext.model, false);
+      unmountModel(namespaceContext, namespaceContext.model, true);
+      namespaceContext.model._reset();
       namespaceContext.model = undefined;
     } else {
       namespaceContext.modelByKey.forEach((model) => {
-        unmountModel(namespaceContext, model, false);
+        unmountModel(namespaceContext, model, true);
+        model._reset();
       });
       namespaceContext.modelByKey.clear();
     }
@@ -152,7 +152,7 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
             action.type,
             nyaxContext.options.namespaceSeparator
           );
-          model = nyaxContext.tryGetModel(fullNamespace) ?? undefined;
+          model = nyaxContext.tryGetModel(fullNamespace);
         }
 
         if (model && actionType) {
@@ -164,7 +164,7 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
           }
 
           if (actionType === ModelUnmountActionType) {
-            unmountModel(namespaceContext, model, true);
+            unmountModel(namespaceContext, model);
           } else if (actionType !== ModelMountActionType && !model.isMounted) {
             model.mount();
           }
@@ -188,15 +188,19 @@ export function createMiddleware(nyaxContext: NyaxContext): ReduxMiddleware {
           }
         });
 
-        if (model?.isMounted && actionType && namespaceContext) {
-          const effect = namespaceContext.flattenedEffects[actionType];
-          if (effect) {
-            const effectResult = effect.call(model, (action as Action).payload);
-            nyaxContext.dispatchingAction = action as Action;
-            nyaxContext.dispatchingModel = model;
-            nyaxContext.dispatchingActionType = actionType;
-            nyaxContext.dispatchingResult = effectResult;
+        if (model && actionType) {
+          let effectResult: unknown | undefined;
+          if (model.isMounted && namespaceContext) {
+            const effect = namespaceContext.flattenedEffects[actionType];
+            if (effect) {
+              effectResult = effect.call(model, (action as Action).payload);
+            }
           }
+
+          nyaxContext.dispatchingAction = action as Action;
+          nyaxContext.dispatchingModel = model;
+          nyaxContext.dispatchingActionType = actionType;
+          nyaxContext.dispatchingResult = effectResult;
         }
 
         return result;

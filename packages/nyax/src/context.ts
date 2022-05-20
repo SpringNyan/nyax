@@ -27,7 +27,7 @@ export interface NyaxContext {
   requireNamespaceContext(
     modelDefinitionOrNamespace: ModelDefinition | string
   ): NamespaceContext;
-  tryGetModel(fullNamespace: string): Model | null;
+  tryGetModel(fullNamespace: string): Model | undefined;
 
   actionSubscribers: ((action: ReduxAction) => void)[];
 }
@@ -152,12 +152,12 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
         }
 
         if (!nyaxContext.namespaceContextByNamespace.has(namespace)) {
-          return null;
+          return undefined;
         }
 
         return nyaxContext.nyax.getModel(namespace, key as any);
       } catch (error) {
-        return null;
+        return undefined;
       }
     },
 
@@ -202,7 +202,7 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
             ? { namespace: stateOrNamespace }
             : { state: stateOrNamespace }
           : {};
-      this.store.dispatch({ type: ReloadActionType, payload });
+      nyaxContext.nyax.store.dispatch({ type: ReloadActionType, payload });
     },
   };
 

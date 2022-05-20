@@ -30,76 +30,76 @@ export function createReducer(nyaxContext: NyaxContext): ReduxReducer {
       rootState = {};
     }
 
-    if (action.type === ReloadActionType) {
-      const payload =
-        (action as Action<ReloadActionPayload | undefined>).payload ?? {};
-      if ("state" in payload && payload.state !== undefined) {
-        return payload.state;
-      } else {
-        return rootState;
-      }
-    }
-
-    let model: Model | undefined;
-    let actionType: string | undefined;
-    if (nyaxContext.dispatchingAction === action) {
-      model = nyaxContext.dispatchingModel;
-      actionType = nyaxContext.dispatchingActionType;
-    }
-
-    if (!model || !actionType) {
-      return rootState;
-    }
-
-    if (actionType === ModelMountActionType) {
-      const payload =
-        (action as Action<ModelMountActionPayload | undefined>).payload ?? {};
-      return setModelState(
-        rootState,
-        model.namespace,
-        model.key,
-        payload.state !== undefined
-          ? payload.state
-          : model.modelDefinition.state.call(model)
-      );
-    }
-
-    if (!model.isMounted) {
-      return rootState;
-    }
-
-    if (actionType === ModelUnmountActionType) {
-      return setModelState(rootState, model.namespace, model.key, undefined);
-    }
-
-    if (actionType === ModelSetActionType) {
-      const payload = (action as Action<ModelSetActionPayload | undefined>)
-        .payload;
-      return setModelState(
-        rootState,
-        model.namespace,
-        model.key,
-        payload ?? model.modelDefinition.state.call(model)
-      );
-    }
-
-    if (actionType === ModelPatchActionType) {
-      const payload = (action as Action<ModelPatchActionPayload | undefined>)
-        .payload;
-      return setModelState(rootState, model.namespace, model.key, {
-        ...getModelState(rootState, model.namespace, model.key),
-        ...payload,
-      });
-    }
-
-    const reducer = nyaxContext.requireNamespaceContext(model.namespace)
-      .flattenedReducers[actionType];
-    if (!reducer) {
-      return rootState;
-    }
-
     nyaxContext.cachedRootState = rootState;
     try {
+      if (action.type === ReloadActionType) {
+        const payload =
+          (action as Action<ReloadActionPayload | undefined>).payload ?? {};
+        if ("state" in payload && payload.state !== undefined) {
+          return payload.state;
+        } else {
+          return rootState;
+        }
+      }
+
+      let model: Model | undefined;
+      let actionType: string | undefined;
+      if (nyaxContext.dispatchingAction === action) {
+        model = nyaxContext.dispatchingModel;
+        actionType = nyaxContext.dispatchingActionType;
+      }
+
+      if (!model || !actionType) {
+        return rootState;
+      }
+
+      if (actionType === ModelMountActionType) {
+        const payload =
+          (action as Action<ModelMountActionPayload | undefined>).payload ?? {};
+        return setModelState(
+          rootState,
+          model.namespace,
+          model.key,
+          payload.state !== undefined
+            ? payload.state
+            : model.modelDefinition.state.call(model)
+        );
+      }
+
+      if (!model.isMounted) {
+        return rootState;
+      }
+
+      if (actionType === ModelUnmountActionType) {
+        return setModelState(rootState, model.namespace, model.key, undefined);
+      }
+
+      if (actionType === ModelSetActionType) {
+        const payload = (action as Action<ModelSetActionPayload | undefined>)
+          .payload;
+        return setModelState(
+          rootState,
+          model.namespace,
+          model.key,
+          payload ?? model.modelDefinition.state.call(model)
+        );
+      }
+
+      if (actionType === ModelPatchActionType) {
+        const payload = (action as Action<ModelPatchActionPayload | undefined>)
+          .payload;
+        return setModelState(rootState, model.namespace, model.key, {
+          ...getModelState(rootState, model.namespace, model.key),
+          ...payload,
+        });
+      }
+
+      const reducer = nyaxContext.requireNamespaceContext(model.namespace)
+        .flattenedReducers[actionType];
+      if (!reducer) {
+        return rootState;
+      }
+
       const newState = produce(
         getModelState(rootState, model.namespace, model.key),
         (draft: any) => {

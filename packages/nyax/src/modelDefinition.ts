@@ -15,6 +15,15 @@ import { ConvertGetters, CreateSelector } from "./selector";
 import { Nyax } from "./store";
 import { mergeObjects } from "./util";
 
+type ModelDefinitionBuildInActionHelpers<
+  TState extends Record<string, unknown>
+> = {
+  [ModelMountActionType]: ActionHelper<ModelMountActionPayload<TState>>;
+  [ModelUnmountActionType]: ActionHelper<ModelUnmountActionPayload>;
+  [ModelSetActionType]: ActionHelper<ModelSetActionPayload<TState>>;
+  [ModelPatchActionType]: ActionHelper<ModelPatchActionPayload<TState>>;
+};
+
 export interface ModelDefinitionBase<
   TState extends Record<string, unknown> = {},
   TSelectors extends Record<string, unknown> = {},
@@ -84,18 +93,10 @@ export type ConvertModelDefinitionActionHelpers<
 > = ConvertActionHelpers<
   ExtractModelDefinitionReducers<TModelDefinition>,
   ExtractModelDefinitionEffects<TModelDefinition>
-> & {
-  [ModelMountActionType]: ActionHelper<
-    ModelMountActionPayload<ConvertModelDefinitionState<TModelDefinition>>
+> &
+  ModelDefinitionBuildInActionHelpers<
+    ConvertModelDefinitionState<TModelDefinition>
   >;
-  [ModelUnmountActionType]: ActionHelper<ModelUnmountActionPayload>;
-  [ModelSetActionType]: ActionHelper<
-    ModelSetActionPayload<ConvertModelDefinitionState<TModelDefinition>>
-  >;
-  [ModelPatchActionType]: ActionHelper<
-    ModelPatchActionPayload<ConvertModelDefinitionState<TModelDefinition>>
-  >;
-};
 
 export interface CreateModelDefinitionContext<
   TState extends Record<string, unknown> = {},
@@ -105,7 +106,8 @@ export interface CreateModelDefinitionContext<
 > {
   state: TState;
   getters: ConvertGetters<TSelectors>;
-  actions: ConvertActionHelpers<TReducers, TEffects>;
+  actions: ConvertActionHelpers<TReducers, TEffects> &
+    ModelDefinitionBuildInActionHelpers<TState>;
 
   namespace: string;
   key: string | undefined;

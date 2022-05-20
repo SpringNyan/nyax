@@ -14,5 +14,5 @@ export default {
     },
   ],
   plugins: [typescript()],
-  external: [],
+  external: ["redux", "immer"],
 };
