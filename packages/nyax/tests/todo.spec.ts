@@ -18,9 +18,6 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
       reload,
     } = nyax;
 
-    subscribeAction;
-    reload;
-
     expect(() => getModel("todo")).throw();
 
     expect(getState()).eq(store.getState());
@@ -102,6 +99,14 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     expect(todoModel.state.allIds).deep.eq(["234"]);
     expect(todoModel.getters.items).deep.eq([todoItem234Model.state]);
 
+    const snapshot = nyax.getState();
+
+    todoItem234Model.set((state) => ({
+      ...state,
+      title: ":3",
+    }));
+    expect(todoItem234Model.state.title).eq(":3");
+
     todoModel.actions.delete("234");
     expect(todoModel.getters.items).deep.eq([]);
     expect(todoItem234Model.isMounted).eq(false);
@@ -116,6 +121,26 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     expect(getModel(todoItemModelDef, "236").isMounted).eq(true);
     expect(getModel(todoItemModelDef, "237").isMounted).eq(false);
     expect(todoModel.getters.title).eq("nyax - 2");
+
+    reload(snapshot);
+    expect(todoModel.state.lastId).eq(234);
+    expect(getModel(todoModelDef).state.allIds).deep.eq(["234"]);
+    expect(todoItem234Model.getters.summary).eq("[x] nyax - redux");
+    expect(getModel(todoItemModelDef, "235").isMounted).eq(false);
+
+    {
+      const disposable = subscribeAction((action) => {
+        if (todoItem234Model.actions.fromSummary.is(action)) {
+          todoItem234Model.actions.toggleDone({});
+        }
+      });
+      todoItem234Model.actions.fromSummary("[ ] abc - xyz");
+      expect(todoItem234Model.getters.summary).eq("[x] abc - xyz");
+
+      disposable();
+      todoItem234Model.actions.fromSummary("[ ] xyz - abc");
+      expect(todoItem234Model.getters.summary).eq("[ ] xyz - abc");
+    }
   });
 }
 
