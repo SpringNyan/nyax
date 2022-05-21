@@ -30,6 +30,12 @@ export interface ModelBase<
   getters: TGetters;
   actions: TActionHelpers;
 
+  namespace: string;
+  key: string | undefined;
+  fullNamespace: string;
+
+  isMounted: boolean;
+
   set(state: TState | ((state: TState) => TState)): void;
   patch(state: Partial<TState> | ((state: TState) => Partial<TState>)): void;
 
@@ -52,12 +58,6 @@ export interface Model<
     ConvertModelDefinitionActionHelpers<TModelDefinition>
   > {
   modelDefinition: TModelDefinition;
-
-  namespace: string;
-  key: string | undefined;
-  fullNamespace: string;
-
-  isMounted: boolean;
 
   mount(state?: this["state"]): void;
   unmount(): void;

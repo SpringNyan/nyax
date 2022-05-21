@@ -37,52 +37,87 @@ export const mergeModelDef = createModelDefinition(
   "merge",
   extendModelDefinition(
     baseModelDef,
-    mergeModelDefinitions([
-      createModelDefinition({
-        state() {
-          return {
-            a: "a",
-            foo: {
-              bar: "foo_bar",
-            },
-          };
-        },
-      }),
-      createModelDefinition({
-        state() {
-          return {
-            b: "b",
-            foo: {
-              baz: "foo_baz",
-            },
-          };
-        },
-      }),
-      createModelDefinition({
-        state() {
-          return {
-            c: "c",
-            bar: {
-              baz: "bar_baz",
-            },
-          };
-        },
-      }),
-      mergeModelDefinitions({
-        foo: createModelDefinition({
+    extendModelDefinition(
+      mergeModelDefinitions([
+        createModelDefinition({
           state() {
             return {
-              abc: "foo_abc",
-              xyz: {
-                foo: "foo_xyz_foo",
+              a: "a",
+              foo: {
+                bar: "foo_bar",
               },
             };
           },
+          selectors: {
+            doubleA() {
+              return this.state.a + this.state.a;
+            },
+          },
         }),
-        strs1: strsModelDef,
-        strs2: strsModelDef,
-      }),
-      strsModelDef,
-    ])
+        createModelDefinition({
+          state() {
+            return {
+              b: "b",
+              foo: {
+                baz: "foo_baz",
+              },
+            };
+          },
+          reducers: {
+            doubleB() {
+              this.state.b += this.state.b;
+            },
+          },
+        }),
+        createModelDefinition({
+          state() {
+            return {
+              c: "c",
+              bar: {
+                baz: "bar_baz",
+              },
+            };
+          },
+          effects: {
+            resetC() {
+              this.patch({
+                c: "c",
+              });
+            },
+          },
+        }),
+        mergeModelDefinitions({
+          foo: createModelDefinition({
+            state() {
+              return {
+                abc: "foo_abc",
+                xyz: {
+                  foo: "foo_xyz_foo",
+                },
+              };
+            },
+          }),
+          strs1: strsModelDef,
+          strs2: strsModelDef,
+        }),
+        strsModelDef,
+      ]),
+      {
+        state() {
+          return {
+            abc: "abc",
+          };
+        },
+        selectors: {
+          allStrs() {
+            return [
+              ...this.state.strs,
+              ...this.state.strs1.strs,
+              ...this.state.strs2.strs,
+            ];
+          },
+        },
+      }
+    )
   )
 );

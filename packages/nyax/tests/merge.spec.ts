@@ -14,6 +14,7 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
       a: "a",
       b: "b",
       c: "c",
+      abc: "abc",
       foo: {
         bar: "foo_bar",
         baz: "foo_baz",

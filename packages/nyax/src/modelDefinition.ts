@@ -1,5 +1,5 @@
 import { ConvertActionHelpers } from "./action";
-import { GetModel } from "./model";
+import { GetModel, ModelBase } from "./model";
 import { ConvertGetters, CreateSelector } from "./selector";
 import { Nyax } from "./store";
 import { mergeObjects, Simplify, UnionToIntersection } from "./util";
@@ -80,36 +80,11 @@ export interface CreateModelDefinitionContext<
   TSelectors extends Record<string, unknown> = {},
   TReducers extends Record<string, unknown> = {},
   TEffects extends Record<string, unknown> = {}
-> {
-  state: TState;
-  getters: ConvertGetters<TSelectors>;
-  actions: ConvertActionHelpers<TReducers, TEffects>;
-
-  namespace: string;
-  key: string | undefined;
-  fullNamespace: string;
-
-  isMounted: boolean;
-
-  set(state: this["state"] | ((state: this["state"]) => this["state"])): void;
-  patch(
-    state:
-      | Partial<this["state"]>
-      | ((state: this["state"]) => Partial<this["state"]>)
-  ): void;
-
-  getSubModel<
-    TKey extends keyof this["state"] &
-      keyof this["getters"] &
-      keyof this["actions"]
-  >(
-    key: TKey
-  ): CreateModelDefinitionContext<
-    Simplify<this["state"][TKey]>,
-    Simplify<this["getters"][TKey]>,
-    Simplify<this["actions"][TKey]>
-  >;
-
+> extends ModelBase<
+    TState,
+    ConvertGetters<TSelectors>,
+    ConvertActionHelpers<TReducers, TEffects>
+  > {
   getModel: GetModel;
   createSelector: CreateSelector;
   nyax: Nyax;

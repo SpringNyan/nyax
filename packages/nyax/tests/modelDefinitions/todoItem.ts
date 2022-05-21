@@ -43,7 +43,7 @@ export const todoItemModelDef = createModelDefinition(
       },
     },
     effects: {
-      toggleDone() {
+      toggleDone(): string {
         return this.getters.summary;
       },
       fromSummaryThenDone(summary: string) {
