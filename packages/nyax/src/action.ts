@@ -112,10 +112,10 @@ export function createActionHelpers<
     _item: unknown,
     k: string,
     target: Record<string, unknown>,
-    paths: readonly string[]
+    path: readonly string[]
   ) {
     if (!(k in target)) {
-      const actionType = paths.join(nyaxContext.options.pathSeparator);
+      const actionType = path.join(nyaxContext.options.pathSeparator);
       defineGetter(target, k, () => {
         delete target[k];
         return (target[k] = createActionHelper(nyaxContext, model, actionType));

@@ -27,16 +27,16 @@ export function mergeObjects(
     item: unknown,
     key: string,
     target: Record<string, unknown>,
-    paths: readonly string[]
+    path: readonly string[]
   ) => void,
-  paths: string[] = []
+  path: string[] = []
 ): Record<string, unknown> {
   Object.keys(source).forEach((key) => {
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return;
     }
 
-    paths.push(key);
+    path.push(key);
 
     const sourceItem = source[key];
     if (isPlainObject(sourceItem)) {
@@ -49,16 +49,16 @@ export function mergeObjects(
         throw new Error(`\`target["${key}"]\` is not an object`);
       }
 
-      mergeObjects(targetItem, sourceItem, fn, paths);
+      mergeObjects(targetItem, sourceItem, fn, path);
     } else {
       if (fn) {
-        fn(sourceItem, key, target, paths);
+        fn(sourceItem, key, target, path);
       } else {
         target[key] = sourceItem;
       }
     }
 
-    paths.pop();
+    path.pop();
   });
 
   return target;
@@ -69,8 +69,8 @@ export function flattenObject(
   separator = "."
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  mergeObjects({}, obj, (item, _key, _target, paths) => {
-    result[paths.join(separator)] = item;
+  mergeObjects({}, obj, (item, _key, _target, path) => {
+    result[path.join(separator)] = item;
   });
   return result;
 }
