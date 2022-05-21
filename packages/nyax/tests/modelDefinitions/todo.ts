@@ -12,6 +12,12 @@ export const todoModelDef = createModelDefinition(
       };
     },
     selectors: {
+      dependencies() {
+        return {
+          ...baseModelDef.selectors.dependencies.call(this),
+          modelName: "todo",
+        };
+      },
       items() {
         return this.createSelector(
           () => this.nyax.getState(todoItemModelDef),
@@ -22,6 +28,9 @@ export const todoModelDef = createModelDefinition(
       },
       title() {
         return `${this.getters.dependencies.packageName} - ${this.state.allIds.length}`;
+      },
+      modelName() {
+        return this.getters.dependencies.modelName;
       },
     },
     reducers: {

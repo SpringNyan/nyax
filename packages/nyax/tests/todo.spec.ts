@@ -44,6 +44,7 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     expect(todoModel.state.allIds).deep.eq([]);
     expect(todoModel.state.lastId).eq(0);
     expect(todoModel.getters.dependencies.packageName).eq("nyax");
+    expect(todoModel.getters.modelName).eq("todo");
     expect(todoModel.getters.items).deep.eq([]);
     expect(todoModel.getters.title).eq("nyax - 0");
 
