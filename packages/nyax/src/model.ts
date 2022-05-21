@@ -65,6 +65,8 @@ export interface Model<
 
 export type ModelInternal = Model &
   CreateModelDefinitionContext & {
+    _path: string[] | undefined;
+
     _initialState: unknown | undefined;
     _getters: unknown | undefined;
     _actions: unknown | undefined;
@@ -96,9 +98,12 @@ export function createModel(
   key: string | undefined
 ): ModelInternal {
   const model: ModelInternal = {
+    _path: undefined,
+
     _initialState: undefined,
     _getters: undefined,
     _actions: undefined,
+
     _reset() {
       this._initialState = undefined;
       this._getters = undefined;
@@ -157,6 +162,10 @@ export function createModel(
         state = state(this.state) as Record<string, unknown>;
       }
       const payload: ModelSetActionPayload = { state };
+      if (this._path !== undefined) {
+        payload.path = this._path;
+      }
+
       nyaxContext.dispatchAction(
         { type: ModelSetActionType, payload },
         this,
@@ -168,6 +177,10 @@ export function createModel(
         state = state(this.state) as Partial<Record<string, unknown>>;
       }
       const payload: ModelPatchActionPayload = { state };
+      if (this._path !== undefined) {
+        payload.path = this._path;
+      }
+
       nyaxContext.dispatchAction(
         { type: ModelPatchActionType, payload },
         this,
@@ -185,22 +198,28 @@ export function createModel(
       let subModel = subModels[key];
       if (!subModel) {
         subModel = Object.create(this, {
+          _path: {
+            value: this._path !== undefined ? [...this._path, key] : [key],
+            enumerable: true,
+            configurable: true,
+          },
+
           state: {
-            get() {
+            get: () => {
               return this.state?.[key];
             },
             enumerable: false,
             configurable: true,
           },
           getters: {
-            get() {
+            get: () => {
               return this.getters?.[key];
             },
             enumerable: false,
             configurable: true,
           },
           actions: {
-            get() {
+            get: () => {
               return this.actions?.[key];
             },
             enumerable: false,

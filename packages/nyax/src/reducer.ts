@@ -14,7 +14,7 @@ import {
 } from "./action";
 import { NyaxContext } from "./context";
 import { Model } from "./model";
-import { getModelState, setModelState } from "./state";
+import { getModelState, setModelState, setModelSubState } from "./state";
 
 export type Reducer<TPayload = unknown> = (payload: TPayload) => void;
 
@@ -77,9 +77,19 @@ export function createReducer(nyaxContext: NyaxContext): ReduxReducer {
       if (actionType === ModelSetActionType) {
         const payload = (action as Action<ModelSetActionPayload | undefined>)
           .payload;
-        const state = payload?.state;
-        if (state !== undefined) {
-          return setModelState(rootState, model.namespace, model.key, state);
+        if (payload?.state !== undefined) {
+          const path =
+            typeof payload.path === "string"
+              ? payload.path.split(nyaxContext.options.pathSeparator)
+              : payload.path;
+          return setModelSubState(
+            rootState,
+            model.namespace,
+            model.key,
+            path,
+            payload.state,
+            false
+          );
         } else {
           return rootState;
         }
@@ -88,12 +98,19 @@ export function createReducer(nyaxContext: NyaxContext): ReduxReducer {
       if (actionType === ModelPatchActionType) {
         const payload = (action as Action<ModelPatchActionPayload | undefined>)
           .payload;
-        const state = payload?.state;
-        if (state !== undefined) {
-          return setModelState(rootState, model.namespace, model.key, {
-            ...getModelState(rootState, model.namespace, model.key),
-            ...state,
-          });
+        if (payload?.state !== undefined) {
+          const path =
+            typeof payload.path === "string"
+              ? payload.path.split(nyaxContext.options.pathSeparator)
+              : payload.path;
+          return setModelSubState(
+            rootState,
+            model.namespace,
+            model.key,
+            path,
+            payload.state,
+            true
+          );
         } else {
           return rootState;
         }

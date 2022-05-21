@@ -24,13 +24,13 @@ export type ModelUnmountActionPayload = {};
 export const ModelSetActionType = "$set";
 export type ModelSetActionPayload = {
   state: Record<string, unknown>;
-  path?: string;
+  path?: string | string[];
 };
 
 export const ModelPatchActionType = "$patch";
 export type ModelPatchActionPayload = {
   state: Partial<Record<string, unknown>>;
-  path?: string;
+  path?: string | string[];
 };
 
 export const ReloadActionType = "@@nyax/reload";

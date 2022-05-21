@@ -44,6 +44,18 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     expect(mergeModel.state.strs1.strs).deep.eq(["m", "e", "o", "w"]);
     expect(mergeModel.state.strs2.strs).deep.eq(["n", "y", "a", "n"]);
 
+    const mergeStr2Model = mergeModel.getSubModel("strs2");
+    mergeStr2Model.set({
+      strs: ["a", "b", "c", "d"],
+    });
+    expect(mergeModel.state.strs).deep.eq(["n", "a", "y", "n"]);
+    expect(mergeModel.state.strs1.strs).deep.eq(["m", "e", "o", "w"]);
+    expect(mergeModel.state.strs2.strs).deep.eq(["a", "b", "c", "d"]);
+    mergeStr2Model.actions.reverseStrs({});
+    expect(mergeModel.state.strs).deep.eq(["n", "a", "y", "n"]);
+    expect(mergeModel.state.strs1.strs).deep.eq(["m", "e", "o", "w"]);
+    expect(mergeModel.state.strs2.strs).deep.eq(["d", "c", "b", "a"]);
+
     mergeModel.patch((state) => ({
       a: "x",
       b: "y",

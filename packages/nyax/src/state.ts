@@ -116,3 +116,43 @@ export function setModelState(
 
   return rootState;
 }
+
+export function setModelSubState(
+  rootState: any,
+  namespace: string,
+  key: string | undefined,
+  path: string[] | undefined,
+  value: any,
+  patch: boolean
+): any {
+  if (!path?.length) {
+    if (patch) {
+      return setModelState(rootState, namespace, key, {
+        ...getModelState(rootState, namespace, key),
+        ...value,
+      });
+    } else {
+      return setModelState(rootState, namespace, key, value);
+    }
+  } else {
+    let state = { ...getModelState(rootState, namespace, key) };
+    rootState = setModelState(rootState, namespace, key, state);
+
+    path.forEach((p, i) => {
+      if (i === path.length - 1) {
+        if (patch) {
+          state[p] = {
+            ...state[p],
+            ...value,
+          };
+        } else {
+          state[p] = value;
+        }
+      } else {
+        state = state[p] = { ...state[p] };
+      }
+    });
+
+    return rootState;
+  }
+}
