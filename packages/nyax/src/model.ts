@@ -19,7 +19,7 @@ import {
 } from "./modelDefinition";
 import { createGetters, createSelector } from "./selector";
 import { getModelState } from "./state";
-import { concatLastString } from "./util";
+import { concatLastString, Simplify } from "./util";
 
 export interface ModelBase<
   TState extends Record<string, unknown> = {},
@@ -29,6 +29,19 @@ export interface ModelBase<
   state: TState;
   getters: TGetters;
   actions: TActionHelpers;
+
+  set(state: TState | ((state: TState) => TState)): void;
+  patch(state: Partial<TState> | ((state: TState) => Partial<TState>)): void;
+
+  getSubModel<
+    TKey extends keyof TState & keyof TGetters & keyof TActionHelpers
+  >(
+    key: TKey
+  ): ModelBase<
+    Simplify<TState[TKey]>,
+    Simplify<TGetters[TKey]>,
+    Simplify<TActionHelpers[TKey]>
+  >;
 }
 
 export interface Model<
@@ -45,13 +58,6 @@ export interface Model<
   fullNamespace: string;
 
   isMounted: boolean;
-
-  set(state: this["state"] | ((state: this["state"]) => this["state"])): void;
-  patch(
-    state:
-      | Partial<this["state"]>
-      | ((state: this["state"]) => Partial<this["state"]>)
-  ): void;
 
   mount(state?: this["state"]): void;
   unmount(): void;
@@ -81,6 +87,10 @@ export interface GetModel {
     : Model<TModelDefinition>;
 }
 
+const subModelsByModel = new WeakMap<
+  ModelBase<any, any, any>,
+  Record<string, ModelBase<any, any, any>>
+>();
 export function createModel(
   nyaxContext: NyaxContext,
   namespace: string,
@@ -145,9 +155,9 @@ export function createModel(
 
     set(state) {
       if (typeof state === "function") {
-        state = state(this.state);
+        state = state(this.state) as Record<string, unknown>;
       }
-      const payload: ModelSetActionPayload = state;
+      const payload: ModelSetActionPayload = { state };
       nyaxContext.dispatchAction(
         { type: ModelSetActionType, payload },
         this,
@@ -156,14 +166,51 @@ export function createModel(
     },
     patch(state) {
       if (typeof state === "function") {
-        state = state(this.state);
+        state = state(this.state) as Partial<Record<string, unknown>>;
       }
-      const payload: ModelPatchActionPayload = state;
+      const payload: ModelPatchActionPayload = { state };
       nyaxContext.dispatchAction(
         { type: ModelPatchActionType, payload },
         this,
         ModelPatchActionType
       );
+    },
+
+    getSubModel(key) {
+      let subModels = subModelsByModel.get(this);
+      if (!subModels) {
+        subModels = {};
+        subModelsByModel.set(this, subModels);
+      }
+
+      let subModel = subModels[key];
+      if (!subModel) {
+        subModel = Object.create(this, {
+          state: {
+            get() {
+              return this.state?.[key];
+            },
+            enumerable: false,
+            configurable: true,
+          },
+          getters: {
+            get() {
+              return this.getters?.[key];
+            },
+            enumerable: false,
+            configurable: true,
+          },
+          actions: {
+            get() {
+              return this.actions?.[key];
+            },
+            enumerable: false,
+            configurable: true,
+          },
+        }) as ModelBase<any, any, any>;
+        subModels[key] = subModel;
+      }
+      return subModel;
     },
 
     mount(state) {
@@ -227,29 +274,5 @@ export function createGetModel(nyaxContext: NyaxContext): GetModel {
       }
     }
     return model;
-  };
-}
-
-export function createSubModel<
-  TModel extends ModelBase<any, any, any>,
-  TPath extends string
->(
-  model: TModel,
-  path: TPath
-): ModelBase<
-  TModel["state"][TPath],
-  TModel["getters"][TPath],
-  TModel["actions"][TPath]
-> {
-  return {
-    get state(): TModel["state"][TPath] {
-      return model.state?.[path];
-    },
-    get getters(): TModel["getters"][TPath] {
-      return model.getters?.[path];
-    },
-    get actions(): TModel["actions"][TPath] {
-      return model.actions?.[path];
-    },
   };
 }

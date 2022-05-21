@@ -77,21 +77,26 @@ export function createReducer(nyaxContext: NyaxContext): ReduxReducer {
       if (actionType === ModelSetActionType) {
         const payload = (action as Action<ModelSetActionPayload | undefined>)
           .payload;
-        return setModelState(
-          rootState,
-          model.namespace,
-          model.key,
-          payload ?? model.modelDefinition.state.call(model)
-        );
+        const state = payload?.state;
+        if (state !== undefined) {
+          return setModelState(rootState, model.namespace, model.key, state);
+        } else {
+          return rootState;
+        }
       }
 
       if (actionType === ModelPatchActionType) {
         const payload = (action as Action<ModelPatchActionPayload | undefined>)
           .payload;
-        return setModelState(rootState, model.namespace, model.key, {
-          ...getModelState(rootState, model.namespace, model.key),
-          ...payload,
-        });
+        const state = payload?.state;
+        if (state !== undefined) {
+          return setModelState(rootState, model.namespace, model.key, {
+            ...getModelState(rootState, model.namespace, model.key),
+            ...state,
+          });
+        } else {
+          return rootState;
+        }
       }
 
       const reducer = nyaxContext.requireNamespaceContext(model.namespace)

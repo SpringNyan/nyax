@@ -91,8 +91,24 @@ export interface CreateModelDefinitionContext<
 
   isMounted: boolean;
 
-  set(state: TState | ((state: TState) => TState)): void;
-  patch(state: Partial<TState> | ((state: TState) => Partial<TState>)): void;
+  set(state: this["state"] | ((state: this["state"]) => this["state"])): void;
+  patch(
+    state:
+      | Partial<this["state"]>
+      | ((state: this["state"]) => Partial<this["state"]>)
+  ): void;
+
+  getSubModel<
+    TKey extends keyof this["state"] &
+      keyof this["getters"] &
+      keyof this["actions"]
+  >(
+    key: TKey
+  ): CreateModelDefinitionContext<
+    Simplify<this["state"][TKey]>,
+    Simplify<this["getters"][TKey]>,
+    Simplify<this["actions"][TKey]>
+  >;
 
   getModel: GetModel;
   createSelector: CreateSelector;
@@ -255,72 +271,19 @@ export function extendModelDefinition<
   return modelDefinition as any;
 }
 
-const subDefineModelContextsWeakMap = new WeakMap<
-  CreateModelDefinitionContext,
-  Record<string, CreateModelDefinitionContext>
->();
-function requireSubDefineModelContext(
-  context: CreateModelDefinitionContext,
-  path: string
-) {
-  let subContexts = subDefineModelContextsWeakMap.get(context);
-  if (!subContexts) {
-    subContexts = {};
-    subDefineModelContextsWeakMap.set(context, subContexts);
-  }
-
-  let subContext = subContexts[path];
-  if (!subContext) {
-    subContext = Object.create(context, {
-      state: {
-        get() {
-          return (context.state as Record<string, unknown> | undefined)?.[path];
-        },
-        enumerable: false,
-        configurable: true,
-      },
-      getters: {
-        get() {
-          return (context.getters as Record<string, unknown> | undefined)?.[
-            path
-          ];
-        },
-        enumerable: false,
-        configurable: true,
-      },
-      actions: {
-        get() {
-          return (context.actions as Record<string, unknown> | undefined)?.[
-            path
-          ];
-        },
-        enumerable: false,
-        configurable: true,
-      },
-    }) as CreateModelDefinitionContext;
-    subContexts[path] = subContext;
-  }
-
-  return subContext;
-}
-
 function convertSubModelDefinitionProperty(
   property: Record<string, unknown>,
-  path: string
+  key: string
 ) {
   return mergeObjects({}, property, (item, k, target) => {
     target[k] = function (
-      this: CreateModelDefinitionContext,
+      this: CreateModelDefinitionContext<any, any, any, any>,
       ...args: unknown[]
     ) {
-      return (item as Function).apply(
-        requireSubDefineModelContext(this, path),
-        args
-      );
+      return (item as Function).apply(this.getSubModel(key), args);
     };
   });
 }
-
 export function mergeModelDefinitions<
   TModelDefinitions extends
     | ModelDefinitionBase<Record<string, unknown>>[]
@@ -435,12 +398,10 @@ export function mergeModelDefinitions(
     };
   } else {
     return {
-      state(this: CreateModelDefinitionContext) {
+      state(this: CreateModelDefinitionContext<any, any, any, any>) {
         return Object.entries(modelDefinitions).reduce<Record<string, unknown>>(
           (prev, [key, value]) => {
-            prev[key] = value.state.call(
-              requireSubDefineModelContext(this, key)
-            );
+            prev[key] = value.state.call(this.getSubModel(key));
             return prev;
           },
           {}

@@ -14,23 +14,24 @@ export interface Action<TPayload = unknown> {
 }
 
 export const ModelMountActionType = "$mount";
-export type ModelMountActionPayload<
-  TState extends Record<string, unknown> = {}
-> = {
-  state?: TState;
+export type ModelMountActionPayload = {
+  state?: Record<string, unknown>;
 };
 
 export const ModelUnmountActionType = "$unmount";
 export type ModelUnmountActionPayload = {};
 
 export const ModelSetActionType = "$set";
-export type ModelSetActionPayload<TState extends Record<string, unknown> = {}> =
-  TState;
+export type ModelSetActionPayload = {
+  state: Record<string, unknown>;
+  path?: string;
+};
 
 export const ModelPatchActionType = "$patch";
-export type ModelPatchActionPayload<
-  TState extends Record<string, unknown> = {}
-> = Partial<TState>;
+export type ModelPatchActionPayload = {
+  state: Partial<Record<string, unknown>>;
+  path?: string;
+};
 
 export const ReloadActionType = "@@nyax/reload";
 export type ReloadActionPayload =

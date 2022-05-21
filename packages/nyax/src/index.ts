@@ -15,7 +15,6 @@ export type {
   ReloadActionPayload,
 } from "./action";
 export type { Effect } from "./effect";
-export { createSubModel } from "./model";
 export type { GetModel, Model, ModelBase } from "./model";
 export {
   createModelDefinition,
