@@ -63,15 +63,14 @@ export interface Model<
   unmount(): void;
 }
 
-export interface ModelInternal<
-  TModelDefinition extends ModelDefinition = ModelDefinition
-> extends Model<TModelDefinition> {
-  _initialState: unknown | undefined;
-  _getters: unknown | undefined;
-  _actions: unknown | undefined;
+export type ModelInternal = Model &
+  CreateModelDefinitionContext & {
+    _initialState: unknown | undefined;
+    _getters: unknown | undefined;
+    _actions: unknown | undefined;
 
-  _reset(): void;
-}
+    _reset(): void;
+  };
 
 export interface GetModel {
   <TModelDefinition extends ModelDefinition>(
@@ -88,15 +87,15 @@ export interface GetModel {
 }
 
 const subModelsByModel = new WeakMap<
-  ModelBase<any, any, any>,
-  Record<string, ModelBase<any, any, any>>
+  ModelInternal,
+  Record<string, ModelInternal>
 >();
 export function createModel(
   nyaxContext: NyaxContext,
   namespace: string,
   key: string | undefined
 ): ModelInternal {
-  const model: ModelInternal & CreateModelDefinitionContext = {
+  const model: ModelInternal = {
     _initialState: undefined,
     _getters: undefined,
     _actions: undefined,
@@ -207,10 +206,10 @@ export function createModel(
             enumerable: false,
             configurable: true,
           },
-        }) as ModelBase<any, any, any>;
+        }) as ModelInternal;
         subModels[key] = subModel;
       }
-      return subModel;
+      return subModel as any;
     },
 
     mount(state) {
