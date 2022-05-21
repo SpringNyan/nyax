@@ -195,6 +195,10 @@ export function createModelDefinition(...args: unknown[]): ModelDefinitionBase {
   return modelDefinitionBase;
 }
 
+export function extendModelDefinition(
+  arg_0: never,
+  arg_1: ExtendModelDefinitionOptions
+): never;
 export function extendModelDefinition<
   TBaseModelDefinition extends ModelDefinitionBase = ModelDefinitionBase,
   TState extends Record<string, unknown> = {},
@@ -219,7 +223,11 @@ export function extendModelDefinition<
   ExtractModelDefinitionReducers<TBaseModelDefinition> & TReducers,
   ExtractModelDefinitionEffects<TBaseModelDefinition> & TEffects,
   ExtractModelDefinitionSubscriptions<TBaseModelDefinition> & TSubscriptions
-> {
+>;
+export function extendModelDefinition(
+  baseModelDefinition: ModelDefinitionBase,
+  options: ExtendModelDefinitionOptions
+): ModelDefinitionBase {
   const modelDefinition: ModelDefinitionBase = {
     state() {
       return {
@@ -244,7 +252,7 @@ export function extendModelDefinition<
       ...options.subscriptions,
     },
   };
-  return modelDefinition as any;
+  return modelDefinition;
 }
 
 function convertSubModelDefinitionProperty(
