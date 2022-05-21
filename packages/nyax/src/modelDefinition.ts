@@ -231,11 +231,12 @@ export function extendModelDefinition<
   baseModelDefinition: TBaseModelDefinition,
   options: ExtendModelDefinitionOptions<
     TBaseModelDefinition,
-    TState,
-    TSelectors,
-    TReducers,
-    TEffects,
-    TSubscriptions
+    Partial<ExtractModelDefinitionState<TBaseModelDefinition>> & TState,
+    Partial<ExtractModelDefinitionSelectors<TBaseModelDefinition>> & TSelectors,
+    Partial<ExtractModelDefinitionReducers<TBaseModelDefinition>> & TReducers,
+    Partial<ExtractModelDefinitionEffects<TBaseModelDefinition>> & TEffects,
+    Partial<ExtractModelDefinitionSubscriptions<TBaseModelDefinition>> &
+      TSubscriptions
   >
 ): ModelDefinitionBase<
   ExtractModelDefinitionState<TBaseModelDefinition> & TState,
