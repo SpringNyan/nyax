@@ -13,6 +13,7 @@ export type {
   ModelSetActionPayload,
   ModelUnmountActionPayload,
   ReloadActionPayload,
+  TestAction,
 } from "./action";
 export type { Effect } from "./effect";
 export type { GetModel, Model, ModelBase } from "./model";
@@ -35,6 +36,7 @@ export type {
 } from "./modelDefinition";
 export type { Reducer } from "./reducer";
 export type { Selector } from "./selector";
+export type { GetState } from "./state";
 export { createNyax } from "./store";
 export type { Nyax, NyaxOptions } from "./store";
 export type { Subscription } from "./subscription";

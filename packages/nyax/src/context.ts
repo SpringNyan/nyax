@@ -1,5 +1,12 @@
 import { Action as ReduxAction } from "redux";
-import { Action, ReloadActionPayload, ReloadActionType } from "./action";
+import {
+  Action,
+  ConvertTestActionConditions,
+  createTestAction,
+  createTestActionConditions,
+  ReloadActionPayload,
+  ReloadActionType,
+} from "./action";
 import { Effect } from "./effect";
 import { createMiddleware } from "./middleware";
 import { createGetModel, Model, ModelInternal } from "./model";
@@ -44,6 +51,8 @@ export interface NamespaceContext {
   modelByKey: Map<string, ModelInternal>;
 
   subscriptionDisposablesByKey: Map<string | undefined, (() => void)[]>;
+
+  testActionConditions: ConvertTestActionConditions<ModelDefinition>;
 }
 
 export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
@@ -117,6 +126,14 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
           modelByKey: new Map(),
 
           subscriptionDisposablesByKey: new Map(),
+
+          get testActionConditions() {
+            delete (this as Partial<NamespaceContext>).testActionConditions;
+            return (this.testActionConditions = createTestActionConditions(
+              nyaxContext,
+              this.modelDefinition
+            ));
+          },
         };
         this.namespaceContextByNamespace.set(namespace, namespaceContext);
 
@@ -170,6 +187,7 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
     ),
     getModel: createGetModel(nyaxContext),
     getState: createGetState(nyaxContext),
+    testAction: createTestAction(nyaxContext),
     subscribeAction(fn) {
       nyaxContext.actionSubscribers = [...nyaxContext.actionSubscribers, fn];
       return function () {

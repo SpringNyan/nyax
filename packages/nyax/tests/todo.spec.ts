@@ -13,6 +13,7 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
       store,
       getModel,
       getState,
+      testAction,
       subscribeAction,
       registerModelDefinitions,
       reload,
@@ -122,6 +123,28 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     expect(getModel(todoItemModelDef, "236").isMounted).eq(true);
     expect(getModel(todoItemModelDef, "237").isMounted).eq(false);
     expect(todoModel.getters.title).eq("nyax - 2");
+
+    {
+      let count = 0;
+      const disposable = subscribeAction((action) => {
+        const result = testAction(
+          action,
+          todoItemModelDef,
+          (e) => e.fromSummary
+        );
+        if (result) {
+          count += 1;
+        }
+      });
+      getModel(todoItemModelDef, "235").actions.fromSummary("[ ] abc - xyz");
+      getModel(todoItemModelDef, "236").actions.fromSummaryThenDone(
+        "[ ] abc - xyz"
+      );
+      getModel(todoItemModelDef, "237").actions.toggleDone({});
+      expect(count).eq(2);
+
+      disposable();
+    }
 
     reload(snapshot);
     expect(todoModel.state.lastId).eq(234);

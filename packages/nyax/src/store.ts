@@ -6,6 +6,7 @@ import {
   Reducer as ReduxReducer,
   Store as ReduxStore,
 } from "redux";
+import { TestAction } from "./action";
 import { createNyaxContext } from "./context";
 import { GetModel } from "./model";
 import { ModelDefinition } from "./modelDefinition";
@@ -15,6 +16,7 @@ export interface Nyax {
   store: ReduxStore;
   getModel: GetModel;
   getState: GetState;
+  testAction: TestAction;
   subscribeAction(fn: (action: ReduxAction) => void): () => void;
   registerModelDefinitions(modelDefinitions: ModelDefinition[]): void;
   reload(stateOrNamespace?: Record<string, unknown> | string): void;
