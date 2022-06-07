@@ -184,11 +184,11 @@ export interface TestActionResult<TPayload = unknown> {
 }
 
 export interface TestAction {
-  (action: unknown): TestActionResult | null;
+  (action: unknown): TestActionResult | undefined;
   <TModelDefinition extends ModelDefinition>(
     action: unknown,
     modelDefinitionOrNamespace: TModelDefinition | string
-  ): TestActionResult | null;
+  ): TestActionResult | undefined;
   <TModelDefinition extends ModelDefinition, TPayload>(
     action: unknown,
     modelDefinitionOrNamespace: TModelDefinition | string,
@@ -197,7 +197,7 @@ export interface TestAction {
       | ((
           conditions: ConvertTestActionConditions<TModelDefinition>
         ) => Partial<Action<TPayload>>)
-  ): TestActionResult<TPayload> | null;
+  ): TestActionResult<TPayload> | undefined;
 }
 
 export function createTestAction(nyaxContext: NyaxContext): TestAction {
@@ -212,7 +212,7 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
   ) {
     const action = action_ as Action | undefined;
     if (!action || typeof action.type !== "string" || !("payload" in action)) {
-      return null;
+      return undefined;
     }
 
     const payload = action.payload;
@@ -226,7 +226,7 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
     } else if (arr.length === 3) {
       [namespace, key, actionType] = arr as [string, string, string];
     } else {
-      return null;
+      return undefined;
     }
 
     let namespaceContext: NamespaceContext;
@@ -235,18 +235,18 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
         modelDefinitionOrNamespace ?? namespace
       );
     } catch (error) {
-      return null;
+      return undefined;
     }
 
     if (namespaceContext.namespace !== namespace) {
-      return null;
+      return undefined;
     }
 
     if (
       (key === undefined && namespaceContext.modelDefinition.isDynamic) ||
       (key !== undefined && !namespaceContext.modelDefinition.isDynamic)
     ) {
-      return null;
+      return undefined;
     }
 
     if (condition) {
@@ -254,10 +254,10 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
         condition = condition(namespaceContext.testActionConditions);
       }
       if ("type" in condition && actionType !== condition.type) {
-        return null;
+        return undefined;
       }
       if ("payload" in condition && payload !== condition.payload) {
-        return null;
+        return undefined;
       }
     }
 
@@ -269,7 +269,7 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
       actionType !== ModelSetActionType &&
       actionType !== ModelPatchActionType
     ) {
-      return null;
+      return undefined;
     }
 
     return {
