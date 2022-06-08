@@ -1,9 +1,9 @@
 import { Action as ReduxAction } from "redux";
 import {
   Action,
-  ConvertTestActionConditions,
-  createTestAction,
-  createTestActionConditions,
+  ConvertParseActionConditions,
+  createParseAction,
+  createParseActionConditions,
   ReloadActionPayload,
   ReloadActionType,
 } from "./action";
@@ -52,7 +52,7 @@ export interface NamespaceContext {
 
   subscriptionDisposablesByKey: Map<string | undefined, (() => void)[]>;
 
-  testActionConditions: ConvertTestActionConditions<ModelDefinition>;
+  parseActionConditions: ConvertParseActionConditions<ModelDefinition>;
 }
 
 export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
@@ -127,9 +127,9 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
 
           subscriptionDisposablesByKey: new Map(),
 
-          get testActionConditions() {
-            delete (this as Partial<NamespaceContext>).testActionConditions;
-            return (this.testActionConditions = createTestActionConditions(
+          get parseActionConditions() {
+            delete (this as Partial<NamespaceContext>).parseActionConditions;
+            return (this.parseActionConditions = createParseActionConditions(
               nyaxContext,
               this.modelDefinition
             ));
@@ -187,7 +187,7 @@ export function createNyaxContext(options: Required<NyaxOptions>): NyaxContext {
     ),
     getModel: createGetModel(nyaxContext),
     getState: createGetState(nyaxContext),
-    testAction: createTestAction(nyaxContext),
+    parseAction: createParseAction(nyaxContext),
     subscribeAction(fn) {
       nyaxContext.actionSubscribers = [...nyaxContext.actionSubscribers, fn];
       return function () {

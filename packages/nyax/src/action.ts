@@ -130,29 +130,29 @@ export function createActionHelpers<
   return actionHelpers;
 }
 
-type ConvertTestActionConditionsFromActionHelpers<TActionHelpers> = {
+type ConvertParseActionConditionsFromActionHelpers<TActionHelpers> = {
   [K in keyof TActionHelpers]: TActionHelpers[K] extends ActionHelper<
     infer TPayload,
     any
   >
     ? Partial<Action<TPayload>>
-    : ConvertTestActionConditionsFromActionHelpers<TActionHelpers[K]>;
+    : ConvertParseActionConditionsFromActionHelpers<TActionHelpers[K]>;
 };
 
-export type ConvertTestActionConditions<
+export type ConvertParseActionConditions<
   TModelDefinition extends ModelDefinitionBase
-> = ConvertTestActionConditionsFromActionHelpers<
+> = ConvertParseActionConditionsFromActionHelpers<
   ConvertModelDefinitionActionHelpers<TModelDefinition>
 >;
 
-export function createTestActionConditions<
+export function createParseActionConditions<
   TModelDefinition extends ModelDefinitionBase
 >(
   nyaxContext: NyaxContext,
   modelDefinition: TModelDefinition
-): ConvertTestActionConditions<TModelDefinition> {
-  const testActionConditions =
-    {} as ConvertTestActionConditions<TModelDefinition>;
+): ConvertParseActionConditions<TModelDefinition> {
+  const parseActionConditions =
+    {} as ConvertParseActionConditions<TModelDefinition>;
 
   function handle(
     _item: unknown,
@@ -170,44 +170,44 @@ export function createTestActionConditions<
     }
   }
 
-  mergeObjects(testActionConditions, modelDefinition.reducers, handle);
-  mergeObjects(testActionConditions, modelDefinition.effects, handle);
+  mergeObjects(parseActionConditions, modelDefinition.reducers, handle);
+  mergeObjects(parseActionConditions, modelDefinition.effects, handle);
 
-  return testActionConditions;
+  return parseActionConditions;
 }
 
-export interface TestActionResult<TPayload = unknown> {
+export interface ParseActionResult<TPayload = unknown> {
   namespace: string;
   key: string | undefined;
   actionType: string;
   payload: TPayload;
 }
 
-export interface TestAction {
-  (action: unknown): TestActionResult | undefined;
+export interface ParseAction {
+  (action: unknown): ParseActionResult | undefined;
   <TModelDefinition extends ModelDefinition>(
     action: unknown,
     modelDefinitionOrNamespace: TModelDefinition | string
-  ): TestActionResult | undefined;
+  ): ParseActionResult | undefined;
   <TModelDefinition extends ModelDefinition, TPayload>(
     action: unknown,
     modelDefinitionOrNamespace: TModelDefinition | string,
     condition:
       | Partial<Action<TPayload>>
       | ((
-          conditions: ConvertTestActionConditions<TModelDefinition>
+          conditions: ConvertParseActionConditions<TModelDefinition>
         ) => Partial<Action<TPayload>>)
-  ): TestActionResult<TPayload> | undefined;
+  ): ParseActionResult<TPayload> | undefined;
 }
 
-export function createTestAction(nyaxContext: NyaxContext): TestAction {
+export function createParseAction(nyaxContext: NyaxContext): ParseAction {
   return function (
     action_: unknown,
     modelDefinitionOrNamespace?: ModelDefinition | string,
     condition?:
       | Partial<Action>
       | ((
-          conditions: ConvertTestActionConditions<ModelDefinition>
+          conditions: ConvertParseActionConditions<ModelDefinition>
         ) => Partial<Action>)
   ) {
     const action = action_ as Action | undefined;
@@ -251,7 +251,7 @@ export function createTestAction(nyaxContext: NyaxContext): TestAction {
 
     if (condition) {
       if (typeof condition === "function") {
-        condition = condition(namespaceContext.testActionConditions);
+        condition = condition(namespaceContext.parseActionConditions);
       }
       if ("type" in condition && actionType !== condition.type) {
         return undefined;

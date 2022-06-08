@@ -13,7 +13,7 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
       store,
       getModel,
       getState,
-      testAction,
+      parseAction,
       subscribeAction,
       registerModelDefinitions,
       reload,
@@ -127,7 +127,7 @@ function test(options?: { title?: string; nyaxOptions?: NyaxOptions }): void {
     {
       let count = 0;
       const disposable = subscribeAction((action) => {
-        const result = testAction(
+        const result = parseAction(
           action,
           todoItemModelDef,
           (e) => e.fromSummary

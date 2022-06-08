@@ -12,8 +12,8 @@ export type {
   ModelPatchActionPayload,
   ModelSetActionPayload,
   ModelUnmountActionPayload,
+  ParseAction,
   ReloadActionPayload,
-  TestAction,
 } from "./action";
 export type { Effect } from "./effect";
 export type { GetModel, Model, ModelBase } from "./model";
