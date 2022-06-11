@@ -1,11 +1,7 @@
 {
-  "name": "nyax",
-  "version": "0.0.0",
+  "name": "@nyax/root",
   "private": true,
   "workspaces": [
-    "packages/core",
-    "packages/mobx",
-    "packages/redux",
-    "packages/vuex"
+    "packages/*"
   ]
 }
